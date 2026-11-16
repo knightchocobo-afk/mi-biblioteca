@@ -219,7 +219,7 @@
         </button>
 
         <!-- Botón directo Conectar Google Drive en cabecera -->
-        <button onclick="quickConnectGoogleDrive()" id="header-drive-btn" class="touch-btn px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/40 text-emerald-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0" title="Conectar o sincronizar con Google Drive">
+        <button onclick="openDriveModal()" id="header-drive-btn" class="touch-btn px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 text-amber-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0" title="Conectar o configurar Google Drive">
           <span>☁️</span>
           <span id="header-drive-label" class="hidden md:inline">Conectar Drive</span>
         </button>
@@ -315,11 +315,11 @@
       </div>
 
       <!-- Botones flotantes laterales para tablet -->
-      <button onclick="stepLightbox(-1)" id="lb-prev-btn" class="touch-btn hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-white text-2xl items-center justify-center shadow-lg z-10" aria-label="Anterior">‹</button>
-      <button onclick="stepLightbox(1)" id="lb-next-btn" class="touch-btn hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-white text-2xl items-center justify-center shadow-lg z-10" aria-label="Siguiente">›</button>
+      <button onclick="stepLightbox(1)" id="lb-prev-btn" class="touch-btn hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-white text-2xl items-center justify-center shadow-lg z-10" aria-label="Siguiente">‹</button>
+      <button onclick="stepLightbox(-1)" id="lb-next-btn" class="touch-btn hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-white text-2xl items-center justify-center shadow-lg z-10" aria-label="Anterior">›</button>
     </div>
 
-      <!-- Barra Inferior Visor: Tags activos y guía táctil -->
+    <!-- Barra Inferior Visor: Tags activos y guía táctil -->
     <div class="bg-slate-950/95 border-t border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 z-20">
       <div id="lb-tags-list" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full">
         <!-- Tags del ítem -->
@@ -547,17 +547,17 @@
   </div>
 
   <!-- ========================================================= -->
-  <!-- MODAL 7: CONFIGURACIÓN GOOGLE DRIVE API                   -->
+  <!-- MODAL 7: CONFIGURACIÓN GOOGLE DRIVE API (Se abre al entrar) -->
   <!-- ========================================================= -->
   <div id="drive-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-slate-925 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">☁️ Conexión con Google Drive</h3>
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">☁️ Conectar con Google Drive</h3>
         <button onclick="closeDriveModal()" class="touch-btn rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">✕</button>
       </div>
 
       <p class="text-xs text-slate-300 leading-relaxed">
-        Todos tus artistas, enlaces, cómics, archivos y etiquetas se guardan automáticamente en la carpeta <code class="px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300">Mi_Biblioteca_Multimedia</code> de tu Google Drive.
+        Tus credenciales se guardan únicamente en este navegador. Pulsa <b>Conectar y Sincronizar</b> para acceder a tu carpeta privada <code class="px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300">Mi_Biblioteca_Multimedia</code>.
       </p>
 
       <div class="space-y-3">
@@ -576,9 +576,9 @@
           Desconectar
         </button>
         <div class="flex items-center gap-2 ml-auto">
-          <button onclick="closeDriveModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-xs font-medium text-slate-300">Cerrar</button>
+          <button onclick="closeDriveModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-xs font-medium text-slate-300">Usar Modo Demo</button>
           <button onclick="saveAndConnectDrive()" class="touch-btn px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20">
-            <span>Conectar y Sincronizar</span>
+            <span>☁️ Conectar y Sincronizar</span>
           </button>
         </div>
       </div>
@@ -596,8 +596,6 @@
   <!-- ========================================================= -->
   <script>
     const ITEMS_PER_PAGE = 50;
-    const DEFAULT_GOOGLE_CLIENT_ID = '677459788084-if5cjq3tone74950jlkh35kivu2tbncr.apps.googleusercontent.com';
-    const DEFAULT_GOOGLE_API_KEY = 'AIzaSyD0DhmghaVche_T9E-354b6p51boG6o8CU';
 
     function svgCover(bg1, bg2, title, subtitle, emoji) {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750" viewBox="0 0 600 750">
@@ -741,11 +739,11 @@
       // Borrado seguro
       deleteTarget: null,
       deleteStep: 1,
-      // Google Drive
+      // Google Drive (se lee únicamente de localStorage)
       drive: {
         connected: false,
-        clientId: localStorage.getItem('gdrive_client_id') || DEFAULT_GOOGLE_CLIENT_ID,
-        apiKey: localStorage.getItem('gdrive_api_key') || DEFAULT_GOOGLE_API_KEY,
+        clientId: localStorage.getItem('gdrive_client_id') || '',
+        apiKey: localStorage.getItem('gdrive_api_key') || '',
         accessToken: null,
         folderId: null,
         metadataFileId: null,
@@ -757,7 +755,7 @@
     const pendingFetches = new Set();
 
     // =========================================================
-    // UTILIDADES GENERALES Y ESTADÍSTICAS GLOBALES DE TAGS
+    // UTILIDADES GENERALES, NORMALIZACIÓN Y ORDENAMIENTO
     // =========================================================
     function showToast(msg, icon = 'ℹ️') {
       const toast = document.getElementById('toast');
@@ -778,13 +776,16 @@
         .replace(/"/g, '&quot;');
     }
 
+    function normalizeTag(raw) {
+      return String(raw || '').trim().toLowerCase().replace(/^#/, '');
+    }
+
+    function normalizeTagList(arr) {
+      return [...new Set((arr || []).map(normalizeTag).filter(Boolean))];
+    }
+
     function parseTags(raw) {
-      return [...new Set(
-        String(raw || '')
-          .split(',')
-          .map(t => t.trim().toLowerCase().replace(/^#/, ''))
-          .filter(Boolean)
-      )];
+      return normalizeTagList(String(raw || '').split(','));
     }
 
     function normalizeUrl(raw) {
@@ -807,24 +808,47 @@
       if (!isoStr) return '';
       try {
         const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return '';
         return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
       } catch {
         return '';
       }
     }
 
+    function extractTimestamp(item) {
+      if (!item) return 0;
+      const raw = item.createdAt || item.date || item.updatedAt;
+      if (typeof raw === 'number') return raw;
+      if (typeof raw === 'string' && raw.trim()) {
+        const parsed = Date.parse(raw);
+        if (!isNaN(parsed)) return parsed;
+      }
+      // Si el ID contiene un timestamp numérico (ej. img-1700000000000), extraerlo como respaldo
+      const idMatch = String(item.id || '').match(/(\d{12,14})/);
+      if (idMatch) return Number(idMatch[1]);
+      return 0;
+    }
+
     function sortItems(list, getNameFn) {
-      const copy = [...list];
+      const copy = [...(list || [])];
+      const mode = document.getElementById('sort-select')?.value || state.sortBy || 'date-desc';
+      state.sortBy = mode;
+
       copy.sort((a, b) => {
-        if (state.sortBy === 'name-asc' || state.sortBy === 'name-desc') {
-          const na = String(getNameFn(a) || '').toLowerCase();
-          const nb = String(getNameFn(b) || '').toLowerCase();
+        if (mode === 'name-asc' || mode === 'name-desc') {
+          const na = String(getNameFn(a) || '').trim().toLowerCase();
+          const nb = String(getNameFn(b) || '').trim().toLowerCase();
           const cmp = na.localeCompare(nb, 'es', { numeric: true, sensitivity: 'base' });
-          return state.sortBy === 'name-asc' ? cmp : -cmp;
+          return mode === 'name-asc' ? cmp : -cmp;
         } else {
-          const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return state.sortBy === 'date-asc' ? da - db : db - da;
+          const da = extractTimestamp(a);
+          const db = extractTimestamp(b);
+          if (da === db) {
+            const na = String(getNameFn(a) || '').trim().toLowerCase();
+            const nb = String(getNameFn(b) || '').trim().toLowerCase();
+            return na.localeCompare(nb, 'es', { numeric: true, sensitivity: 'base' });
+          }
+          return mode === 'date-asc' ? da - db : db - da;
         }
       });
       return copy;
@@ -840,29 +864,28 @@
     function computeGlobalTagStats() {
       const map = new Map();
       const ensure = (t) => {
-        const clean = String(t || '').trim().toLowerCase();
+        const clean = normalizeTag(t);
         if (!clean) return null;
         if (!map.has(clean)) {
           map.set(clean, {
             tag: clean,
-            imagesCount: 0,    // Imágenes de artistas + páginas de cómics
-            storiesCount: 0,   // Historias (PDF, Docs, Imágenes/Videos de historia)
-            comicsCount: 0,    // Cómics con este tag
-            artistsCount: 0,   // Artistas con este tag
+            imagesCount: 0,
+            storiesCount: 0,
+            comicsCount: 0,
+            artistsCount: 0,
             totalUsage: 0
           });
         }
         return map.get(clean);
       };
 
-      // 1. Historia
-      state.data.historiaArtists.forEach(art => {
-        (art.tags || []).forEach(t => {
+      (state.data.historiaArtists || []).forEach(art => {
+        normalizeTagList(art.tags).forEach(t => {
           const e = ensure(t);
           if (e) { e.artistsCount++; e.totalUsage++; }
         });
         (art.stories || []).forEach(st => {
-          (st.tags || []).forEach(t => {
+          normalizeTagList(st.tags).forEach(t => {
             const e = ensure(t);
             if (e) {
               e.storiesCount++;
@@ -873,19 +896,18 @@
         });
       });
 
-      // 2. Comics
-      state.data.comicArtists.forEach(art => {
-        (art.tags || []).forEach(t => {
+      (state.data.comicArtists || []).forEach(art => {
+        normalizeTagList(art.tags).forEach(t => {
           const e = ensure(t);
           if (e) { e.artistsCount++; e.totalUsage++; }
         });
         (art.comics || []).forEach(com => {
-          (com.tags || []).forEach(t => {
+          normalizeTagList(com.tags).forEach(t => {
             const e = ensure(t);
             if (e) { e.comicsCount++; e.totalUsage++; }
           });
           (com.pages || []).forEach(pg => {
-            (pg.tags || []).forEach(t => {
+            normalizeTagList(pg.tags).forEach(t => {
               const e = ensure(t);
               if (e) { e.imagesCount++; e.totalUsage++; }
             });
@@ -893,14 +915,13 @@
         });
       });
 
-      // 3. Artistas
-      state.data.artArtists.forEach(art => {
-        (art.tags || []).forEach(t => {
+      (state.data.artArtists || []).forEach(art => {
+        normalizeTagList(art.tags).forEach(t => {
           const e = ensure(t);
           if (e) { e.artistsCount++; e.totalUsage++; }
         });
         (art.images || []).forEach(img => {
-          (img.tags || []).forEach(t => {
+          normalizeTagList(img.tags).forEach(t => {
             const e = ensure(t);
             if (e) { e.imagesCount++; e.totalUsage++; }
           });
@@ -1014,7 +1035,9 @@
       renderApp();
     }
 
-    function toggleTag(tag) {
+    function toggleTag(rawTag) {
+      const tag = normalizeTag(rawTag);
+      if (!tag) return;
       const idx = state.selectedTags.indexOf(tag);
       if (idx >= 0) state.selectedTags.splice(idx, 1);
       else state.selectedTags.push(tag);
@@ -1037,12 +1060,12 @@
       }
     }
 
-    // Al pulsar un tag en el Directorio Global de Tags, busca por ese tag en toda la biblioteca
-    function exploreTagGlobally(tag) {
+    function exploreTagGlobally(rawTag) {
+      const tag = normalizeTag(rawTag);
       state.category = 'tags';
       state.selectedArtistId = null;
       state.selectedComicId = null;
-      state.selectedTags = [tag];
+      state.selectedTags = tag ? [tag] : [];
       state.searchQuery = '';
       state.currentPage = 1;
       document.getElementById('search-input').value = '';
@@ -1128,36 +1151,36 @@
     }
 
     function getAllTagsInArtistSubtree(art) {
-      const set = new Set(art.tags || []);
+      const set = new Set(normalizeTagList(art.tags));
       if (state.category === 'historia') {
-        (art.stories || []).forEach(st => (st.tags || []).forEach(t => set.add(t)));
+        (art.stories || []).forEach(st => normalizeTagList(st.tags).forEach(t => set.add(t)));
       } else if (state.category === 'comics') {
         (art.comics || []).forEach(com => {
-          (com.tags || []).forEach(t => set.add(t));
-          (com.pages || []).forEach(pg => (pg.tags || []).forEach(t => set.add(t)));
+          normalizeTagList(com.tags).forEach(t => set.add(t));
+          (com.pages || []).forEach(pg => normalizeTagList(pg.tags).forEach(t => set.add(t)));
         });
       } else if (state.category === 'artistas') {
-        (art.images || []).forEach(img => (img.tags || []).forEach(t => set.add(t)));
+        (art.images || []).forEach(img => normalizeTagList(img.tags).forEach(t => set.add(t)));
       }
       return Array.from(set);
     }
 
     function getAllTagsInComicSubtree(com) {
-      const set = new Set(com.tags || []);
-      (com.pages || []).forEach(pg => (pg.tags || []).forEach(t => set.add(t)));
+      const set = new Set(normalizeTagList(com.tags));
+      (com.pages || []).forEach(pg => normalizeTagList(pg.tags).forEach(t => set.add(t)));
       return Array.from(set);
     }
 
     function matchesSearchAndTags(name, tagsArray, extraSearchTexts = []) {
-      const tags = tagsArray || [];
+      const tags = normalizeTagList(tagsArray);
       if (state.selectedTags.length > 0) {
-        const hasAll = state.selectedTags.every(t => tags.includes(t));
+        const hasAll = state.selectedTags.every(t => tags.includes(normalizeTag(t)));
         if (!hasAll) return false;
       }
       if (state.searchQuery) {
         const q = state.searchQuery.replace(/^#/, '');
         const inName = String(name || '').toLowerCase().includes(q);
-        const inTags = tags.some(t => t.toLowerCase().includes(q));
+        const inTags = tags.some(t => t.includes(q));
         const inExtra = extraSearchTexts.some(txt => String(txt || '').toLowerCase().includes(q));
         if (!inName && !inTags && !inExtra) return false;
       }
@@ -1200,7 +1223,6 @@
     function renderApp() {
       const globalTagStats = computeGlobalTagStats();
 
-      // Contadores del sidebar
       document.getElementById('count-historia').textContent = state.data.historiaArtists.length;
       document.getElementById('count-comics').textContent = state.data.comicArtists.length;
       document.getElementById('count-artistas').textContent = state.data.artArtists.length;
@@ -1209,11 +1231,9 @@
       const art = getCurrentArtist();
       const com = getCurrentComic();
 
-      // Mostrar/ocultar filtro de formato en Historia
       const showFmt = state.category === 'historia' && Boolean(art);
       document.getElementById('sidebar-format-box').classList.toggle('hidden', !showFmt);
 
-      // Etiquetas de botón primario y contexto
       let primaryLabel = 'Nuevo Artista';
       let ruleTitle = '';
       let ruleDesc = '';
@@ -1313,21 +1333,19 @@
       if (state.category === 'tags') {
         globalTagStats.forEach(s => allTags.add(s.tag));
       } else if (!art) {
-        // Nivel raíz: incluir todos los tags del artista + subcarpetas
         getArtistArrayByCategory().forEach(a => {
           getAllTagsInArtistSubtree(a).forEach(t => allTags.add(t));
         });
       } else if (state.category === 'historia') {
-        (art.stories || []).forEach(s => (s.tags || []).forEach(t => allTags.add(t)));
+        (art.stories || []).forEach(s => normalizeTagList(s.tags).forEach(t => allTags.add(t)));
       } else if (state.category === 'artistas') {
-        (art.images || []).forEach(i => (i.tags || []).forEach(t => allTags.add(t)));
+        (art.images || []).forEach(i => normalizeTagList(i.tags).forEach(t => allTags.add(t)));
       } else if (state.category === 'comics' && !com) {
         (art.comics || []).forEach(c => getAllTagsInComicSubtree(c).forEach(t => allTags.add(t)));
       } else if (state.category === 'comics' && com) {
-        (com.pages || []).forEach(p => (p.tags || []).forEach(t => allTags.add(t)));
+        (com.pages || []).forEach(p => normalizeTagList(p.tags).forEach(t => allTags.add(t)));
       }
 
-      // Orden alfabético estricto
       const sortedTags = Array.from(allTags).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
       if (sortedTags.length === 0) {
@@ -1404,14 +1422,16 @@
           return;
         }
 
-        // Si se seleccionó un tag en el directorio, mostrar todos los resultados globales
-        const hasAll = (tags) => state.selectedTags.every(t => (tags || []).includes(t));
+        const hasAll = (tags) => {
+          const norm = normalizeTagList(tags);
+          return state.selectedTags.every(t => norm.includes(normalizeTag(t)));
+        };
         const globalResults = [];
 
         state.data.artArtists.forEach(a => {
           (a.images || []).forEach(img => {
             if (hasAll([...(a.tags || []), ...(img.tags || [])])) {
-              globalResults.push({ kind: 'art-img', artist: a, item: img, name: img.name, createdAt: img.createdAt });
+              globalResults.push({ kind: 'art-img', artist: a, item: img, name: img.name, createdAt: img.createdAt, id: img.id });
             }
           });
         });
@@ -1419,7 +1439,7 @@
           (a.comics || []).forEach(c => {
             (c.pages || []).forEach(pg => {
               if (hasAll([...(a.tags || []), ...(c.tags || []), ...(pg.tags || [])])) {
-                globalResults.push({ kind: 'comic-page', artist: a, comic: c, item: pg, name: `${c.title} — ${pg.name}`, createdAt: pg.createdAt });
+                globalResults.push({ kind: 'comic-page', artist: a, comic: c, item: pg, name: `${c.title} — ${pg.name}`, createdAt: pg.createdAt, id: pg.id });
               }
             });
           });
@@ -1427,7 +1447,7 @@
         state.data.historiaArtists.forEach(a => {
           (a.stories || []).forEach(st => {
             if (hasAll([...(a.tags || []), ...(st.tags || [])])) {
-              globalResults.push({ kind: 'story', artist: a, item: st, name: st.title, createdAt: st.createdAt });
+              globalResults.push({ kind: 'story', artist: a, item: st, name: st.title, createdAt: st.createdAt, id: st.id });
             }
           });
         });
@@ -1488,18 +1508,16 @@
       if (!art) {
         const hasCrossFilter = state.selectedTags.length > 0 || state.searchQuery.length > 0;
 
-        // Si hay tags seleccionados o búsqueda activa en Artistas, Comics o Historia,
-        // mostramos directamente TODOS los elementos coincidentes de TODOS los artistas
         if (hasCrossFilter) {
           const matchesQueryAndTags = (itemName, itemTags, artistName) => {
-            const tags = itemTags || [];
+            const tags = normalizeTagList(itemTags);
             if (state.selectedTags.length > 0) {
-              if (!state.selectedTags.every(t => tags.includes(t))) return false;
+              if (!state.selectedTags.every(t => tags.includes(normalizeTag(t)))) return false;
             }
             if (state.searchQuery) {
               const q = state.searchQuery.replace(/^#/, '');
               const inName = String(itemName || '').toLowerCase().includes(q);
-              const inTags = tags.some(t => t.toLowerCase().includes(q));
+              const inTags = tags.some(t => t.includes(q));
               const inArtist = String(artistName || '').toLowerCase().includes(q);
               if (!inName && !inTags && !inArtist) return false;
             }
@@ -1512,7 +1530,7 @@
               (a.images || []).forEach(img => {
                 const combinedTags = [...new Set([...(a.tags || []), ...(img.tags || [])])];
                 if (matchesQueryAndTags(img.name, combinedTags, a.name)) {
-                  crossImages.push({ artist: a, img, createdAt: img.createdAt, name: img.name });
+                  crossImages.push({ artist: a, img, createdAt: img.createdAt, name: img.name, id: img.id });
                 }
               });
             });
@@ -1542,7 +1560,7 @@
               const img = entry.img;
               const imgIdAttr = `cross-art-img-${img.id}`;
               const displayUrl = getResolvedDisplayUrl(img.driveFileId, img.url, imgIdAttr);
-              const tagsHtml = (img.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+              const tagsHtml = normalizeTagList(img.tags).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
               return `
                 <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
                   <div onclick="openCrossArtistImagesLightbox(${globalFilteredIdx})" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
@@ -1574,7 +1592,7 @@
               (a.comics || []).forEach(c => {
                 const combinedTags = [...new Set([...(a.tags || []), ...getAllTagsInComicSubtree(c)])];
                 if (matchesQueryAndTags(c.title, combinedTags, a.name)) {
-                  crossComics.push({ artist: a, comic: c, createdAt: c.createdAt, name: c.title });
+                  crossComics.push({ artist: a, comic: c, createdAt: c.createdAt, name: c.title, id: c.id });
                 }
               });
             });
@@ -1606,7 +1624,7 @@
               const coverUrl = firstPage
                 ? getResolvedDisplayUrl(firstPage.driveFileId, firstPage.url, imgIdAttr)
                 : svgCover('#312e81', '#6d28d9', c.title.slice(0, 18), 'Sin páginas aún', '💬');
-              const tagsHtml = (c.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+              const tagsHtml = normalizeTagList(c.tags).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
               return `
                 <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
                   <div onclick="openArtist('${entry.artist.id}');openComic('${c.id}');" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
@@ -1634,7 +1652,7 @@
               (a.stories || []).forEach(st => {
                 const combinedTags = [...new Set([...(a.tags || []), ...(st.tags || [])])];
                 if (matchesQueryAndTags(st.title, combinedTags, a.name)) {
-                  crossStories.push({ artist: a, story: st, createdAt: st.createdAt, name: st.title });
+                  crossStories.push({ artist: a, story: st, createdAt: st.createdAt, name: st.title, id: st.id });
                 }
               });
             });
@@ -1665,7 +1683,7 @@
               const previewUrl = st.format === 'image'
                 ? getResolvedDisplayUrl(st.driveFileId, st.url, imgIdAttr)
                 : svgCover('#1e293b', '#312e81', st.format.toUpperCase(), st.title.slice(0, 22), getFormatIcon(st.format));
-              const tagsHtml = (st.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+              const tagsHtml = normalizeTagList(st.tags).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
               return `
                 <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
                   <div onclick="openArtist('${entry.artist.id}');openStoryViewer('${st.id}');" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
@@ -1701,7 +1719,7 @@
             </a>
           `).join('');
 
-          const tagsHtml = (a.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const tagsHtml = normalizeTagList(a.tags).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
           const dateLabel = formatShortDate(a.createdAt);
 
           return `
@@ -1755,7 +1773,7 @@
           const previewUrl = st.format === 'image'
             ? getResolvedDisplayUrl(st.driveFileId, st.url, imgIdAttr)
             : svgCover('#1e293b', '#312e81', st.format.toUpperCase(), st.title.slice(0, 22), getFormatIcon(st.format));
-          const tagsHtml = (st.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const tagsHtml = normalizeTagList(st.tags).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
           const dateLabel = formatShortDate(st.createdAt);
 
           return `
@@ -1803,7 +1821,7 @@
           const globalFilteredIdx = startIndex + idxOnPage;
           const imgIdAttr = `art-img-${img.id}`;
           const displayUrl = getResolvedDisplayUrl(img.driveFileId, img.url, imgIdAttr);
-          const tagsHtml = (img.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const tagsHtml = normalizeTagList(img.tags).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
           const dateLabel = formatShortDate(img.createdAt);
 
           return `
@@ -1856,7 +1874,7 @@
           const coverUrl = firstPage
             ? getResolvedDisplayUrl(firstPage.driveFileId, firstPage.url, imgIdAttr)
             : svgCover('#312e81', '#6d28d9', c.title.slice(0, 18), 'Sin páginas aún', '💬');
-          const tagsHtml = (c.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const tagsHtml = normalizeTagList(c.tags).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
           const isInProgress = c.status === 'En progreso';
           const dateLabel = formatShortDate(c.createdAt);
 
@@ -1905,7 +1923,7 @@
           const globalFilteredIdx = startIndex + idxOnPage;
           const imgIdAttr = `comic-pg-${pg.id}`;
           const displayUrl = getResolvedDisplayUrl(pg.driveFileId, pg.url, imgIdAttr);
-          const tagsHtml = (pg.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const tagsHtml = normalizeTagList(pg.tags).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
           const dateLabel = formatShortDate(pg.createdAt);
 
           return `
@@ -1941,7 +1959,7 @@
     }
 
     // =========================================================
-    // SISTEMA DE BORRADO CON DOBLE ADVERTENCIA PARA ARTISTAS
+    // SISTEMA DE BORRADO CON DOBLE ADVERTENCIA
     // =========================================================
     function openDeleteConfirmModal({ target, hasChildren, title, step1Html, step2Html }) {
       state.deleteTarget = target;
@@ -1983,7 +2001,6 @@
     function proceedDeleteModal() {
       if (!state.deleteTarget) return;
 
-      // Si tiene doble advertencia y estamos en paso 1, pasamos al paso 2
       if (state.deleteHasDoubleWarning && state.deleteStep === 1) {
         state.deleteStep = 2;
         document.getElementById('del-modal-step-badge').textContent = '⚠️ SEGUNDA ADVERTENCIA (2 de 2) — Acción irreversible';
@@ -2058,20 +2075,6 @@
         title: 'Borrar Imagen',
         step1Html: `<p>¿Seguro que deseas eliminar la imagen <b>"${escapeHtml(img.name)}"</b>?</p>`,
         step2Html: `<p class="text-rose-200 font-semibold">Esta acción eliminará la imagen de tu artista y la enviará a la papelera de Drive.</p>`
-      });
-    }
-
-    function promptDeleteArtistImage(imageId) {
-      const art = getCurrentArtist();
-      if (!art) return;
-      const img = (art.images || []).find(i => i.id === imageId);
-      if (!img) return;
-
-      openDeleteConfirmModal({
-        target: { type: 'art-img', artistId: art.id, imageId },
-        hasChildren: false,
-        title: 'Borrar Imagen',
-        step1Html: `<p>¿Seguro que deseas eliminar la imagen <b>"${escapeHtml(img.name)}"</b>?</p>`
       });
     }
 
@@ -2175,7 +2178,6 @@
 
       renderApp();
 
-      // Enviar archivos borrados a la papelera de Drive en segundo plano si está conectado
       if (state.drive.connected && driveIdsToTrash.length > 0) {
         for (const fid of driveIdsToTrash) {
           trashDriveFile(fid).catch(() => {});
@@ -2185,9 +2187,9 @@
     }
 
     // =========================================================
-    // RENDERIZADO DE TOP 10 TAGS EN MODALES (Fácil de pulsar)
+    // RENDERIZADO DE TOP 10 TAGS EN MODALES
     // =========================================================
-    function renderTop10TagButtons(containerId, getCurrentTagsFn, setCurrentTagsFn) {
+    function renderTop10TagButtons(containerId, getCurrentTagsFn) {
       const container = document.getElementById(containerId);
       if (!container) return;
       const top10 = getTop10Tags();
@@ -2196,7 +2198,7 @@
         return;
       }
 
-      const activeTags = getCurrentTagsFn();
+      const activeTags = normalizeTagList(getCurrentTagsFn());
       container.innerHTML = top10.map(item => {
         const isSelected = activeTags.includes(item.tag);
         return `
@@ -2211,7 +2213,8 @@
       }).join('');
     }
 
-    function toggleQuickTopTag(containerId, tag) {
+    function toggleQuickTopTag(containerId, rawTag) {
+      const tag = normalizeTag(rawTag);
       if (containerId === 'artist-top-tags') {
         const inp = document.getElementById('artist-tags-input');
         const list = parseTags(inp.value);
@@ -2297,7 +2300,7 @@
       document.getElementById('artist-url-1').value = (art.urls || [])[0] || '';
       document.getElementById('artist-url-2').value = (art.urls || [])[1] || '';
       document.getElementById('artist-url-3').value = (art.urls || [])[2] || '';
-      document.getElementById('artist-tags-input').value = (art.tags || []).join(', ');
+      document.getElementById('artist-tags-input').value = normalizeTagList(art.tags).join(', ');
       document.getElementById('artist-modal-delete-btn').classList.remove('hidden');
       renderTop10TagButtons('artist-top-tags', () => parseTags(document.getElementById('artist-tags-input').value));
 
@@ -2519,12 +2522,13 @@
           }
         }
 
-        const nowIso = new Date().toISOString();
+        const baseNow = Date.now();
+        const nowIso = new Date(baseNow).toISOString();
 
         if (mode === 'story') {
           const rec = uploadedRecords[0];
           art.stories.unshift({
-            id: 'st-' + Date.now(),
+            id: 'st-' + baseNow,
             title,
             format: detectStoryFormat(rec.file),
             tags,
@@ -2536,10 +2540,10 @@
         } else if (mode === 'artist-images') {
           uploadedRecords.forEach((rec, i) => {
             art.images.unshift({
-              id: 'img-' + Date.now() + '-' + i,
+              id: 'img-' + (baseNow + i) + '-' + i,
               name: rec.file.name.replace(/\.[^/.]+$/, ''),
               tags: [...tags],
-              createdAt: new Date(Date.now() + i).toISOString(),
+              createdAt: new Date(baseNow + i).toISOString(),
               url: rec.url,
               driveFileId: rec.driveFileId
             });
@@ -2548,15 +2552,15 @@
         } else if (mode === 'new-comic') {
           const status = document.getElementById('upload-comic-status').value;
           const pages = uploadedRecords.map((rec, i) => ({
-            id: 'cp-' + Date.now() + '-' + i,
+            id: 'cp-' + (baseNow + i) + '-' + i,
             name: rec.file.name.replace(/\.[^/.]+$/, '') || `Página ${i + 1}`,
             tags: [...tags],
-            createdAt: new Date(Date.now() + i).toISOString(),
+            createdAt: new Date(baseNow + i).toISOString(),
             url: rec.url,
             driveFileId: rec.driveFileId
           }));
           art.comics.unshift({
-            id: 'comic-' + Date.now(),
+            id: 'comic-' + baseNow,
             title,
             status,
             tags,
@@ -2570,10 +2574,10 @@
             const baseCount = com.pages.length;
             uploadedRecords.forEach((rec, i) => {
               com.pages.push({
-                id: 'cp-' + Date.now() + '-' + i,
+                id: 'cp-' + (baseNow + i) + '-' + i,
                 name: rec.file.name.replace(/\.[^/.]+$/, '') || `Página ${baseCount + i + 1}`,
                 tags: [...tags],
-                createdAt: new Date(Date.now() + i).toISOString(),
+                createdAt: new Date(baseNow + i).toISOString(),
                 url: rec.url,
                 driveFileId: rec.driveFileId
               });
@@ -2601,33 +2605,45 @@
       const art = getCurrentArtist();
       const st = art ? (art.stories || []).find(s => s.id === storyId) : null;
       if (!st) return;
-      openEditItemModal({ type: 'story', id: st.id }, st.title, st.tags || [], null);
+      openEditItemModal({ type: 'story', id: st.id }, st.title, normalizeTagList(st.tags), null);
     }
 
     function openEditArtistImageModal(imageId) {
-      const art = getCurrentArtist();
-      const img = art ? (art.images || []).find(i => i.id === imageId) : null;
+      let art = getCurrentArtist();
+      let img = art ? (art.images || []).find(i => i.id === imageId) : null;
+      if (!img) {
+        state.data.artArtists.forEach(a => {
+          const found = (a.images || []).find(i => i.id === imageId);
+          if (found) img = found;
+        });
+      }
       if (!img) return;
-      openEditItemModal({ type: 'artist-image', id: img.id }, img.name, img.tags || [], null);
+      openEditItemModal({ type: 'artist-image', id: img.id }, img.name, normalizeTagList(img.tags), null);
     }
 
     function openEditComicModal(comicId) {
       const art = getCurrentArtist();
       const c = art ? (art.comics || []).find(x => x.id === comicId) : null;
       if (!c) return;
-      openEditItemModal({ type: 'comic', id: c.id }, c.title, c.tags || [], c.status || 'En progreso');
+      openEditItemModal({ type: 'comic', id: c.id }, c.title, normalizeTagList(c.tags), c.status || 'En progreso');
     }
 
     function openEditComicPageModal(pageId) {
       const com = getCurrentComic();
-      const pg = com ? (com.pages || []).find(p => p.id === pageId) : null;
+      let pg = com ? (com.pages || []).find(p => p.id === pageId) : null;
+      if (!pg) {
+        state.data.comicArtists.forEach(a => (a.comics || []).forEach(c => {
+          const found = (c.pages || []).find(p => p.id === pageId);
+          if (found) pg = found;
+        }));
+      }
       if (!pg) return;
-      openEditItemModal({ type: 'comic-page', id: pg.id }, pg.name, pg.tags || [], null);
+      openEditItemModal({ type: 'comic-page', id: pg.id }, pg.name, normalizeTagList(pg.tags), null);
     }
 
     function openEditItemModal(target, currentName, currentTags, comicStatus) {
       state.editTarget = target;
-      state.editTagsBuffer = [...currentTags];
+      state.editTagsBuffer = normalizeTagList(currentTags);
       document.getElementById('edit-item-name-input').value = currentName;
       document.getElementById('edit-new-tag-input').value = '';
 
@@ -2679,7 +2695,8 @@
       renderTop10TagButtons('edit-top-tags', () => state.editTagsBuffer);
     }
 
-    function removeTagInEditModal(tag) {
+    function removeTagInEditModal(rawTag) {
+      const tag = normalizeTag(rawTag);
       state.editTagsBuffer = state.editTagsBuffer.filter(t => t !== tag);
       renderEditTagsChips();
       renderTop10TagButtons('edit-top-tags', () => state.editTagsBuffer);
@@ -2704,7 +2721,6 @@
           if (state.activeStoryId === st.id) document.getElementById('mv-title').textContent = newName;
         }
       } else if (target.type === 'artist-image') {
-        // Buscar en artista activo o globalmente si venimos de vista Tags
         let img = art ? (art.images || []).find(i => i.id === target.id) : null;
         if (!img) {
           state.data.artArtists.forEach(a => {
@@ -2743,6 +2759,12 @@
       renderApp();
 
       if (!document.getElementById('lightbox-modal').classList.contains('hidden')) {
+        const active = state.lightboxList[state.lightboxIndex];
+        if (active && active.id === target.id) {
+          active.title = newName;
+          active.rawName = newName;
+          active.tags = [...state.editTagsBuffer];
+        }
         updateLightboxSlide();
       }
       showToast('Cambios guardados', '✅');
@@ -2766,7 +2788,7 @@
         rawName: pg.name,
         url: pg.url,
         driveFileId: pg.driveFileId,
-        tags: pg.tags || []
+        tags: normalizeTagList(pg.tags)
       }));
       state.lightboxIndex = index;
       launchLightbox();
@@ -2784,7 +2806,7 @@
         title: img.name,
         url: img.url,
         driveFileId: img.driveFileId,
-        tags: img.tags || []
+        tags: normalizeTagList(img.tags)
       }));
       state.lightboxIndex = index;
       launchLightbox();
@@ -2792,12 +2814,12 @@
 
     function openCrossArtistImagesLightbox(index) {
       const matchesQueryAndTags = (itemName, itemTags, artistName) => {
-        const tags = itemTags || [];
-        if (state.selectedTags.length > 0 && !state.selectedTags.every(t => tags.includes(t))) return false;
+        const tags = normalizeTagList(itemTags);
+        if (state.selectedTags.length > 0 && !state.selectedTags.every(t => tags.includes(normalizeTag(t)))) return false;
         if (state.searchQuery) {
           const q = state.searchQuery.replace(/^#/, '');
           if (!String(itemName || '').toLowerCase().includes(q) &&
-              !tags.some(t => t.toLowerCase().includes(q)) &&
+              !tags.some(t => t.includes(q)) &&
               !String(artistName || '').toLowerCase().includes(q)) return false;
         }
         return true;
@@ -2808,7 +2830,7 @@
         (a.images || []).forEach(img => {
           const combinedTags = [...new Set([...(a.tags || []), ...(img.tags || [])])];
           if (matchesQueryAndTags(img.name, combinedTags, a.name)) {
-            crossImages.push({ artist: a, img, createdAt: img.createdAt, name: img.name });
+            crossImages.push({ artist: a, img, createdAt: img.createdAt, name: img.name, id: img.id });
           }
         });
       });
@@ -2822,20 +2844,23 @@
         rawName: entry.img.name,
         url: entry.img.url,
         driveFileId: entry.img.driveFileId,
-        tags: entry.img.tags || []
+        tags: normalizeTagList(entry.img.tags)
       }));
       state.lightboxIndex = index;
       launchLightbox();
     }
 
     function openGlobalImageInLightbox(type, artistId, comicId, imageId) {
-      const hasAll = (tags) => state.selectedTags.every(t => (tags || []).includes(t));
+      const hasAll = (tags) => {
+        const norm = normalizeTagList(tags);
+        return state.selectedTags.every(t => norm.includes(normalizeTag(t)));
+      };
       const list = [];
 
       if (type === 'art-img') {
         const a = state.data.artArtists.find(x => x.id === artistId);
         if (!a) return;
-        sortItems((a.images || []).filter(i => hasAll(i.tags)), i => i.name).forEach(img => {
+        sortItems((a.images || []).filter(i => hasAll([...(a.tags || []), ...(i.tags || [])])), i => i.name).forEach(img => {
           list.push({
             id: img.id,
             artistId: a.id,
@@ -2843,14 +2868,14 @@
             title: img.name,
             url: img.url,
             driveFileId: img.driveFileId,
-            tags: img.tags || []
+            tags: normalizeTagList(img.tags)
           });
         });
       } else {
         const a = state.data.comicArtists.find(x => x.id === artistId);
         const c = a ? (a.comics || []).find(x => x.id === comicId) : null;
         if (!a || !c) return;
-        sortItems((c.pages || []).filter(p => hasAll(p.tags)), p => p.name).forEach(pg => {
+        sortItems((c.pages || []).filter(p => hasAll([...(a.tags || []), ...(c.tags || []), ...(p.tags || [])])), p => p.name).forEach(pg => {
           list.push({
             id: pg.id,
             artistId: a.id,
@@ -2860,7 +2885,7 @@
             rawName: pg.name,
             url: pg.url,
             driveFileId: pg.driveFileId,
-            tags: pg.tags || []
+            tags: normalizeTagList(pg.tags)
           });
         });
       }
@@ -3083,8 +3108,8 @@
     document.addEventListener('keydown', (e) => {
       if (document.getElementById('lightbox-modal').classList.contains('hidden')) return;
       if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowRight') stepLightbox(1);
-      if (e.key === 'ArrowLeft') stepLightbox(-1);
+      if (e.key === 'ArrowLeft') stepLightbox(1);
+      if (e.key === 'ArrowRight') stepLightbox(-1);
     });
 
     // =========================================================
@@ -3153,11 +3178,11 @@
     }
 
     // =========================================================
-    // INTEGRACIÓN REAL CON GOOGLE DRIVE API + BLOB URLS
+    // INTEGRACIÓN CON GOOGLE DRIVE (Claves guardadas solo en navegador)
     // =========================================================
     function openDriveModal() {
-      document.getElementById('drive-client-id').value = state.drive.clientId || DEFAULT_GOOGLE_CLIENT_ID;
-      document.getElementById('drive-api-key').value = state.drive.apiKey || DEFAULT_GOOGLE_API_KEY;
+      document.getElementById('drive-client-id').value = state.drive.clientId || localStorage.getItem('gdrive_client_id') || '';
+      document.getElementById('drive-api-key').value = state.drive.apiKey || localStorage.getItem('gdrive_api_key') || '';
       document.getElementById('drive-logout-btn').classList.toggle('hidden', !state.drive.connected);
       const modal = document.getElementById('drive-modal');
       modal.classList.remove('hidden');
@@ -3204,20 +3229,22 @@
       showToast('Desconectado de Google Drive', 'ℹ️');
     }
 
-    function initGoogleDriveClient(silentAuto = false) {
-      const clientId = (state.drive.clientId || DEFAULT_GOOGLE_CLIENT_ID).trim();
-      const apiKey = (state.drive.apiKey || DEFAULT_GOOGLE_API_KEY).trim();
+    function saveAndConnectDrive() {
+      const clientId = document.getElementById('drive-client-id').value.trim();
+      const apiKey = document.getElementById('drive-api-key').value.trim();
+
+      if (!clientId || !apiKey) {
+        showToast('Ingresa tu Client ID y tu API Key', '⚠️');
+        return;
+      }
+
       state.drive.clientId = clientId;
       state.drive.apiKey = apiKey;
       localStorage.setItem('gdrive_client_id', clientId);
       localStorage.setItem('gdrive_api_key', apiKey);
 
       if (!window.google || !window.gapi) {
-        if (silentAuto) {
-          setTimeout(() => initGoogleDriveClient(true), 600);
-        } else {
-          showToast('Cargando librerías de Google, intenta en 1 segundo...', '⏳');
-        }
+        showToast('Cargando librerías de Google, pulsa de nuevo en 1 segundo...', '⏳');
         return;
       }
 
@@ -3233,7 +3260,7 @@
             scope: 'https://www.googleapis.com/auth/drive.file',
             callback: async (tokenResponse) => {
               if (tokenResponse.error) {
-                if (!silentAuto) showToast('Error OAuth: ' + tokenResponse.error, '❌');
+                showToast('Error OAuth: ' + tokenResponse.error, '❌');
                 return;
               }
               state.drive.accessToken = tokenResponse.access_token;
@@ -3245,35 +3272,12 @@
             }
           });
 
-          // Solo abrir el popup tras un clic explícito del usuario para evitar bloqueo del navegador
-          if (!silentAuto) {
-            state.drive.tokenClient.requestAccessToken({ prompt: 'consent' });
-          }
+          state.drive.tokenClient.requestAccessToken({ prompt: 'consent' });
         } catch (err) {
           console.error(err);
-          if (!silentAuto) showToast('Error iniciando Google API', '❌');
+          showToast('Error iniciando Google API. Revisa tus claves.', '❌');
         }
       });
-    }
-
-    function quickConnectGoogleDrive() {
-      if (state.drive.connected) {
-        openDriveModal();
-      } else if (state.drive.tokenClient) {
-        state.drive.tokenClient.requestAccessToken({ prompt: 'consent' });
-      } else {
-        initGoogleDriveClient(false);
-      }
-    }
-
-    function saveAndConnectDrive() {
-      const clientId = document.getElementById('drive-client-id').value.trim() || DEFAULT_GOOGLE_CLIENT_ID;
-      const apiKey = document.getElementById('drive-api-key').value.trim() || DEFAULT_GOOGLE_API_KEY;
-      state.drive.clientId = clientId;
-      state.drive.apiKey = apiKey;
-      localStorage.setItem('gdrive_client_id', clientId);
-      localStorage.setItem('gdrive_api_key', apiKey);
-      initGoogleDriveClient(false);
     }
 
     function getResolvedDisplayUrl(driveFileId, fallbackUrl, imgElementId) {
@@ -3429,12 +3433,12 @@
     }
 
     // =========================================================
-    // INICIALIZACIÓN
+    // INICIALIZACIÓN: SIEMPRE ABRE EL MODAL DE CONEXIÓN AL ENTRAR
     // =========================================================
     updateDriveStatusUI();
     renderApp();
     window.addEventListener('load', () => {
-      initGoogleDriveClient(true);
+      openDriveModal();
     });
   </script>
 </body>
