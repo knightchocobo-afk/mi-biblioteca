@@ -161,11 +161,15 @@
       </div>
     </div>
 
-    <!-- Pie Sidebar: Google Drive & Subida -->
+    <!-- Pie Sidebar: Google Drive, Escanear Drive & Subida -->
     <div class="p-3 border-t border-slate-800/80 space-y-2">
       <button onclick="triggerPrimaryAddAction()" id="sidebar-primary-btn" class="touch-btn w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 transition">
         <span class="text-lg">＋</span>
         <span id="sidebar-primary-label">Nuevo Artista</span>
+      </button>
+      <button onclick="openDriveScannerModal()" id="sidebar-scan-btn" class="hidden touch-btn w-full py-2.5 px-4 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/35 border border-cyan-500/40 text-cyan-200 font-semibold text-xs flex items-center justify-center gap-2 transition">
+        <span>🔄</span>
+        <span id="sidebar-scan-label">Detectar archivos en Drive</span>
       </button>
       <button onclick="openDriveModal()" class="touch-btn w-full py-2.5 px-4 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-slate-200 font-medium text-xs flex items-center justify-center gap-2 transition">
         <span>🛡️</span>
@@ -178,14 +182,14 @@
   <main class="flex-1 flex flex-col min-w-0 bg-slate-950">
     <!-- Barra Superior -->
     <header class="bg-slate-925/95 backdrop-blur border-b border-slate-800/80 px-3 sm:px-5 py-3 flex flex-col gap-2.5 z-20">
-      <div class="flex items-center gap-2.5">
+      <div class="flex items-center gap-2">
         <!-- Botón Hamburguesa Tablet/Móvil -->
         <button onclick="toggleSidebar(true)" class="touch-btn lg:hidden flex items-center justify-center rounded-xl bg-slate-850 border border-slate-700/80 text-slate-200 hover:bg-slate-800" aria-label="Abrir menú">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
 
         <!-- Buscador Global y Local -->
-        <div class="relative flex-1">
+        <div class="relative flex-1 min-w-0">
           <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">🔍</span>
           <input
             id="search-input"
@@ -204,7 +208,7 @@
           id="sort-select"
           onchange="setSortOrder(this.value)"
           aria-label="Ordenar elementos"
-          class="touch-btn h-11 px-3 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm font-medium text-slate-200 focus:outline-none focus:border-indigo-500 shrink-0"
+          class="touch-btn h-11 px-2.5 sm:px-3 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm font-medium text-slate-200 focus:outline-none focus:border-indigo-500 shrink-0"
         >
           <option value="date-desc">🕒 Subida: Más recientes</option>
           <option value="date-asc">🕒 Subida: Más antiguos</option>
@@ -213,9 +217,16 @@
         </select>
 
         <!-- Botón de acción contextual -->
-        <button onclick="triggerPrimaryAddAction()" class="touch-btn px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center gap-1.5 shrink-0 shadow-md shadow-indigo-600/20">
+        <button onclick="triggerPrimaryAddAction()" class="touch-btn px-3 sm:px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center gap-1.5 shrink-0 shadow-md shadow-indigo-600/20">
           <span class="text-lg">＋</span>
           <span id="header-primary-label" class="hidden sm:inline">Nuevo Artista</span>
+        </button>
+
+        <!-- Botón Escanear Archivos Directos de Drive -->
+        <button onclick="openDriveScannerModal()" id="header-scan-btn" class="hidden touch-btn px-2.5 sm:px-3 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/35 border border-cyan-500/40 text-cyan-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 relative" title="Detectar archivos subidos directamente a Google Drive">
+          <span>🔄</span>
+          <span class="hidden xl:inline">Escanear Drive</span>
+          <span id="untracked-drive-badge" class="hidden -top-1.5 -right-1.5 absolute px-1.5 py-0.5 rounded-full bg-cyan-500 text-slate-950 font-extrabold text-[10px] leading-none shadow">0</span>
         </button>
 
         <!-- Botón directo Conectar Google Drive y Resguardos en cabecera -->
@@ -618,6 +629,82 @@
     </div>
   </div>
 
+  <!-- ========================================================= -->
+  <!-- MODAL 8: ESCÁNER E IMPORTADOR DIRECTO DESDE GOOGLE DRIVE  -->
+  <!-- ========================================================= -->
+  <div id="drive-scanner-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-925 border border-cyan-500/40 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+        <div>
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">🔄 Archivos Directos en Google Drive</h3>
+          <p class="text-xs text-slate-400">Detecta archivos subidos directamente a tu carpeta <code class="text-cyan-300">Mi_Biblioteca_Multimedia</code> que aún no están catalogados en la página.</p>
+        </div>
+        <button onclick="closeDriveScannerModal()" class="touch-btn rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">✕</button>
+      </div>
+
+      <!-- Barra de selección rápida + re-escaneo -->
+      <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900/80 border border-slate-800 rounded-xl px-3.5 py-2.5 shrink-0">
+        <div class="flex items-center gap-2">
+          <button onclick="toggleSelectAllUntracked(true)" class="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200">
+            Seleccionar todos
+          </button>
+          <button onclick="toggleSelectAllUntracked(false)" class="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-400">
+            Ninguno
+          </button>
+          <span id="scanner-selected-count" class="text-xs text-cyan-300 font-bold ml-1">0 seleccionados</span>
+        </div>
+        <button onclick="scanDriveForUntrackedFiles(true)" class="px-3 py-1.5 rounded-lg bg-cyan-600/25 hover:bg-cyan-600/40 border border-cyan-500/40 text-cyan-200 text-xs font-semibold flex items-center gap-1.5">
+          <span>↻</span> Volver a escanear carpeta
+        </button>
+      </div>
+
+      <!-- Lista de archivos detectados en Drive -->
+      <div id="scanner-files-list" class="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[160px]">
+        <p class="text-xs text-slate-400 py-6 text-center">Escaneando carpeta en Google Drive...</p>
+      </div>
+
+      <!-- Configuración de destino para importar -->
+      <div class="pt-3 border-t border-slate-800 space-y-3 shrink-0">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">1. Sección destino</label>
+            <select id="scanner-dest-category" onchange="populateScannerArtistOptions()" class="w-full h-11 px-3 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-cyan-500 focus:outline-none">
+              <option value="artistas">🎨 Artistas (Galería de Imágenes)</option>
+              <option value="comics">💬 Comics (Añadir páginas a un Cómic)</option>
+              <option value="historia">📖 Historia (Documentos / PDF / Videos)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">2. Artista destino</label>
+            <select id="scanner-dest-artist" onchange="populateScannerComicOptions()" class="w-full h-11 px-3 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-cyan-500 focus:outline-none">
+              <!-- Opciones dinámicas -->
+            </select>
+          </div>
+        </div>
+
+        <div id="scanner-dest-comic-box" class="hidden">
+          <label class="block text-xs font-semibold text-slate-300 mb-1">3. Cómic destino (o crea uno nuevo con estos archivos)</label>
+          <select id="scanner-dest-comic" onchange="toggleScannerNewComicTitle()" class="w-full h-11 px-3 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-cyan-500 focus:outline-none">
+            <!-- Opciones dinámicas -->
+          </select>
+          <input id="scanner-new-comic-title" type="text" placeholder="Título del nuevo cómic..." class="hidden mt-2 w-full h-10 px-3 rounded-xl bg-slate-900 border border-cyan-500/50 text-xs text-white focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Tags para los archivos importados (separados por coma)</label>
+          <input id="scanner-tags-input" type="text" placeholder="importado, ilustracion, nuevo..." class="w-full h-10 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-cyan-500 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <button onclick="closeDriveScannerModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-xs font-medium text-slate-300">Cancelar</button>
+          <button id="scanner-import-btn" onclick="importSelectedDriveFiles()" class="touch-btn px-5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-600/20">
+            <span>📥 Importar a la Biblioteca</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICACIONES -->
   <div id="toast" class="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl bg-slate-850 border border-slate-700 text-sm text-white shadow-2xl transform translate-y-24 opacity-0 transition-all duration-200 pointer-events-none flex items-center gap-2.5 max-w-sm">
     <span id="toast-icon">ℹ️</span>
@@ -773,7 +860,7 @@
       // Borrado seguro
       deleteTarget: null,
       deleteStep: 1,
-      // Google Drive y Resguardos
+      // Google Drive, Resguardos y Escáner de archivos directos
       drive: {
         connected: false,
         clientId: localStorage.getItem('gdrive_client_id') || '',
@@ -785,6 +872,8 @@
         activityLogFileId: null,
         activityLogLines: [],
         backupsList: [],
+        untrackedFiles: [],
+        selectedUntrackedIds: new Set(),
         tokenClient: null
       }
     };
@@ -915,7 +1004,6 @@
       renderApp();
     }
 
-    // Recopila estadísticas completas de TODOS los tags en toda la biblioteca
     function computeGlobalTagStats() {
       const map = new Map();
       const ensure = (t) => {
@@ -2547,9 +2635,9 @@
       }
     }
 
-    function detectStoryFormat(file) {
-      const mime = (file.type || '').toLowerCase();
-      const name = (file.name || '').toLowerCase();
+    function detectStoryFormat(fileOrMeta) {
+      const mime = String(fileOrMeta.type || fileOrMeta.mimeType || '').toLowerCase();
+      const name = String(fileOrMeta.name || '').toLowerCase();
       if (mime.includes('pdf') || name.endsWith('.pdf')) return 'pdf';
       if (mime.includes('word') || mime.includes('document') || name.endsWith('.doc') || name.endsWith('.docx')) return 'doc';
       if (mime.startsWith('video/') || /\.(mp4|webm|mov|mkv)$/.test(name)) return 'video';
@@ -3251,6 +3339,343 @@
     }
 
     // =========================================================
+    // DETECTOR E IMPORTADOR DIRECTO DE ARCHIVOS EN GOOGLE DRIVE
+    // =========================================================
+    function collectAllTrackedDriveIds() {
+      const ids = new Set();
+      if (state.drive.metadataFileId) ids.add(state.drive.metadataFileId);
+      if (state.drive.activityLogFileId) ids.add(state.drive.activityLogFileId);
+
+      (state.data.historiaArtists || []).forEach(a => {
+        if (a.coverDriveId) ids.add(a.coverDriveId);
+        (a.stories || []).forEach(s => { if (s.driveFileId) ids.add(s.driveFileId); });
+      });
+      (state.data.comicArtists || []).forEach(a => {
+        if (a.coverDriveId) ids.add(a.coverDriveId);
+        (a.comics || []).forEach(c => (c.pages || []).forEach(p => { if (p.driveFileId) ids.add(p.driveFileId); }));
+      });
+      (state.data.artArtists || []).forEach(a => {
+        if (a.coverDriveId) ids.add(a.coverDriveId);
+        (a.images || []).forEach(i => { if (i.driveFileId) ids.add(i.driveFileId); });
+      });
+      return ids;
+    }
+
+    function updateUntrackedDriveBadgeUI() {
+      const count = (state.drive.untrackedFiles || []).length;
+      const badge = document.getElementById('untracked-drive-badge');
+      const sideLabel = document.getElementById('sidebar-scan-label');
+      if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+      if (sideLabel) {
+        sideLabel.textContent = count > 0
+          ? `Archivos nuevos en Drive (${count})`
+          : 'Detectar archivos en Drive';
+      }
+    }
+
+    async function scanDriveForUntrackedFiles(notifyUser = false) {
+      if (!state.drive.connected || !state.drive.folderId) return [];
+      try {
+        let allFiles = [];
+        let pageToken = null;
+        do {
+          const resp = await gapi.client.drive.files.list({
+            q: `'${state.drive.folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false`,
+            pageSize: 100,
+            pageToken: pageToken || undefined,
+            fields: 'nextPageToken, files(id, name, mimeType, createdTime, size)'
+          });
+          allFiles = allFiles.concat(resp.result.files || []);
+          pageToken = resp.result.nextPageToken;
+        } while (pageToken);
+
+        const tracked = collectAllTrackedDriveIds();
+        const untracked = allFiles.filter(f => {
+          if (tracked.has(f.id)) return false;
+          if (f.name === 'index_metadata.json' || f.name === 'historial_actividad.txt') return false;
+          if (f.name.startsWith('Respaldo_') && f.name.endsWith('.json')) return false;
+          return true;
+        });
+
+        state.drive.untrackedFiles = untracked;
+        state.drive.selectedUntrackedIds = new Set(untracked.map(f => f.id));
+        updateUntrackedDriveBadgeUI();
+
+        if (!document.getElementById('drive-scanner-modal').classList.contains('hidden')) {
+          renderScannerFilesList();
+        }
+
+        if (notifyUser) {
+          if (untracked.length > 0) {
+            showToast(`Se encontraron ${untracked.length} archivo(s) nuevos en Drive`, '🔄');
+          } else {
+            showToast('Todos los archivos de Drive ya están en tu biblioteca', '✅');
+          }
+        }
+        return untracked;
+      } catch (err) {
+        console.error('Error escaneando Drive:', err);
+        if (notifyUser) showToast('Error al escanear carpeta de Drive', '❌');
+        return [];
+      }
+    }
+
+    async function openDriveScannerModal() {
+      if (!state.drive.connected) {
+        showToast('Conecta primero con Google Drive', '⚠️');
+        openDriveModal();
+        return;
+      }
+
+      const modal = document.getElementById('drive-scanner-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      // Preseleccionar categoría actual si aplica
+      const catSelect = document.getElementById('scanner-dest-category');
+      if (state.category === 'historia' || state.category === 'comics' || state.category === 'artistas') {
+        catSelect.value = state.category;
+      }
+      populateScannerArtistOptions();
+
+      document.getElementById('scanner-files-list').innerHTML = `<p class="text-xs text-cyan-300 py-8 text-center animate-pulse">🔄 Escaneando carpeta Mi_Biblioteca_Multimedia en Google Drive...</p>`;
+      await scanDriveForUntrackedFiles(false);
+      renderScannerFilesList();
+    }
+
+    function closeDriveScannerModal() {
+      const modal = document.getElementById('drive-scanner-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function toggleSelectAllUntracked(selectAll) {
+      if (selectAll) {
+        state.drive.selectedUntrackedIds = new Set((state.drive.untrackedFiles || []).map(f => f.id));
+      } else {
+        state.drive.selectedUntrackedIds.clear();
+      }
+      renderScannerFilesList();
+    }
+
+    function toggleSingleUntrackedFile(fileId) {
+      if (state.drive.selectedUntrackedIds.has(fileId)) {
+        state.drive.selectedUntrackedIds.delete(fileId);
+      } else {
+        state.drive.selectedUntrackedIds.add(fileId);
+      }
+      updateScannerSelectedCount();
+    }
+
+    function updateScannerSelectedCount() {
+      const el = document.getElementById('scanner-selected-count');
+      if (el) el.textContent = `${state.drive.selectedUntrackedIds.size} seleccionados`;
+    }
+
+    function renderScannerFilesList() {
+      const container = document.getElementById('scanner-files-list');
+      const files = state.drive.untrackedFiles || [];
+      updateScannerSelectedCount();
+
+      if (files.length === 0) {
+        container.innerHTML = `
+          <div class="py-10 text-center space-y-2">
+            <p class="text-2xl">✨</p>
+            <p class="text-sm font-semibold text-slate-200">No hay archivos sueltos pendientes en Drive</p>
+            <p class="text-xs text-slate-400 max-w-md mx-auto">Si subes fotos, cómics o PDFs directamente a tu carpeta <b>Mi_Biblioteca_Multimedia</b> desde la app o web de Google Drive, aparecerán aquí para importarlos.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = files.map(f => {
+        const checked = state.drive.selectedUntrackedIds.has(f.id);
+        const isImg = (f.mimeType || '').startsWith('image/');
+        const fmt = detectStoryFormat(f);
+        const icon = getFormatIcon(fmt);
+        const dateNice = formatShortDate(f.createdTime);
+        const thumbId = `scan-thumb-${f.id}`;
+
+        let thumbHtml = `<div class="w-11 h-11 rounded-lg bg-slate-850 border border-slate-700 flex items-center justify-center text-xl shrink-0">${icon}</div>`;
+        if (isImg) {
+          const previewUrl = getResolvedDisplayUrl(f.id, '', thumbId);
+          thumbHtml = `<img id="${thumbId}" src="${escapeHtml(previewUrl)}" alt="${escapeHtml(f.name)}" class="w-11 h-11 rounded-lg object-cover bg-slate-850 border border-slate-700 shrink-0" />`;
+        }
+
+        return `
+          <label class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-900 border ${checked ? 'border-cyan-500/60' : 'border-slate-800'} cursor-pointer transition">
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleSingleUntrackedFile('${f.id}')" class="w-5 h-5 rounded accent-cyan-500 shrink-0" />
+            ${thumbHtml}
+            <div class="min-w-0 flex-1">
+              <p class="text-xs sm:text-sm font-semibold text-white truncate">${escapeHtml(f.name)}</p>
+              <p class="text-[11px] text-slate-400">${escapeHtml(fmt.toUpperCase())} ${dateNice ? '• Subido ' + dateNice : ''}</p>
+            </div>
+          </label>
+        `;
+      }).join('');
+    }
+
+    function populateScannerArtistOptions() {
+      const cat = document.getElementById('scanner-dest-category').value;
+      const artistSelect = document.getElementById('scanner-dest-artist');
+      const artists = getArtistArrayByCategory(cat);
+
+      let optionsHtml = artists.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
+      optionsHtml += `<option value="__NEW__">➕ Crear nuevo artista "Importados de Drive"</option>`;
+      artistSelect.innerHTML = optionsHtml;
+
+      if (state.selectedArtistId && artists.some(a => a.id === state.selectedArtistId)) {
+        artistSelect.value = state.selectedArtistId;
+      }
+
+      populateScannerComicOptions();
+    }
+
+    function populateScannerComicOptions() {
+      const cat = document.getElementById('scanner-dest-category').value;
+      const comicBox = document.getElementById('scanner-dest-comic-box');
+      if (cat !== 'comics') {
+        comicBox.classList.add('hidden');
+        return;
+      }
+
+      comicBox.classList.remove('hidden');
+      const artistId = document.getElementById('scanner-dest-artist').value;
+      const comicSelect = document.getElementById('scanner-dest-comic');
+      const art = state.data.comicArtists.find(a => a.id === artistId);
+      const comics = art ? (art.comics || []) : [];
+
+      let opts = comics.map(c => `<option value="${c.id}">${escapeHtml(c.title)} (${(c.pages || []).length} págs.)</option>`).join('');
+      opts += `<option value="__NEW_COMIC__">➕ Crear un nuevo cómic con estos archivos</option>`;
+      comicSelect.innerHTML = opts;
+
+      if (state.selectedComicId && comics.some(c => c.id === state.selectedComicId)) {
+        comicSelect.value = state.selectedComicId;
+      }
+      toggleScannerNewComicTitle();
+    }
+
+    function toggleScannerNewComicTitle() {
+      const val = document.getElementById('scanner-dest-comic').value;
+      const inp = document.getElementById('scanner-new-comic-title');
+      inp.classList.toggle('hidden', val !== '__NEW_COMIC__');
+    }
+
+    async function importSelectedDriveFiles() {
+      const selectedIds = state.drive.selectedUntrackedIds;
+      if (selectedIds.size === 0) {
+        showToast('Selecciona al menos un archivo para importar', '⚠️');
+        return;
+      }
+
+      const filesToImport = (state.drive.untrackedFiles || []).filter(f => selectedIds.has(f.id));
+      const cat = document.getElementById('scanner-dest-category').value;
+      let artistId = document.getElementById('scanner-dest-artist').value;
+      const tags = parseTags(document.getElementById('scanner-tags-input').value);
+      const baseNow = Date.now();
+
+      const btn = document.getElementById('scanner-import-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ Importando...</span>';
+
+      try {
+        const arr = getArtistArrayByCategory(cat);
+        let art = arr.find(a => a.id === artistId);
+
+        if (!art || artistId === '__NEW__') {
+          const defaultEmoji = cat === 'historia' ? '📖' : cat === 'comics' ? '💬' : '🎨';
+          art = {
+            id: 'art-' + baseNow,
+            name: 'Importados de Drive',
+            coverUrl: svgCover('#0f172a', '#0891b2', 'Importados Drive', 'Carpeta Directa', defaultEmoji),
+            coverDriveId: null,
+            urls: [],
+            tags: ['drive'],
+            createdAt: new Date(baseNow).toISOString()
+          };
+          if (cat === 'historia') art.stories = [];
+          if (cat === 'comics') art.comics = [];
+          if (cat === 'artistas') art.images = [];
+          arr.unshift(art);
+        }
+
+        let logMsg = '';
+
+        if (cat === 'artistas') {
+          filesToImport.forEach((f, i) => {
+            art.images.unshift({
+              id: 'img-' + (baseNow + i) + '-' + i,
+              name: f.name.replace(/\.[^/.]+$/, ''),
+              tags: [...tags],
+              createdAt: f.createdTime || new Date(baseNow + i).toISOString(),
+              url: '',
+              driveFileId: f.id
+            });
+          });
+          logMsg = `Importadas ${filesToImport.length} imagen(es) desde Drive a ${art.name}`;
+        } else if (cat === 'historia') {
+          filesToImport.forEach((f, i) => {
+            art.stories.unshift({
+              id: 'st-' + (baseNow + i) + '-' + i,
+              title: f.name.replace(/\.[^/.]+$/, ''),
+              format: detectStoryFormat(f),
+              tags: [...tags],
+              createdAt: f.createdTime || new Date(baseNow + i).toISOString(),
+              url: '',
+              driveFileId: f.id
+            });
+          });
+          logMsg = `Importadas ${filesToImport.length} historia(s) desde Drive a ${art.name}`;
+        } else if (cat === 'comics') {
+          const comicVal = document.getElementById('scanner-dest-comic').value;
+          let targetComic = (art.comics || []).find(c => c.id === comicVal);
+
+          if (!targetComic || comicVal === '__NEW_COMIC__') {
+            const newTitle = document.getElementById('scanner-new-comic-title').value.trim() || `Cómic Importado (${formatShortDate(new Date().toISOString())})`;
+            targetComic = {
+              id: 'comic-' + baseNow,
+              title: newTitle,
+              status: 'En progreso',
+              tags: [...tags],
+              createdAt: new Date(baseNow).toISOString(),
+              pages: []
+            };
+            art.comics.unshift(targetComic);
+          }
+
+          filesToImport.forEach((f, i) => {
+            targetComic.pages.push({
+              id: 'cp-' + (baseNow + i) + '-' + i,
+              name: f.name.replace(/\.[^/.]+$/, ''),
+              tags: [...tags],
+              createdAt: f.createdTime || new Date(baseNow + i).toISOString(),
+              url: '',
+              driveFileId: f.id
+            });
+          });
+          logMsg = `Importadas ${filesToImport.length} página(s) desde Drive a "${targetComic.title}" (${art.name})`;
+        }
+
+        await syncMetadataToDrive(logMsg);
+        await scanDriveForUntrackedFiles(false);
+        closeDriveScannerModal();
+
+        selectCategory(cat);
+        openArtist(art.id);
+        showToast(`${filesToImport.length} archivo(s) importado(s) a tu biblioteca`, '✅');
+      } catch (err) {
+        console.error(err);
+        showToast('Error al importar archivos de Drive', '❌');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>📥 Importar a la Biblioteca</span>';
+      }
+    }
+
+    // =========================================================
     // INTEGRACIÓN CON GOOGLE DRIVE + RESGUARDOS E HISTORIAL
     // =========================================================
     function openDriveModal() {
@@ -3280,10 +3705,15 @@
       const btnLabel = document.getElementById('drive-btn-label');
       const headerBtn = document.getElementById('header-drive-btn');
       const headerLabel = document.getElementById('header-drive-label');
+      const headerScanBtn = document.getElementById('header-scan-btn');
+      const sidebarScanBtn = document.getElementById('sidebar-scan-btn');
+
       if (state.drive.connected) {
         badge.className = 'text-xs text-emerald-400 flex items-center gap-1.5 mt-0.5';
         badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Drive + Resguardos`;
         btnLabel.textContent = 'Drive y Resguardos';
+        if (headerScanBtn) headerScanBtn.classList.remove('hidden');
+        if (sidebarScanBtn) sidebarScanBtn.classList.remove('hidden');
         if (headerBtn && headerLabel) {
           headerBtn.className = 'touch-btn px-3 rounded-xl bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0';
           headerLabel.textContent = 'Drive Activo';
@@ -3292,6 +3722,8 @@
         badge.className = 'text-xs text-amber-400 flex items-center gap-1.5 mt-0.5';
         badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Modo Demo Local`;
         btnLabel.textContent = 'Conectar Google Drive';
+        if (headerScanBtn) headerScanBtn.classList.add('hidden');
+        if (sidebarScanBtn) sidebarScanBtn.classList.add('hidden');
         if (headerBtn && headerLabel) {
           headerBtn.className = 'touch-btn px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 text-amber-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0';
           headerLabel.textContent = 'Conectar Drive';
@@ -3302,6 +3734,7 @@
     function disconnectDrive() {
       state.drive.connected = false;
       state.drive.accessToken = null;
+      state.drive.untrackedFiles = [];
       blobCache.clear();
       updateDriveStatusUI();
       closeDriveModal();
@@ -3567,7 +4000,6 @@
           body: form
         });
 
-        // Limpiar respaldos antiguos manteniendo los últimos MAX_BACKUPS_TO_KEEP
         const listRes = await gapi.client.drive.files.list({
           q: `'${backupsFolderId}' in parents and trashed = false`,
           orderBy: 'createdTime desc',
@@ -3649,7 +4081,6 @@
 
       try {
         showToast('Restaurando punto de seguridad...', '⏳');
-        // Guardar copia preventiva del estado actual antes de restaurar
         await createAutomaticBackupSnapshot('Copia preventiva antes de restaurar');
 
         const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(backupFileId)}?alt=media`, {
@@ -3712,7 +4143,12 @@
           if (parsed && parsed.historiaArtists && parsed.comicArtists && parsed.artArtists) {
             state.data = parsed;
             renderApp();
-            showToast('Biblioteca cargada desde Drive', '✅');
+            const found = await scanDriveForUntrackedFiles(false);
+            if (found.length > 0) {
+              showToast(`Biblioteca cargada + ${found.length} archivo(s) nuevos detectados en Drive`, '🔄');
+            } else {
+              showToast('Biblioteca cargada desde Drive', '✅');
+            }
             return;
           }
         }
@@ -3720,6 +4156,7 @@
         state.data = { historiaArtists: [], comicArtists: [], artArtists: [] };
         await syncMetadataToDrive('Inicialización de biblioteca en Drive');
         renderApp();
+        await scanDriveForUntrackedFiles(false);
         showToast('Carpeta creada en Google Drive', '📁');
       } catch (err) {
         console.error(err);
