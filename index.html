@@ -1657,6 +1657,8 @@
         return;
       }
 
+      const { section, artistId } = editingArtistContext || { section: state.section, artistId: null };
+
       const urls = [
         document.getElementById('artist-url-1').value.trim(),
         document.getElementById('artist-url-2').value.trim(),
@@ -1676,7 +1678,6 @@
       btn.textContent = 'Guardando...';
 
       try {
-        const { section, artistId } = editingArtistContext;
         const artistFolderId = await ensureArtistDriveFolder(section, name);
 
         let uploadedCover = null;
@@ -1693,9 +1694,7 @@
             const oldAliases = extractArtistNameTags(artist.name);
             artist.name = name;
             artist.urls = urls;
-            artist.tags = section === 'artistas'
-              ? normalizeTagsArray([...artistAliases, ...extraTags])
-              : extraTags;
+            artist.tags = tags;
             if (artistFolderId) artist.driveFolderId = artistFolderId;
             if (uploadedCover) {
               artist.coverUrl = uploadedCover.url;
@@ -1723,9 +1722,7 @@
             id: `art_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             name,
             urls,
-            tags: section === 'artistas'
-              ? normalizeTagsArray([...artistAliases, ...extraTags])
-              : extraTags,
+            tags,
             favorite: false,
             createdAt: Date.now(),
             driveFolderId: artistFolderId || null,
