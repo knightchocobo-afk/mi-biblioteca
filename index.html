@@ -320,7 +320,7 @@
         </button>
         <div class="flex gap-2 ml-auto">
           <button onclick="closeModal('artist-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
-          <button id="save-artist-btn" onclick="saveArtistForm()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm">
+          <button id="save-artist-btn" type="button" onclick="saveArtistForm()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm">
             Guardar Artista
           </button>
         </div>
@@ -684,7 +684,6 @@
 
     function saveLocalOnly() {
       try {
-        // Evitar guardar blob: URLs volátiles que agotan cuota si hay miles
         const cleanCopy = JSON.parse(JSON.stringify(libraryData, (key, value) => {
           if (typeof value === 'string' && value.startsWith('blob:')) return '';
           return value;
@@ -1311,7 +1310,7 @@
     // =========================================================================
     function renderPlusCard(label, onclickCode) {
       return `
-        <button onclick="${onclickCode}" class="card-hover min-h-[240px] rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500 bg-slate-900/40 hover:bg-slate-900/80 flex flex-col items-center justify-center gap-2 p-4 text-slate-400 hover:text-indigo-300 transition">
+        <button type="button" onclick="${onclickCode}" class="card-hover min-h-[240px] rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500 bg-slate-900/40 hover:bg-slate-900/80 flex flex-col items-center justify-center gap-2 p-4 text-slate-400 hover:text-indigo-300 transition">
           <span class="text-5xl font-light leading-none">+</span>
           <span class="text-xs font-semibold text-center">${escapeHtml(label)}</span>
         </button>
@@ -1635,14 +1634,18 @@
     // CREACIÓN / EDICIÓN / BORRADO SEGURO DE ARTISTAS Y ELEMENTOS
     // =========================================================================
     function openArtistModal(section, artistId) {
-      editingArtistContext = { section, artistId };
+      const targetSection = ['historia', 'comics', 'artistas'].includes(section)
+        ? section
+        : (['historia', 'comics', 'artistas'].includes(state.section) ? state.section : 'comics');
+
+      editingArtistContext = { section: targetSection, artistId: artistId || null };
       const isEdit = Boolean(artistId);
       document.getElementById('artist-modal-title').textContent = isEdit ? '✏️ Editar Artista' : '➕ Nuevo Artista';
       document.getElementById('delete-artist-modal-btn').classList.toggle('hidden', !isEdit);
       document.getElementById('artist-cover-file').value = '';
 
       if (isEdit) {
-        const artist = (libraryData[section] || []).find(a => a.id === artistId);
+        const artist = (libraryData[targetSection] || []).find(a => a.id === artistId);
         document.getElementById('artist-name-input').value = artist ? artist.name : '';
         document.getElementById('artist-url-1').value = (artist && artist.urls && artist.urls[0]) || '';
         document.getElementById('artist-url-2').value = (artist && artist.urls && artist.urls[1]) || '';
@@ -1661,7 +1664,8 @@
     }
 
     async function saveArtistForm() {
-      const name = document.getElementById('artist-name-input').value.trim();
+      const nameInput = document.getElementById('artist-name-input');
+      const name = (nameInput ? nameInput.value : '').trim();
       if (!name) {
         alert('Escribe el nombre del artista.');
         return;
@@ -1692,86 +1696,68 @@
 
       const coverFile = document.getElementById('artist-cover-file').files[0];
 
-      const btn = document.getElementById('save-artist-btn');
-      btn.disabled = true;
-      btn.textContent = 'Guardando...';
-
-      try {
-        let artistFolderId = null;
-        let uploadedCover = null;
-
-        try {
-          artistFolderId = await ensureArtistDriveFolder(section, name);
+      // 1. CREAR / ACTUALIZAR INMEDIATAMENTE EN PANTALLA Y CERRAR MODAL SIN BLOQUEOS
+      let targetArtist = null;
+      if (artistId) {
+        targetArtist = libraryData[section].find(a => a.id === artistId);
+        if (targetArtist) {
+          const oldAliases = extractArtistNameTags(targetArtist.name);
+          targetArtist.name = name;
+          targetArtist.urls = urls;
+          targetArtist.tags = tags;
           if (coverFile) {
-            uploadedCover = await uploadFileToDriveOrLocal(coverFile, {
+            targetArtist.coverUrl = URL.createObjectURL(coverFile);
+          }
+          if (section === 'artistas' && Array.isArray(targetArtist.images)) {
+            const oldSet = new Set(oldAliases);
+            targetArtist.images.forEach(img => {
+              const kept = normalizeTagsArray(img.tags).filter(t => !oldSet.has(t));
+              img.tags = normalizeTagsArray([...artistAliases, ...kept]);
+            });
+          }
+        }
+      } else {
+        targetArtist = {
+          id: `art_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          name,
+          urls,
+          tags,
+          favorite: false,
+          createdAt: Date.now(),
+          driveFolderId: null,
+          coverUrl: coverFile ? URL.createObjectURL(coverFile) : '',
+          coverDriveId: null
+        };
+        if (section === 'historia') targetArtist.items = [];
+        if (section === 'comics') targetArtist.comics = [];
+        if (section === 'artistas') targetArtist.images = [];
+        libraryData[section].push(targetArtist);
+      }
+
+      closeModal('artist-modal');
+      saveLocalOnly();
+      updateSidebarCounts();
+      renderTagCloud();
+      renderGrid();
+      showToast('✅ Artista guardado');
+
+      // 2. SINCRONIZAR CARPETA, PORTADA E ÍNDICE EN GOOGLE DRIVE EN SEGUNDO PLANO
+      if (driveConfig.accessToken && driveConfig.rootFolderId && targetArtist) {
+        try {
+          const artistFolderId = await ensureArtistDriveFolder(section, name, targetArtist);
+          if (coverFile) {
+            const uploadedCover = await uploadFileToDriveOrLocal(coverFile, {
               targetFolderId: artistFolderId,
               tags: normalizeTagsArray([...artistAliases, ...extraTags, 'portada'])
             });
+            targetArtist.coverDriveId = uploadedCover.driveId;
           }
+          await syncMetadataToDrive(artistId ? `Editado artista ${name}` : `Creado artista ${name} en ${section}`);
+          saveLocalOnly();
         } catch (driveErr) {
-          console.warn('Fallo al crear carpeta o subir portada en Drive:', driveErr);
-          if (coverFile) {
-            uploadedCover = { url: URL.createObjectURL(coverFile), driveId: null };
-          }
+          console.warn('Aviso sincronizando artista con Drive:', driveErr);
+          setSyncStatus('Pendiente Drive');
         }
-
-        if (artistId) {
-          const artist = libraryData[section].find(a => a.id === artistId);
-          if (artist) {
-            const oldAliases = extractArtistNameTags(artist.name);
-            artist.name = name;
-            artist.urls = urls;
-            artist.tags = tags;
-            if (artistFolderId) artist.driveFolderId = artistFolderId;
-            if (uploadedCover) {
-              artist.coverUrl = uploadedCover.url;
-              artist.coverDriveId = uploadedCover.driveId;
-            }
-
-            if (section === 'artistas' && Array.isArray(artist.images)) {
-              const oldSet = new Set(oldAliases);
-              const syncTasks = [];
-              artist.images.forEach(img => {
-                const kept = normalizeTagsArray(img.tags).filter(t => !oldSet.has(t));
-                img.tags = normalizeTagsArray([...artistAliases, ...kept]);
-                if (img.driveId) {
-                  syncTasks.push(updateDriveFileTags(img.driveId, img.tags));
-                }
-              });
-              if (syncTasks.length) await Promise.allSettled(syncTasks);
-            }
-          }
-          closeModal('artist-modal');
-          await persistChanges(`Editado artista ${name}`);
-        } else {
-          const newArtist = {
-            id: `art_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            name,
-            urls,
-            tags,
-            favorite: false,
-            createdAt: Date.now(),
-            driveFolderId: artistFolderId || null,
-            coverUrl: uploadedCover ? uploadedCover.url : '',
-            coverDriveId: uploadedCover ? uploadedCover.driveId : null
-          };
-          if (section === 'historia') newArtist.items = [];
-          if (section === 'comics') newArtist.comics = [];
-          if (section === 'artistas') newArtist.images = [];
-
-          libraryData[section].push(newArtist);
-          closeModal('artist-modal');
-          await persistChanges(`Creado artista ${name} en ${section}`);
-        }
-        showToast('✅ Artista guardado');
-      } catch (err) {
-        console.error('Error guardando artista:', err);
-        closeModal('artist-modal');
-        renderGrid();
-        showToast('⚠️ Guardado localmente. Reconecta Drive si caducó la sesión.');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Guardar Artista';
       }
     }
 
