@@ -193,7 +193,7 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1">API Key</label>
           <input id="input-api-key" type="password" placeholder="Ej: AIzaSy..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
         </div>
-        <p class="text-[11px] text-slate-400">Tus claves se guardan únicamente en este navegador (no están escritas en el código público).</p>
+        <p class="text-[11px] text-slate-400">Tus claves se guardan únicamente en este navegador. Crea carpetas reales en Drive: <code class="text-indigo-300">Comics / Artista / Cómic</code>, <code class="text-indigo-300">Artistas / Artista</code> e <code class="text-indigo-300">Historia / Artista</code>.</p>
       </div>
 
       <div class="flex items-center gap-2.5 pt-1">
@@ -229,7 +229,7 @@
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
           <h2 class="text-lg font-bold text-white">🔄 Archivos Detectados en Google Drive</h2>
-          <p class="text-xs text-slate-400">Archivos en <code class="text-indigo-300">Mi_Biblioteca_Multimedia</code> que aún no están en tu catálogo</p>
+          <p class="text-xs text-slate-400">Archivos en <code class="text-indigo-300">Mi_Biblioteca_Multimedia</code> y sus subcarpetas que aún no están en tu catálogo</p>
         </div>
         <button onclick="closeModal('scanner-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
       </div>
@@ -522,6 +522,12 @@
     const METADATA_FILENAME = 'index_metadata.json';
     const HISTORY_LOG_FILENAME = 'historial_actividad.txt';
 
+    const SECTION_FOLDER_NAMES = {
+      historia: 'Historia',
+      comics: 'Comics',
+      artistas: 'Artistas'
+    };
+
     let state = {
       section: 'artistas',     // 'historia' | 'comics' | 'artistas' | 'favoritos' | 'tags'
       artistId: null,
@@ -550,13 +556,19 @@
       tokenClient: null,
       rootFolderId: null,
       backupFolderId: null,
+      sectionFolderIds: {
+        historia: null,
+        comics: null,
+        artistas: null
+      },
       metadataFileId: null,
       historyFileId: null,
       untrackedFiles: []
     };
 
-    // Caché en memoria de Blob URLs para archivos privados de Drive
+    // Caché en memoria de Blob URLs y carpetas de Drive
     const blobCache = new Map();
+    const driveFolderCache = new Map(); // key: `${parentId}::${safeName}` -> folderId
 
     // Estado del visor y modales
     let lightboxState = {
@@ -745,13 +757,13 @@
         const timeA = getItemTimestamp(a);
         const timeB = getItemTimestamp(b);
         if (mode === 'date-asc') return timeA - timeB;
-        return timeB - timeA; // date-desc por defecto
+        return timeB - timeA;
       });
       return copy;
     }
 
     function collectGlobalTagStats() {
-      const map = new Map(); // tag -> { count, images, comics, stories, artists }
+      const map = new Map();
       const addTags = (tags, type) => {
         normalizeTagsArray(tags).forEach(tag => {
           if (!map.has(tag)) {
@@ -1193,7 +1205,6 @@
         const artists = sortItems(
           (libraryData[state.section] || []).filter(art => {
             if (!state.search) return true;
-            const q = state.search.replace(/^#+/, '');
             const selfMatch = matchesQueryAndTag(art);
             const subMatch =
               (art.items || []).some(i => matchesQueryAndTag(i)) ||
@@ -1579,6 +1590,8 @@
       const toRemove = new Set(parseTags(document.getElementById('bulk-remove-tags-input').value));
 
       let modified = 0;
+      const driveSyncTasks = [];
+
       (artist.images || []).forEach(img => {
         if (state.selectedImageIds.has(img.id)) {
           const current = new Set(normalizeTagsArray(img.tags));
@@ -1586,11 +1599,17 @@
           toAdd.forEach(t => current.add(t));
           img.tags = Array.from(current);
           modified++;
+          if (img.driveId) {
+            driveSyncTasks.push(updateDriveFileTags(img.driveId, img.tags, img.title));
+          }
         }
       });
 
       closeModal('bulk-tag-modal');
       toggleBulkSelectMode(false);
+      if (driveSyncTasks.length) {
+        await Promise.allSettled(driveSyncTasks);
+      }
       showToast(`✅ Tags actualizados en ${modified} imágenes`);
       await persistChanges(`Etiquetado masivo en ${modified} imágenes de ${artist.name}`);
     }
@@ -1645,18 +1664,24 @@
       btn.textContent = 'Guardando...';
 
       try {
+        const { section, artistId } = editingArtistContext;
+        const artistFolderId = await ensureArtistDriveFolder(section, name);
+
         let uploadedCover = null;
         if (coverFile) {
-          uploadedCover = await uploadFileToDriveOrLocal(coverFile);
+          uploadedCover = await uploadFileToDriveOrLocal(coverFile, {
+            targetFolderId: artistFolderId,
+            tags: [...tags, 'portada']
+          });
         }
 
-        const { section, artistId } = editingArtistContext;
         if (artistId) {
           const artist = libraryData[section].find(a => a.id === artistId);
           if (artist) {
             artist.name = name;
             artist.urls = urls;
             artist.tags = tags;
+            if (artistFolderId) artist.driveFolderId = artistFolderId;
             if (uploadedCover) {
               artist.coverUrl = uploadedCover.url;
               artist.coverDriveId = uploadedCover.driveId;
@@ -1672,6 +1697,7 @@
             tags,
             favorite: false,
             createdAt: Date.now(),
+            driveFolderId: artistFolderId || null,
             coverUrl: uploadedCover ? uploadedCover.url : '',
             coverDriveId: uploadedCover ? uploadedCover.driveId : null
           };
@@ -1683,7 +1709,7 @@
           closeModal('artist-modal');
           await persistChanges(`Creado artista ${name} en ${section}`);
         }
-        showToast('✅ Artista guardado');
+        showToast('✅ Artista y carpeta guardados');
       } finally {
         btn.disabled = false;
         btn.textContent = 'Guardar Artista';
@@ -1717,7 +1743,7 @@
     }
 
     // =========================================================================
-    // SUBIDA DE ARCHIVOS (HISTORIAS / IMÁGENES / CÓMICS / PÁGINAS)
+    // SUBIDA DE ARCHIVOS (CON CARPETAS JERÁRQUICAS Y TAGS EN GOOGLE DRIVE)
     // =========================================================================
     function openUploadModal(mode) {
       currentUploadMode = mode;
@@ -1792,10 +1818,16 @@
         const artist = (libraryData[state.section] || []).find(a => a.id === state.artistId);
         if (!artist) return;
 
+        // Asegurar carpeta en Drive: Mi_Biblioteca_Multimedia / Seccion / Artista
+        const artistFolderId = await ensureArtistDriveFolder(state.section, artist.name, artist);
+
         if (currentUploadMode === 'story-item') {
           for (let i = 0; i < files.length; i++) {
             const f = files[i];
-            const res = await uploadFileToDriveOrLocal(f);
+            const res = await uploadFileToDriveOrLocal(f, {
+              targetFolderId: artistFolderId,
+              tags
+            });
             artist.items.push({
               id: `story_${Date.now()}_${i}`,
               title: rawTitle ? (files.length > 1 ? `${rawTitle} (${i + 1})` : rawTitle) : f.name.replace(/\.[^.]+$/, ''),
@@ -1812,7 +1844,10 @@
         } else if (currentUploadMode === 'artist-images') {
           for (let i = 0; i < files.length; i++) {
             const f = files[i];
-            const res = await uploadFileToDriveOrLocal(f);
+            const res = await uploadFileToDriveOrLocal(f, {
+              targetFolderId: artistFolderId,
+              tags
+            });
             artist.images.push({
               id: `img_${Date.now()}_${i}`,
               title: f.name.replace(/\.[^.]+$/, ''),
@@ -1831,16 +1866,21 @@
             return;
           }
           const status = document.getElementById('upload-status-select').value;
+          // Crear subcarpeta específica del cómic dentro de Comics / Artista / NombreComic
+          const comicFolderId = await ensureComicDriveFolder(artist, rawTitle);
           const pages = [];
           for (let i = 0; i < files.length; i++) {
             const f = files[i];
-            const res = await uploadFileToDriveOrLocal(f);
+            const res = await uploadFileToDriveOrLocal(f, {
+              targetFolderId: comicFolderId,
+              tags
+            });
             pages.push({
               id: `page_${Date.now()}_${i}`,
               title: f.name.replace(/\.[^.]+$/, ''),
               url: res.url,
               driveId: res.driveId,
-              tags: [...tags], // Herencia automática de los tags del cómic
+              tags: [...tags],
               favorite: false,
               createdAt: Date.now() + i
             });
@@ -1852,6 +1892,7 @@
             tags: [...tags],
             favorite: false,
             createdAt: Date.now(),
+            driveFolderId: comicFolderId || null,
             pages
           });
           closeModal('upload-modal');
@@ -1859,16 +1900,20 @@
         } else if (currentUploadMode === 'comic-pages') {
           const comic = (artist.comics || []).find(c => c.id === state.comicId);
           if (!comic) return;
+          const comicFolderId = await ensureComicDriveFolder(artist, comic.title, comic);
           const inheritedTags = normalizeTagsArray([...(comic.tags || []), ...tags]);
           for (let i = 0; i < files.length; i++) {
             const f = files[i];
-            const res = await uploadFileToDriveOrLocal(f);
+            const res = await uploadFileToDriveOrLocal(f, {
+              targetFolderId: comicFolderId,
+              tags: inheritedTags
+            });
             comic.pages.push({
               id: `page_${Date.now()}_${i}`,
               title: f.name.replace(/\.[^.]+$/, ''),
               url: res.url,
               driveId: res.driveId,
-              tags: [...inheritedTags], // Herencia automática
+              tags: [...inheritedTags],
               favorite: false,
               createdAt: Date.now() + i
             });
@@ -1877,7 +1922,7 @@
           await persistChanges(`Añadidas ${files.length} páginas al cómic "${comic.title}"`);
         }
 
-        showToast(`✅ ${files.length} archivo(s) subido(s) correctamente`);
+        showToast(`✅ ${files.length} archivo(s) subido(s) a su carpeta en Drive`);
       } finally {
         btn.disabled = false;
         btn.textContent = 'Subir a Drive';
@@ -1885,7 +1930,7 @@
     }
 
     // =========================================================================
-    // EDICIÓN Y BORRADO INDIVIDUAL DE ELEMENTOS
+    // EDICIÓN Y BORRADO INDIVIDUAL DE ELEMENTOS (CON SINCRONÍA DE TAGS EN DRIVE)
     // =========================================================================
     function openEditItemModal(kind, itemId) {
       editingItemContext = { kind, itemId };
@@ -1935,12 +1980,16 @@
         item.status = document.getElementById('edit-item-status').value;
       }
 
+      if (item.driveId) {
+        await updateDriveFileTags(item.driveId, item.tags, newTitle);
+      }
+
       closeModal('edit-item-modal');
       await persistChanges(`Editado elemento "${newTitle}"`);
       if (!document.getElementById('lightbox-modal').classList.contains('hidden')) {
         updateLightboxUI();
       }
-      showToast('✅ Cambios guardados');
+      showToast('✅ Cambios y tags guardados');
     }
 
     async function deleteEditingItem() {
@@ -2058,7 +2107,7 @@
 
     function handleStageZoneClick(event, step) {
       event.stopPropagation();
-      if (lightboxState.zoom > 1.05) return; // Evita saltar página mientras haces zoom
+      if (lightboxState.zoom > 1.05) return;
       navigateLightbox(step);
     }
 
@@ -2175,8 +2224,16 @@
     }
 
     // =========================================================================
-    // INTEGRACIÓN GOOGLE DRIVE (CONEXIÓN, SUBIDA BINARIA, BLOB URLS, RESGUARDOS Y ESCÁNER)
+    // INTEGRACIÓN GOOGLE DRIVE (CARPETAS ESPEJO + METADATOS/TAGS EN ARCHIVOS)
     // =========================================================================
+    function sanitizeDriveFolderName(name, fallback = 'Sin_Nombre') {
+      const clean = String(name || '')
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return clean || fallback;
+    }
+
     function loadSavedCredentials() {
       try {
         const saved = JSON.parse(localStorage.getItem(CREDS_KEY) || '{}');
@@ -2260,9 +2317,15 @@
     }
 
     async function initializeDriveWorkspace() {
-      setSyncStatus('Sincronizando carpetas...');
+      setSyncStatus('Creando estructura de carpetas...');
+      driveFolderCache.clear();
+
+      // Carpeta raíz y carpetas principales por sección
       driveConfig.rootFolderId = await findOrCreateDriveFolder(ROOT_FOLDER_NAME, null);
       driveConfig.backupFolderId = await findOrCreateDriveFolder(BACKUP_FOLDER_NAME, driveConfig.rootFolderId);
+      driveConfig.sectionFolderIds.historia = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES.historia, driveConfig.rootFolderId);
+      driveConfig.sectionFolderIds.comics = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES.comics, driveConfig.rootFolderId);
+      driveConfig.sectionFolderIds.artistas = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES.artistas, driveConfig.rootFolderId);
 
       // Buscar index_metadata.json en Drive
       const q = encodeURIComponent(`name='${METADATA_FILENAME}' and '${driveConfig.rootFolderId}' in parents and trashed=false`);
@@ -2293,14 +2356,24 @@
     }
 
     async function findOrCreateDriveFolder(name, parentId) {
-      let query = `mimeType='application/vnd.google-apps.folder' and name='${name}' and trashed=false`;
+      const safeName = sanitizeDriveFolderName(name, 'Carpeta');
+      const cacheKey = `${parentId || 'root'}::${safeName}`;
+      if (driveFolderCache.has(cacheKey)) {
+        return driveFolderCache.get(cacheKey);
+      }
+
+      const escapedQueryName = safeName.replace(/'/g, "\\'");
+      let query = `mimeType='application/vnd.google-apps.folder' and name='${escapedQueryName}' and trashed=false`;
       if (parentId) query += ` and '${parentId}' in parents`;
+
       const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`);
       const data = await res.json();
       if (data.files && data.files.length > 0) {
+        driveFolderCache.set(cacheKey, data.files[0].id);
         return data.files[0].id;
       }
-      const meta = { name, mimeType: 'application/vnd.google-apps.folder' };
+
+      const meta = { name: safeName, mimeType: 'application/vnd.google-apps.folder' };
       if (parentId) meta.parents = [parentId];
       const createRes = await driveApiFetch('https://www.googleapis.com/drive/v3/files', {
         method: 'POST',
@@ -2308,19 +2381,51 @@
         body: JSON.stringify(meta)
       });
       const created = await createRes.json();
+      driveFolderCache.set(cacheKey, created.id);
       return created.id;
     }
 
-    async function uploadFileToDriveOrLocal(file) {
+    // Crea o recupera: Mi_Biblioteca_Multimedia / [Historia|Comics|Artistas] / [Nombre_Artista]
+    async function ensureArtistDriveFolder(section, artistName, artistObj = null) {
+      if (!driveConfig.accessToken || !driveConfig.rootFolderId) return null;
+      let secFolderId = driveConfig.sectionFolderIds[section];
+      if (!secFolderId) {
+        secFolderId = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES[section] || section, driveConfig.rootFolderId);
+        driveConfig.sectionFolderIds[section] = secFolderId;
+      }
+      const folderId = await findOrCreateDriveFolder(artistName, secFolderId);
+      if (artistObj) artistObj.driveFolderId = folderId;
+      return folderId;
+    }
+
+    // Crea o recupera: Mi_Biblioteca_Multimedia / Comics / [Nombre_Artista] / [Nombre_Comic]
+    async function ensureComicDriveFolder(artistObj, comicTitle, comicObj = null) {
+      if (!driveConfig.accessToken || !driveConfig.rootFolderId) return null;
+      const artistFolderId = await ensureArtistDriveFolder('comics', artistObj.name, artistObj);
+      if (!artistFolderId) return null;
+      const comicFolderId = await findOrCreateDriveFolder(comicTitle, artistFolderId);
+      if (comicObj) comicObj.driveFolderId = comicFolderId;
+      return comicFolderId;
+    }
+
+    async function uploadFileToDriveOrLocal(file, options = {}) {
       const localBlobUrl = URL.createObjectURL(file);
       if (!driveConfig.accessToken || !driveConfig.rootFolderId) {
         return { url: localBlobUrl, driveId: null };
       }
 
+      const targetFolderId = options.targetFolderId || driveConfig.rootFolderId;
+      const cleanTags = normalizeTagsArray(options.tags || []);
+      const tagsText = cleanTags.map(t => `#${t}`).join(' ');
+
       setSyncStatus(`Subiendo ${file.name}...`);
       const metadata = {
         name: file.name,
-        parents: [driveConfig.rootFolderId]
+        parents: [targetFolderId],
+        description: tagsText ? `Tags: ${tagsText}` : '',
+        appProperties: {
+          tags: cleanTags.join(',')
+        }
       };
 
       const form = new FormData();
@@ -2335,6 +2440,31 @@
       blobCache.set(uploaded.id, localBlobUrl);
       setSyncStatus('Sincronizado ✓');
       return { url: '', driveId: uploaded.id };
+    }
+
+    // Actualiza tags y descripción directamente en los metadatos nativos del archivo en Google Drive
+    async function updateDriveFileTags(driveId, tagsArray, newName = '') {
+      if (!driveConfig.accessToken || !driveId) return;
+      try {
+        const cleanTags = normalizeTagsArray(tagsArray);
+        const tagsText = cleanTags.map(t => `#${t}`).join(' ');
+        const patchBody = {
+          description: tagsText ? `Tags: ${tagsText}` : '',
+          appProperties: {
+            tags: cleanTags.join(',')
+          }
+        };
+        if (newName) {
+          patchBody.name = sanitizeDriveFolderName(newName, newName);
+        }
+        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patchBody)
+        });
+      } catch (e) {
+        console.warn('No se pudieron actualizar los metadatos nativos en Drive', e);
+      }
     }
 
     async function fetchDriveMediaBlobUrl(driveId) {
@@ -2488,7 +2618,7 @@
     }
 
     // =========================================================================
-    // DETECTOR E IMPORTADOR DE ARCHIVOS DIRECTOS EN GOOGLE DRIVE
+    // DETECTOR E IMPORTADOR RECURSIVO DE ARCHIVOS EN GOOGLE DRIVE
     // =========================================================================
     function getAllTrackedDriveIds() {
       const ids = new Set();
@@ -2512,19 +2642,33 @@
       return ids;
     }
 
+    async function collectFilesRecursivelyInFolder(folderId, trackedSet, outList, depth = 0) {
+      if (depth > 4) return;
+      const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+      const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=100&fields=files(id,name,mimeType,createdTime,appProperties,description)`);
+      const data = await res.json();
+      for (const f of (data.files || [])) {
+        if (f.mimeType === 'application/vnd.google-apps.folder') {
+          if (f.id !== driveConfig.backupFolderId && f.name !== BACKUP_FOLDER_NAME) {
+            await collectFilesRecursivelyInFolder(f.id, trackedSet, outList, depth + 1);
+          }
+        } else if (
+          !trackedSet.has(f.id) &&
+          f.name !== METADATA_FILENAME &&
+          f.name !== HISTORY_LOG_FILENAME &&
+          !f.name.startsWith('Respaldo_')
+        ) {
+          outList.push(f);
+        }
+      }
+    }
+
     async function scanDriveForUntrackedFiles() {
       if (!driveConfig.accessToken || !driveConfig.rootFolderId) return;
-      const q = encodeURIComponent(`'${driveConfig.rootFolderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`);
-      const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=100&fields=files(id,name,mimeType,createdTime)`);
-      const data = await res.json();
       const tracked = getAllTrackedDriveIds();
-
-      driveConfig.untrackedFiles = (data.files || []).filter(f =>
-        !tracked.has(f.id) &&
-        f.name !== METADATA_FILENAME &&
-        f.name !== HISTORY_LOG_FILENAME &&
-        !f.name.startsWith('Respaldo_')
-      );
+      const found = [];
+      await collectFilesRecursivelyInFolder(driveConfig.rootFolderId, tracked, found, 0);
+      driveConfig.untrackedFiles = found;
 
       const badge = document.getElementById('untracked-badge');
       if (driveConfig.untrackedFiles.length > 0) {
@@ -2541,7 +2685,7 @@
         return;
       }
       openModal('scanner-modal');
-      document.getElementById('scanner-summary').textContent = 'Escaneando carpeta Mi_Biblioteca_Multimedia...';
+      document.getElementById('scanner-summary').textContent = 'Escaneando carpetas en Mi_Biblioteca_Multimedia...';
       await scanDriveForUntrackedFiles();
       populateScannerArtists();
       renderTopTagsChips('scanner-top-tags', 'scanner-tags');
@@ -2551,19 +2695,22 @@
       document.getElementById('scanner-summary').textContent = `${files.length} archivo(s) nuevos detectados en Drive`;
 
       if (!files.length) {
-        listEl.innerHTML = '<div class="text-xs text-slate-400 text-center py-6">Todos los archivos de tu carpeta Drive ya están catalogados en la página.</div>';
+        listEl.innerHTML = '<div class="text-xs text-slate-400 text-center py-6">Todos los archivos de tus carpetas de Drive ya están catalogados en la página.</div>';
         return;
       }
 
-      listEl.innerHTML = files.map(f => `
-        <label class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900 border border-slate-800 cursor-pointer hover:border-indigo-500/50">
-          <input type="checkbox" checked value="${f.id}" class="scanner-file-cb w-4 h-4 accent-indigo-600" />
-          <div class="min-w-0 flex-1">
-            <div class="text-xs font-semibold text-white truncate">${escapeHtml(f.name)}</div>
-            <div class="text-[10px] text-slate-400">${escapeHtml(f.mimeType)}</div>
-          </div>
-        </label>
-      `).join('');
+      listEl.innerHTML = files.map(f => {
+        const embeddedTags = (f.appProperties && f.appProperties.tags) ? ` • Tags: ${f.appProperties.tags}` : '';
+        return `
+          <label class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900 border border-slate-800 cursor-pointer hover:border-indigo-500/50">
+            <input type="checkbox" checked value="${f.id}" class="scanner-file-cb w-4 h-4 accent-indigo-600" />
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-semibold text-white truncate">${escapeHtml(f.name)}</div>
+              <div class="text-[10px] text-slate-400 truncate">${escapeHtml(f.mimeType)}${escapeHtml(embeddedTags)}</div>
+            </div>
+          </label>
+        `;
+      }).join('');
     }
 
     function populateScannerArtists() {
@@ -2605,7 +2752,7 @@
 
       const sec = document.getElementById('scanner-section').value;
       let artistId = document.getElementById('scanner-artist').value;
-      const tags = parseTags(document.getElementById('scanner-tags').value);
+      const inputTags = parseTags(document.getElementById('scanner-tags').value);
 
       let artist = (libraryData[sec] || []).find(a => a.id === artistId);
       if (!artist) {
@@ -2623,31 +2770,44 @@
         libraryData[sec].push(artist);
       }
 
+      const extractMergedTags = (driveFile, extraBaseTags = []) => {
+        const nativeTags = (driveFile.appProperties && driveFile.appProperties.tags)
+          ? parseTags(driveFile.appProperties.tags)
+          : [];
+        return normalizeTagsArray([...extraBaseTags, ...nativeTags, ...inputTags]);
+      };
+
       if (sec === 'artistas') {
-        toImport.forEach((f, idx) => {
+        for (let idx = 0; idx < toImport.length; idx++) {
+          const f = toImport[idx];
+          const finalTags = extractMergedTags(f);
           artist.images.push({
             id: `img_${Date.now()}_${idx}`,
             title: f.name.replace(/\.[^.]+$/, ''),
             url: '',
             driveId: f.id,
-            tags: [...tags],
+            tags: finalTags,
             favorite: false,
             createdAt: Date.now() + idx
           });
-        });
+          await updateDriveFileTags(f.id, finalTags);
+        }
       } else if (sec === 'historia') {
-        toImport.forEach((f, idx) => {
+        for (let idx = 0; idx < toImport.length; idx++) {
+          const f = toImport[idx];
+          const finalTags = extractMergedTags(f);
           artist.items.push({
             id: `story_${Date.now()}_${idx}`,
             title: f.name.replace(/\.[^.]+$/, ''),
             url: '',
             driveId: f.id,
             mimeType: f.mimeType,
-            tags: [...tags],
+            tags: finalTags,
             favorite: false,
             createdAt: Date.now() + idx
           });
-        });
+          await updateDriveFileTags(f.id, finalTags);
+        }
       } else if (sec === 'comics') {
         const comicId = document.getElementById('scanner-comic').value;
         let comic = (artist.comics || []).find(c => c.id === comicId);
@@ -2656,25 +2816,27 @@
             id: `comic_${Date.now()}`,
             title: 'Importado de Drive',
             status: 'En Progreso',
-            tags: [...tags],
+            tags: [...inputTags],
             favorite: false,
             createdAt: Date.now(),
             pages: []
           };
           artist.comics.push(comic);
         }
-        const mergedTags = normalizeTagsArray([...(comic.tags || []), ...tags]);
-        toImport.forEach((f, idx) => {
+        for (let idx = 0; idx < toImport.length; idx++) {
+          const f = toImport[idx];
+          const finalTags = extractMergedTags(f, comic.tags || []);
           comic.pages.push({
             id: `page_${Date.now()}_${idx}`,
             title: f.name.replace(/\.[^.]+$/, ''),
             url: '',
             driveId: f.id,
-            tags: [...mergedTags],
+            tags: finalTags,
             favorite: false,
             createdAt: Date.now() + idx
           });
-        });
+          await updateDriveFileTags(f.id, finalTags);
+        }
       }
 
       closeModal('scanner-modal');
@@ -2755,8 +2917,8 @@
     // Teclado en visor
     document.addEventListener('keydown', (e) => {
       if (document.getElementById('lightbox-modal').classList.contains('hidden')) return;
-      if (e.key === 'ArrowLeft') navigateLightbox(1);   // Izquierda avanza
-      if (e.key === 'ArrowRight') navigateLightbox(-1); // Derecha retrocede
+      if (e.key === 'ArrowLeft') navigateLightbox(1);
+      if (e.key === 'ArrowRight') navigateLightbox(-1);
       if (e.key === 'Escape') closeLightbox();
     });
 
@@ -2770,7 +2932,6 @@
       updateSidebarCounts();
       renderTagCloud();
       renderGrid();
-      // Abre automáticamente el diálogo de conexión al iniciar o recargar con las claves guardadas
       openDriveModal();
     });
   </script>
