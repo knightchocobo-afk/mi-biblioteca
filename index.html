@@ -193,7 +193,7 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1">API Key</label>
           <input id="input-api-key" type="password" placeholder="Ej: AIzaSy..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
         </div>
-        <p class="text-[11px] text-slate-400">Tus claves se guardan únicamente en este navegador. Crea carpetas reales en Drive: <code class="text-indigo-300">Comics / Artista / Cómic</code>, <code class="text-indigo-300">Artistas / Artista</code> e <code class="text-indigo-300">Historia / Artista</code>.</p>
+        <p class="text-[11px] text-slate-400">Almacenamiento ilimitado según tu espacio libre en Google Drive. Organiza automáticamente <code class="text-indigo-300">Comics / Artista / Cómic</code>, <code class="text-indigo-300">Artistas / Artista</code> e <code class="text-indigo-300">Historia / Artista</code>.</p>
       </div>
 
       <div class="flex items-center gap-2.5 pt-1">
@@ -570,7 +570,7 @@
 
     // Caché en memoria de Blob URLs y carpetas de Drive
     const blobCache = new Map();
-    const driveFolderCache = new Map(); // key: `${parentId}::${safeName}` -> folderId
+    const driveFolderCache = new Map();
 
     // Estado del visor y modales
     let lightboxState = {
@@ -684,9 +684,14 @@
 
     function saveLocalOnly() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(libraryData));
+        // Evitar guardar blob: URLs volátiles que agotan cuota si hay miles
+        const cleanCopy = JSON.parse(JSON.stringify(libraryData, (key, value) => {
+          if (typeof value === 'string' && value.startsWith('blob:')) return '';
+          return value;
+        }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanCopy));
       } catch (e) {
-        console.warn('Error guardando en localStorage', e);
+        console.warn('Aviso guardando caché local:', e);
       }
     }
 
@@ -697,12 +702,18 @@
       renderGrid();
 
       if (driveConfig.accessToken && driveConfig.rootFolderId) {
-        await syncMetadataToDrive(logMessage);
+        try {
+          await syncMetadataToDrive(logMessage);
+        } catch (err) {
+          console.warn('Error sincronizando con Drive:', err);
+          setSyncStatus('Error Drive (reconecta)');
+          showToast('⚠️ Se guardó en pantalla, pero tu sesión de Drive caducó. Pulsa "Drive Activo" para reconectar.');
+        }
       }
     }
 
     // =========================================================================
-    // UTILIDADES DE TAGS (INCLUYENDO NOMBRES/SEUDÓNIMOS DE ARTISTA POR COMA)
+    // UTILIDADES DE TAGS
     // =========================================================================
     function parseTags(str) {
       if (!str) return [];
@@ -718,7 +729,6 @@
       return result;
     }
 
-    // Extrae uno o varios tags a partir del nombre del artista separado por comas
     function extractArtistNameTags(artistName) {
       return parseTags(artistName || '');
     }
@@ -1258,7 +1268,7 @@
         return;
       }
 
-      // 5C. ARTISTA -> CÓMICS (LISTA DE CÓMICS O PÁGINAS DE UN CÓMIC)
+      // 5C. ARTISTA -> CÓMICS
       if (state.section === 'comics') {
         if (!state.comicId) {
           const comics = sortItems((artist.comics || []).filter(c => matchesQueryAndTag(c, artist.name) || (c.pages || []).some(p => matchesQueryAndTag(p))));
@@ -1657,7 +1667,16 @@
         return;
       }
 
-      const { section, artistId } = editingArtistContext || { section: state.section, artistId: null };
+      const validSections = ['historia', 'comics', 'artistas'];
+      let section = editingArtistContext && editingArtistContext.section;
+      if (!validSections.includes(section)) {
+        section = validSections.includes(state.section) ? state.section : 'comics';
+      }
+      const artistId = (editingArtistContext && editingArtistContext.artistId) || null;
+
+      if (!Array.isArray(libraryData[section])) {
+        libraryData[section] = [];
+      }
 
       const urls = [
         document.getElementById('artist-url-1').value.trim(),
@@ -1678,14 +1697,22 @@
       btn.textContent = 'Guardando...';
 
       try {
-        const artistFolderId = await ensureArtistDriveFolder(section, name);
-
+        let artistFolderId = null;
         let uploadedCover = null;
-        if (coverFile) {
-          uploadedCover = await uploadFileToDriveOrLocal(coverFile, {
-            targetFolderId: artistFolderId,
-            tags: normalizeTagsArray([...artistAliases, ...extraTags, 'portada'])
-          });
+
+        try {
+          artistFolderId = await ensureArtistDriveFolder(section, name);
+          if (coverFile) {
+            uploadedCover = await uploadFileToDriveOrLocal(coverFile, {
+              targetFolderId: artistFolderId,
+              tags: normalizeTagsArray([...artistAliases, ...extraTags, 'portada'])
+            });
+          }
+        } catch (driveErr) {
+          console.warn('Fallo al crear carpeta o subir portada en Drive:', driveErr);
+          if (coverFile) {
+            uploadedCover = { url: URL.createObjectURL(coverFile), driveId: null };
+          }
         }
 
         if (artistId) {
@@ -1701,7 +1728,6 @@
               artist.coverDriveId = uploadedCover.driveId;
             }
 
-            // Si es de la sección Artistas, actualizar los tags automáticos de sus imágenes con los nuevos nombres/seudónimos
             if (section === 'artistas' && Array.isArray(artist.images)) {
               const oldSet = new Set(oldAliases);
               const syncTasks = [];
@@ -1737,7 +1763,12 @@
           closeModal('artist-modal');
           await persistChanges(`Creado artista ${name} en ${section}`);
         }
-        showToast('✅ Artista y carpeta guardados');
+        showToast('✅ Artista guardado');
+      } catch (err) {
+        console.error('Error guardando artista:', err);
+        closeModal('artist-modal');
+        renderGrid();
+        showToast('⚠️ Guardado localmente. Reconecta Drive si caducó la sesión.');
       } finally {
         btn.disabled = false;
         btn.textContent = 'Guardar Artista';
@@ -1771,7 +1802,7 @@
     }
 
     // =========================================================================
-    // SUBIDA DE ARCHIVOS (CON CARPETAS JERÁRQUICAS Y TAGS AUTOMÁTICOS DE ARTISTA)
+    // SUBIDA DE ARCHIVOS
     // =========================================================================
     function openUploadModal(mode) {
       currentUploadMode = mode;
@@ -1857,7 +1888,6 @@
         const artist = (libraryData[state.section] || []).find(a => a.id === state.artistId);
         if (!artist) return;
 
-        // Asegurar carpeta en Drive: Mi_Biblioteca_Multimedia / Seccion / Artista
         const artistFolderId = await ensureArtistDriveFolder(state.section, artist.name, artist);
 
         if (currentUploadMode === 'story-item') {
@@ -1881,7 +1911,6 @@
           closeModal('upload-modal');
           await persistChanges(`Subidas ${files.length} historias a ${artist.name}`);
         } else if (currentUploadMode === 'artist-images') {
-          // Añadir automáticamente el/los nombres del artista separados por coma como tags
           const artistAutoTags = extractArtistNameTags(artist.name);
           const mergedArtistImageTags = normalizeTagsArray([...artistAutoTags, ...tags]);
 
@@ -1965,6 +1994,9 @@
         }
 
         showToast(`✅ ${files.length} archivo(s) subido(s) a su carpeta en Drive`);
+      } catch (err) {
+        console.error('Error durante la subida:', err);
+        alert('Ocurrió un error al subir a Drive. Verifica tu conexión o vuelve a conectar Google Drive.');
       } finally {
         btn.disabled = false;
         btn.textContent = 'Subir a Drive';
@@ -1972,7 +2004,7 @@
     }
 
     // =========================================================================
-    // EDICIÓN Y BORRADO INDIVIDUAL DE ELEMENTOS (CON SINCRONÍA DE TAGS EN DRIVE)
+    // EDICIÓN Y BORRADO INDIVIDUAL DE ELEMENTOS
     // =========================================================================
     function openEditItemModal(kind, itemId) {
       editingItemContext = { kind, itemId };
@@ -2266,7 +2298,7 @@
     }
 
     // =========================================================================
-    // INTEGRACIÓN GOOGLE DRIVE (CARPETAS ESPEJO + METADATOS/TAGS EN ARCHIVOS)
+    // INTEGRACIÓN GOOGLE DRIVE (CON TIMEOUT DE RED Y RENOVACIÓN SEGURA)
     // =========================================================================
     function sanitizeDriveFolderName(name, fallback = 'Sin_Nombre') {
       const clean = String(name || '')
@@ -2348,53 +2380,68 @@
       document.getElementById('drive-backups-section').classList.toggle('hidden', !connected);
     }
 
-    async function driveApiFetch(url, options = {}) {
-      const headers = new Headers(options.headers || {});
-      headers.set('Authorization', `Bearer ${driveConfig.accessToken}`);
-      const res = await fetch(url, { ...options, headers });
-      if (!res.ok) {
-        throw new Error(`Drive API error ${res.status}`);
+    async function driveApiFetch(url, options = {}, timeoutMs = 25000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const headers = new Headers(options.headers || {});
+        headers.set('Authorization', `Bearer ${driveConfig.accessToken}`);
+        const res = await fetch(url, { ...options, headers, signal: controller.signal });
+        if (res.status === 401) {
+          driveConfig.accessToken = null;
+          updateDriveConnectedUI(false);
+          throw new Error('Sesión de Drive caducada (401)');
+        }
+        if (!res.ok) {
+          throw new Error(`Drive API error ${res.status}`);
+        }
+        return res;
+      } finally {
+        clearTimeout(timer);
       }
-      return res;
     }
 
     async function initializeDriveWorkspace() {
-      setSyncStatus('Creando estructura de carpetas...');
-      driveFolderCache.clear();
+      try {
+        setSyncStatus('Creando estructura de carpetas...');
+        driveFolderCache.clear();
 
-      // Carpeta raíz y carpetas principales por sección
-      driveConfig.rootFolderId = await findOrCreateDriveFolder(ROOT_FOLDER_NAME, null);
-      driveConfig.backupFolderId = await findOrCreateDriveFolder(BACKUP_FOLDER_NAME, driveConfig.rootFolderId);
-      driveConfig.sectionFolderIds.historia = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES.historia, driveConfig.rootFolderId);
-      driveConfig.sectionFolderIds.comics = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES.comics, driveConfig.rootFolderId);
-      driveConfig.sectionFolderIds.artistas = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES.artistas, driveConfig.rootFolderId);
+        driveConfig.rootFolderId = await findOrCreateDriveFolder(ROOT_FOLDER_NAME, null);
+        driveConfig.backupFolderId = await findOrCreateDriveFolder(BACKUP_FOLDER_NAME, driveConfig.rootFolderId);
+        driveConfig.sectionFolderIds.historia = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES.historia, driveConfig.rootFolderId);
+        driveConfig.sectionFolderIds.comics = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES.comics, driveConfig.rootFolderId);
+        driveConfig.sectionFolderIds.artistas = await findOrCreateDriveFolder(SECTION_FOLDER_NAMES.artistas, driveConfig.rootFolderId);
 
-      // Buscar index_metadata.json en Drive
-      const q = encodeURIComponent(`name='${METADATA_FILENAME}' and '${driveConfig.rootFolderId}' in parents and trashed=false`);
-      const listRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`);
-      const listData = await listRes.json();
+        const q = encodeURIComponent(`name='${METADATA_FILENAME}' and '${driveConfig.rootFolderId}' in parents and trashed=false`);
+        const listRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`);
+        const listData = await listRes.json();
 
-      if (listData.files && listData.files.length > 0) {
-        driveConfig.metadataFileId = listData.files[0].id;
-        const fileRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveConfig.metadataFileId}?alt=media`);
-        const remoteData = await fileRes.json();
-        if (remoteData && (remoteData.historia || remoteData.comics || remoteData.artistas)) {
-          libraryData = {
-            historia: remoteData.historia || [],
-            comics: remoteData.comics || [],
-            artistas: remoteData.artistas || []
-          };
-          saveLocalOnly();
+        if (listData.files && listData.files.length > 0) {
+          driveConfig.metadataFileId = listData.files[0].id;
+          const fileRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveConfig.metadataFileId}?alt=media`);
+          const remoteData = await fileRes.json();
+          if (remoteData && (remoteData.historia || remoteData.comics || remoteData.artistas)) {
+            libraryData = {
+              historia: remoteData.historia || [],
+              comics: remoteData.comics || [],
+              artistas: remoteData.artistas || []
+            };
+            saveLocalOnly();
+          }
+        } else {
+          await syncMetadataToDrive('Inicialización de biblioteca en Drive');
         }
-      } else {
-        await syncMetadataToDrive('Inicialización de biblioteca en Drive');
-      }
 
-      updateSidebarCounts();
-      renderTagCloud();
-      renderGrid();
-      setSyncStatus('Sincronizado ✓');
-      await scanDriveForUntrackedFiles();
+        updateSidebarCounts();
+        renderTagCloud();
+        renderGrid();
+        setSyncStatus('Sincronizado ✓');
+        await scanDriveForUntrackedFiles();
+      } catch (err) {
+        console.error('Error iniciando espacio de Drive:', err);
+        setSyncStatus('Error conectando Drive');
+        showToast('⚠️ Error al sincronizar carpetas en Drive');
+      }
     }
 
     async function findOrCreateDriveFolder(name, parentId) {
@@ -2475,7 +2522,7 @@
       const res = await driveApiFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType', {
         method: 'POST',
         body: form
-      });
+      }, 60000);
       const uploaded = await res.json();
       blobCache.set(uploaded.id, localBlobUrl);
       setSyncStatus('Sincronizado ✓');
@@ -2512,7 +2559,7 @@
       if (!driveConfig.accessToken) return '';
 
       try {
-        const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?alt=media`);
+        const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?alt=media`, {}, 30000);
         const blob = await res.blob();
         const objectUrl = URL.createObjectURL(blob);
         blobCache.set(driveId, objectUrl);
@@ -2538,7 +2585,11 @@
     async function syncMetadataToDrive(logMessage = '') {
       if (!driveConfig.accessToken || !driveConfig.rootFolderId) return;
       setSyncStatus('Guardando índice...');
-      const jsonBlob = new Blob([JSON.stringify(libraryData, null, 2)], { type: 'application/json' });
+      const cleanPayload = JSON.stringify(libraryData, (key, value) => {
+        if (typeof value === 'string' && value.startsWith('blob:')) return '';
+        return value;
+      }, 2);
+      const jsonBlob = new Blob([cleanPayload], { type: 'application/json' });
 
       if (driveConfig.metadataFileId) {
         await driveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${driveConfig.metadataFileId}?uploadType=media`, {
@@ -2559,7 +2610,7 @@
       }
 
       if (logMessage) {
-        await createDriveBackupSnapshot(logMessage);
+        createDriveBackupSnapshot(logMessage).catch(() => {});
       }
       setSyncStatus('Sincronizado ✓');
     }
