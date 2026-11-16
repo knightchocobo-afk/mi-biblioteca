@@ -168,8 +168,8 @@
         <span id="sidebar-primary-label">Nuevo Artista</span>
       </button>
       <button onclick="openDriveModal()" class="touch-btn w-full py-2.5 px-4 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-slate-200 font-medium text-xs flex items-center justify-center gap-2 transition">
-        <span>☁️</span>
-        <span id="drive-btn-label">Conectar Google Drive</span>
+        <span>🛡️</span>
+        <span id="drive-btn-label">Drive y Resguardos</span>
       </button>
     </div>
   </aside>
@@ -218,8 +218,8 @@
           <span id="header-primary-label" class="hidden sm:inline">Nuevo Artista</span>
         </button>
 
-        <!-- Botón directo Conectar Google Drive en cabecera -->
-        <button onclick="openDriveModal()" id="header-drive-btn" class="touch-btn px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 text-amber-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0" title="Conectar o configurar Google Drive">
+        <!-- Botón directo Conectar Google Drive y Resguardos en cabecera -->
+        <button onclick="openDriveModal()" id="header-drive-btn" class="touch-btn px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 text-amber-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0" title="Conectar Google Drive y ver resguardos">
           <span>☁️</span>
           <span id="header-drive-label" class="hidden md:inline">Conectar Drive</span>
         </button>
@@ -547,17 +547,17 @@
   </div>
 
   <!-- ========================================================= -->
-  <!-- MODAL 7: CONFIGURACIÓN GOOGLE DRIVE API (Se abre al entrar) -->
+  <!-- MODAL 7: GOOGLE DRIVE, RESGUARDOS AUTOMÁTICOS E HISTORIAL -->
   <!-- ========================================================= -->
   <div id="drive-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-slate-925 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+    <div class="bg-slate-925 border border-slate-800 rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">☁️ Conectar con Google Drive</h3>
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">☁️ Google Drive y Resguardos</h3>
         <button onclick="closeDriveModal()" class="touch-btn rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">✕</button>
       </div>
 
       <p class="text-xs text-slate-300 leading-relaxed">
-        Tus credenciales se guardan únicamente en este navegador. Pulsa <b>Conectar y Sincronizar</b> para acceder a tu carpeta privada <code class="px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300">Mi_Biblioteca_Multimedia</code>.
+        Tus credenciales se guardan únicamente en este navegador. Cada vez que subes o editas algo, se crea un respaldo automático en <code class="px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300">Respaldos_Biblioteca</code> dentro de tu Drive.
       </p>
 
       <div class="space-y-3">
@@ -571,12 +571,45 @@
         </div>
       </div>
 
+      <!-- SECCIÓN DE RESGUARDOS AUTOMÁTICOS E HISTORIAL (Visible al estar conectado) -->
+      <div id="drive-backups-section" class="hidden pt-3 border-t border-slate-800 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h4 class="text-sm font-bold text-emerald-300 flex items-center gap-1.5">🛡️ Resguardos Automáticos en Drive</h4>
+            <p class="text-[11px] text-slate-400">Se conservan los últimos 15 puntos de restauración por fecha.</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="createManualBackupNow()" class="px-3 py-1.5 rounded-lg bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-200 text-xs font-semibold">
+              + Respaldar ahora
+            </button>
+            <button onclick="refreshDriveBackupsList()" class="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs" title="Actualizar lista">
+              ↻
+            </button>
+          </div>
+        </div>
+
+        <div id="drive-backups-list" class="max-h-48 overflow-y-auto space-y-2 pr-1">
+          <p class="text-xs text-slate-400 py-2">Cargando puntos de restauración...</p>
+        </div>
+
+        <!-- Bitácora reciente de actividad -->
+        <div class="pt-2 border-t border-slate-800/80">
+          <div class="flex items-center justify-between mb-1.5">
+            <h4 class="text-xs font-bold text-slate-300">📜 Últimos movimientos registrados</h4>
+            <span class="text-[10px] text-slate-500">Guardado en historial_actividad.txt</span>
+          </div>
+          <div id="drive-activity-log-box" class="max-h-28 overflow-y-auto rounded-xl bg-slate-950/90 border border-slate-800 p-2.5 text-[11px] text-slate-300 space-y-1 font-mono">
+            <p class="text-slate-500">Sin movimientos registrados en esta sesión.</p>
+          </div>
+        </div>
+      </div>
+
       <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
         <button onclick="disconnectDrive()" id="drive-logout-btn" class="hidden touch-btn px-3.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 text-xs font-semibold">
           Desconectar
         </button>
         <div class="flex items-center gap-2 ml-auto">
-          <button onclick="closeDriveModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-xs font-medium text-slate-300">Usar Modo Demo</button>
+          <button onclick="closeDriveModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-xs font-medium text-slate-300">Cerrar / Demo</button>
           <button onclick="saveAndConnectDrive()" class="touch-btn px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20">
             <span>☁️ Conectar y Sincronizar</span>
           </button>
@@ -596,6 +629,7 @@
   <!-- ========================================================= -->
   <script>
     const ITEMS_PER_PAGE = 50;
+    const MAX_BACKUPS_TO_KEEP = 15;
 
     function svgCover(bg1, bg2, title, subtitle, emoji) {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750" viewBox="0 0 600 750">
@@ -739,14 +773,18 @@
       // Borrado seguro
       deleteTarget: null,
       deleteStep: 1,
-      // Google Drive (se lee únicamente de localStorage)
+      // Google Drive y Resguardos
       drive: {
         connected: false,
         clientId: localStorage.getItem('gdrive_client_id') || '',
         apiKey: localStorage.getItem('gdrive_api_key') || '',
         accessToken: null,
         folderId: null,
+        backupsFolderId: null,
         metadataFileId: null,
+        activityLogFileId: null,
+        activityLogLines: [],
+        backupsList: [],
         tokenClient: null
       }
     };
@@ -815,6 +853,24 @@
       }
     }
 
+    function formatFullDateTime(isoStr) {
+      if (!isoStr) return '';
+      try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      } catch {
+        return '';
+      }
+    }
+
     function extractTimestamp(item) {
       if (!item) return 0;
       const raw = item.createdAt || item.date || item.updatedAt;
@@ -823,7 +879,6 @@
         const parsed = Date.parse(raw);
         if (!isNaN(parsed)) return parsed;
       }
-      // Si el ID contiene un timestamp numérico (ej. img-1700000000000), extraerlo como respaldo
       const idMatch = String(item.id || '').match(/(\d{12,14})/);
       if (idMatch) return Number(idMatch[1]);
       return 0;
@@ -2037,7 +2092,7 @@
              </p>`
           : `<p>¿Seguro que deseas eliminar al artista vacío <b>${escapeHtml(art.name)}</b>?</p>`,
         step2Html: `<p class="text-rose-200 font-semibold">¡ATENCIÓN! Se borrará permanentemente el artista <b>${escapeHtml(art.name)}</b> junto con sus <b>${totalCount} archivo(s)</b>.</p>
-                    <p class="text-xs text-slate-400">Esta acción eliminará su registro de la biblioteca y sincronizará el cambio con Google Drive.</p>`
+                    <p class="text-xs text-slate-400">Se guardará un respaldo automático previo en Google Drive por si necesitas recuperarlo.</p>`
       });
     }
 
@@ -2114,6 +2169,7 @@
 
     async function executeDeletion(target) {
       const driveIdsToTrash = [];
+      let logSummary = 'Elemento eliminado';
 
       if (target.type === 'artist') {
         const arr = getArtistArrayByCategory();
@@ -2129,6 +2185,7 @@
             state.selectedArtistId = null;
             state.selectedComicId = null;
           }
+          logSummary = `Artista eliminado: "${art.name}"`;
           showToast(`Artista "${art.name}" eliminado`, '🗑️');
         }
       } else if (target.type === 'story') {
@@ -2136,9 +2193,11 @@
         if (art) {
           const idx = (art.stories || []).findIndex(s => s.id === target.storyId);
           if (idx >= 0) {
+            const stTitle = art.stories[idx].title;
             if (art.stories[idx].driveFileId) driveIdsToTrash.push(art.stories[idx].driveFileId);
             art.stories.splice(idx, 1);
             if (state.activeStoryId === target.storyId) closeMediaViewer();
+            logSummary = `Historia eliminada: "${stTitle}" (${art.name})`;
             showToast('Historia eliminada', '🗑️');
           }
         }
@@ -2147,8 +2206,10 @@
         if (art) {
           const idx = (art.images || []).findIndex(i => i.id === target.imageId);
           if (idx >= 0) {
+            const imgName = art.images[idx].name;
             if (art.images[idx].driveFileId) driveIdsToTrash.push(art.images[idx].driveFileId);
             art.images.splice(idx, 1);
+            logSummary = `Imagen eliminada: "${imgName}" (${art.name})`;
             showToast('Imagen eliminada', '🗑️');
           }
         }
@@ -2157,9 +2218,11 @@
         if (art) {
           const idx = (art.comics || []).findIndex(c => c.id === target.comicId);
           if (idx >= 0) {
+            const comTitle = art.comics[idx].title;
             (art.comics[idx].pages || []).forEach(p => { if (p.driveFileId) driveIdsToTrash.push(p.driveFileId); });
             art.comics.splice(idx, 1);
             if (state.selectedComicId === target.comicId) state.selectedComicId = null;
+            logSummary = `Cómic eliminado: "${comTitle}" (${art.name})`;
             showToast('Cómic eliminado', '🗑️');
           }
         }
@@ -2169,8 +2232,10 @@
         if (com) {
           const idx = (com.pages || []).findIndex(p => p.id === target.pageId);
           if (idx >= 0) {
+            const pgName = com.pages[idx].name;
             if (com.pages[idx].driveFileId) driveIdsToTrash.push(com.pages[idx].driveFileId);
             com.pages.splice(idx, 1);
+            logSummary = `Página eliminada: "${pgName}" de "${com.title}"`;
             showToast('Página eliminada', '🗑️');
           }
         }
@@ -2183,7 +2248,7 @@
           trashDriveFile(fid).catch(() => {});
         }
       }
-      await syncMetadataToDrive();
+      await syncMetadataToDrive(logSummary);
     }
 
     // =========================================================
@@ -2356,6 +2421,7 @@
         }
 
         const arr = getArtistArrayByCategory();
+        let logMsg = '';
 
         if (state.editingArtistId) {
           const existing = arr.find(a => a.id === state.editingArtistId);
@@ -2368,6 +2434,7 @@
               existing.coverDriveId = coverDriveId;
             }
           }
+          logMsg = `Artista editado: "${name}" (${state.category})`;
           showToast('Artista actualizado', '✅');
         } else {
           const defaultEmoji = state.category === 'historia' ? '📖' : state.category === 'comics' ? '💬' : '🎨';
@@ -2384,10 +2451,11 @@
           if (state.category === 'comics') newArtist.comics = [];
           if (state.category === 'artistas') newArtist.images = [];
           arr.unshift(newArtist);
+          logMsg = `Nuevo artista creado: "${name}" en ${state.category}`;
           showToast('Nuevo artista añadido', '✅');
         }
 
-        await syncMetadataToDrive();
+        await syncMetadataToDrive(logMsg);
         closeArtistModal();
         renderApp();
       } catch (err) {
@@ -2524,6 +2592,7 @@
 
         const baseNow = Date.now();
         const nowIso = new Date(baseNow).toISOString();
+        let logMsg = '';
 
         if (mode === 'story') {
           const rec = uploadedRecords[0];
@@ -2536,6 +2605,7 @@
             url: rec.url,
             driveFileId: rec.driveFileId
           });
+          logMsg = `Subida historia "${title}" en ${art.name}`;
           showToast('Historia guardada', '✅');
         } else if (mode === 'artist-images') {
           uploadedRecords.forEach((rec, i) => {
@@ -2548,6 +2618,7 @@
               driveFileId: rec.driveFileId
             });
           });
+          logMsg = `Subidas ${uploadedRecords.length} imagen(es) en ${art.name}`;
           showToast(`${uploadedRecords.length} imagen(es) añadida(s)`, '✅');
         } else if (mode === 'new-comic') {
           const status = document.getElementById('upload-comic-status').value;
@@ -2567,6 +2638,7 @@
             createdAt: nowIso,
             pages
           });
+          logMsg = `Nuevo cómic "${title}" (${pages.length} págs.) en ${art.name}`;
           showToast('Cómic creado', '✅');
         } else if (mode === 'comic-pages') {
           const com = getCurrentComic();
@@ -2582,11 +2654,12 @@
                 driveFileId: rec.driveFileId
               });
             });
+            logMsg = `Añadidas ${uploadedRecords.length} página(s) a "${com.title}" (${art.name})`;
             showToast(`${uploadedRecords.length} página(s) añadida(s)`, '✅');
           }
         }
 
-        await syncMetadataToDrive();
+        await syncMetadataToDrive(logMsg);
         closeUploadModal();
         renderApp();
       } catch (err) {
@@ -2754,7 +2827,7 @@
         }
       }
 
-      await syncMetadataToDrive();
+      await syncMetadataToDrive(`Editado "${newName}" (${state.editTagsBuffer.length} tags)`);
       closeEditItemModal();
       renderApp();
 
@@ -3178,15 +3251,22 @@
     }
 
     // =========================================================
-    // INTEGRACIÓN CON GOOGLE DRIVE (Claves guardadas solo en navegador)
+    // INTEGRACIÓN CON GOOGLE DRIVE + RESGUARDOS E HISTORIAL
     // =========================================================
     function openDriveModal() {
       document.getElementById('drive-client-id').value = state.drive.clientId || localStorage.getItem('gdrive_client_id') || '';
       document.getElementById('drive-api-key').value = state.drive.apiKey || localStorage.getItem('gdrive_api_key') || '';
       document.getElementById('drive-logout-btn').classList.toggle('hidden', !state.drive.connected);
+      document.getElementById('drive-backups-section').classList.toggle('hidden', !state.drive.connected);
+
       const modal = document.getElementById('drive-modal');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
+
+      if (state.drive.connected) {
+        refreshDriveBackupsList();
+        renderActivityLogUI();
+      }
     }
 
     function closeDriveModal() {
@@ -3202,8 +3282,8 @@
       const headerLabel = document.getElementById('header-drive-label');
       if (state.drive.connected) {
         badge.className = 'text-xs text-emerald-400 flex items-center gap-1.5 mt-0.5';
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Drive Conectado`;
-        btnLabel.textContent = 'Google Drive Activo';
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Drive + Resguardos`;
+        btnLabel.textContent = 'Drive y Resguardos';
         if (headerBtn && headerLabel) {
           headerBtn.className = 'touch-btn px-3 rounded-xl bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0';
           headerLabel.textContent = 'Drive Activo';
@@ -3333,6 +3413,271 @@
       });
     }
 
+    async function ensureBackupsSubfolder() {
+      if (!state.drive.connected || !state.drive.folderId) return null;
+      if (state.drive.backupsFolderId) return state.drive.backupsFolderId;
+
+      const res = await gapi.client.drive.files.list({
+        q: `'${state.drive.folderId}' in parents and name = 'Respaldos_Biblioteca' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        fields: 'files(id, name)'
+      });
+
+      if (res.result.files && res.result.files.length > 0) {
+        state.drive.backupsFolderId = res.result.files[0].id;
+      } else {
+        const created = await gapi.client.drive.files.create({
+          resource: {
+            name: 'Respaldos_Biblioteca',
+            parents: [state.drive.folderId],
+            mimeType: 'application/vnd.google-apps.folder'
+          },
+          fields: 'id'
+        });
+        state.drive.backupsFolderId = created.result.id;
+      }
+      return state.drive.backupsFolderId;
+    }
+
+    async function loadActivityLogFromDrive() {
+      if (!state.drive.connected || !state.drive.folderId) return;
+      try {
+        const logRes = await gapi.client.drive.files.list({
+          q: `'${state.drive.folderId}' in parents and name = 'historial_actividad.txt' and trashed = false`,
+          fields: 'files(id, name)'
+        });
+        if (logRes.result.files && logRes.result.files.length > 0) {
+          state.drive.activityLogFileId = logRes.result.files[0].id;
+          const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${state.drive.activityLogFileId}?alt=media`, {
+            headers: { Authorization: 'Bearer ' + state.drive.accessToken }
+          });
+          if (resp.ok) {
+            const text = await resp.text();
+            state.drive.activityLogLines = text.split('\n').filter(Boolean);
+          }
+        }
+      } catch (e) {
+        console.warn('No se pudo cargar historial_actividad.txt:', e);
+      }
+    }
+
+    async function appendActivityLogToDrive(actionMessage) {
+      if (!state.drive.connected || !state.drive.folderId || !actionMessage) return;
+      try {
+        const stamp = formatFullDateTime(new Date().toISOString());
+        const newLine = `[${stamp}] ${actionMessage}`;
+        state.drive.activityLogLines.unshift(newLine);
+        if (state.drive.activityLogLines.length > 100) {
+          state.drive.activityLogLines = state.drive.activityLogLines.slice(0, 100);
+        }
+        renderActivityLogUI();
+
+        const txtBlob = new Blob([state.drive.activityLogLines.join('\n')], { type: 'text/plain;charset=utf-8' });
+
+        if (state.drive.activityLogFileId) {
+          await fetch(`https://www.googleapis.com/upload/drive/v3/files/${state.drive.activityLogFileId}?uploadType=media`, {
+            method: 'PATCH',
+            headers: { Authorization: 'Bearer ' + state.drive.accessToken, 'Content-Type': 'text/plain;charset=utf-8' },
+            body: txtBlob
+          });
+        } else {
+          const metadata = { name: 'historial_actividad.txt', parents: [state.drive.folderId], mimeType: 'text/plain' };
+          const form = new FormData();
+          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+          form.append('file', txtBlob);
+          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + state.drive.accessToken },
+            body: form
+          });
+          if (res.ok) {
+            const data = await res.json();
+            state.drive.activityLogFileId = data.id;
+          }
+        }
+      } catch (e) {
+        console.warn('Error escribiendo historial_actividad.txt:', e);
+      }
+    }
+
+    function renderActivityLogUI() {
+      const box = document.getElementById('drive-activity-log-box');
+      if (!box) return;
+      const lines = state.drive.activityLogLines || [];
+      if (lines.length === 0) {
+        box.innerHTML = `<p class="text-slate-500">Sin movimientos registrados todavía.</p>`;
+        return;
+      }
+      box.innerHTML = lines.slice(0, 25).map(l => `<div class="truncate" title="${escapeHtml(l)}">${escapeHtml(l)}</div>`).join('');
+    }
+
+    function buildCleanSnapshotObject() {
+      const cleanClone = JSON.parse(JSON.stringify(state.data));
+      const stripBlob = (obj) => {
+        if (obj.coverDriveId && String(obj.coverUrl || '').startsWith('blob:')) obj.coverUrl = '';
+        if (obj.driveFileId && String(obj.url || '').startsWith('blob:')) obj.url = '';
+      };
+      cleanClone.historiaArtists.forEach(a => { stripBlob(a); (a.stories || []).forEach(stripBlob); });
+      cleanClone.comicArtists.forEach(a => { stripBlob(a); (a.comics || []).forEach(c => (c.pages || []).forEach(stripBlob)); });
+      cleanClone.artArtists.forEach(a => { stripBlob(a); (a.images || []).forEach(stripBlob); });
+      return cleanClone;
+    }
+
+    function getSnapshotSummaryText(snapshot) {
+      const hCount = (snapshot.historiaArtists || []).length;
+      const cCount = (snapshot.comicArtists || []).length;
+      const aCount = (snapshot.artArtists || []).length;
+      const imgs = (snapshot.artArtists || []).reduce((acc, a) => acc + (a.images || []).length, 0);
+      const pages = (snapshot.comicArtists || []).reduce((acc, a) => acc + (a.comics || []).reduce((s, c) => s + (c.pages || []).length, 0), 0);
+      return `${aCount + cCount + hCount} artistas • ${imgs} ilustraciones • ${pages} págs. cómic`;
+    }
+
+    async function createAutomaticBackupSnapshot(reasonLabel = 'Respaldo automático') {
+      if (!state.drive.connected || !state.drive.folderId) return;
+      try {
+        const backupsFolderId = await ensureBackupsSubfolder();
+        if (!backupsFolderId) return;
+
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const fileName = `Respaldo_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}.json`;
+
+        const cleanData = buildCleanSnapshotObject();
+        const payload = {
+          backupCreatedAt: now.toISOString(),
+          reason: reasonLabel,
+          summary: getSnapshotSummaryText(cleanData),
+          libraryData: cleanData
+        };
+
+        const jsonBlob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const metadata = {
+          name: fileName,
+          parents: [backupsFolderId],
+          mimeType: 'application/json',
+          description: `${reasonLabel} | ${payload.summary}`
+        };
+
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', jsonBlob);
+
+        await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + state.drive.accessToken },
+          body: form
+        });
+
+        // Limpiar respaldos antiguos manteniendo los últimos MAX_BACKUPS_TO_KEEP
+        const listRes = await gapi.client.drive.files.list({
+          q: `'${backupsFolderId}' in parents and trashed = false`,
+          orderBy: 'createdTime desc',
+          pageSize: 40,
+          fields: 'files(id, name, createdTime, description)'
+        });
+        const files = listRes.result.files || [];
+        state.drive.backupsList = files;
+
+        if (files.length > MAX_BACKUPS_TO_KEEP) {
+          const toRemove = files.slice(MAX_BACKUPS_TO_KEEP);
+          for (const oldFile of toRemove) {
+            trashDriveFile(oldFile.id).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('Error creando respaldo automático:', err);
+      }
+    }
+
+    async function createManualBackupNow() {
+      if (!state.drive.connected) return;
+      showToast('Creando punto de restauración...', '🛡️');
+      await createAutomaticBackupSnapshot('Respaldo manual del usuario');
+      await appendActivityLogToDrive('Respaldo manual creado');
+      await refreshDriveBackupsList();
+      showToast('Resguardo guardado en Drive', '✅');
+    }
+
+    async function refreshDriveBackupsList() {
+      const container = document.getElementById('drive-backups-list');
+      if (!container || !state.drive.connected) return;
+      container.innerHTML = `<p class="text-xs text-slate-400 py-2">Buscando respaldos en Google Drive...</p>`;
+
+      try {
+        const backupsFolderId = await ensureBackupsSubfolder();
+        const listRes = await gapi.client.drive.files.list({
+          q: `'${backupsFolderId}' in parents and trashed = false`,
+          orderBy: 'createdTime desc',
+          pageSize: 20,
+          fields: 'files(id, name, createdTime, description)'
+        });
+        const files = listRes.result.files || [];
+        state.drive.backupsList = files;
+
+        if (files.length === 0) {
+          container.innerHTML = `<p class="text-xs text-slate-500 py-2">Aún no hay respaldos guardados. Se crearán automáticamente al subir o editar.</p>`;
+          return;
+        }
+
+        container.innerHTML = files.map((f, idx) => {
+          const dateNice = formatFullDateTime(f.createdTime);
+          const desc = f.description || f.name;
+          return `
+            <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                  <span>${idx === 0 ? '🟢' : '📦'}</span>
+                  <span>${escapeHtml(dateNice || f.name)}</span>
+                </div>
+                <p class="text-[11px] text-slate-400 truncate mt-0.5">${escapeHtml(desc)}</p>
+              </div>
+              <button onclick="restoreBackupFromDrive('${f.id}', '${escapeHtml(dateNice || f.name)}')" class="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-200 hover:text-white text-xs font-semibold transition">
+                Restaurar
+              </button>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<p class="text-xs text-rose-400 py-2">Error al leer respaldos de Drive.</p>`;
+      }
+    }
+
+    async function restoreBackupFromDrive(backupFileId, label) {
+      if (!state.drive.connected || !backupFileId) return;
+      const ok = confirm(`¿Restaurar la biblioteca al punto "${label}"?\n\nPrimero se guardará una copia de seguridad de tu estado actual por precaución.`);
+      if (!ok) return;
+
+      try {
+        showToast('Restaurando punto de seguridad...', '⏳');
+        // Guardar copia preventiva del estado actual antes de restaurar
+        await createAutomaticBackupSnapshot('Copia preventiva antes de restaurar');
+
+        const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(backupFileId)}?alt=media`, {
+          headers: { Authorization: 'Bearer ' + state.drive.accessToken }
+        });
+        if (!resp.ok) throw new Error('No se pudo leer el respaldo');
+        const parsed = await resp.json();
+        const restoredData = parsed.libraryData || parsed;
+
+        if (!restoredData || !restoredData.historiaArtists || !restoredData.comicArtists || !restoredData.artArtists) {
+          throw new Error('Formato de respaldo inválido');
+        }
+
+        state.data = restoredData;
+        state.selectedArtistId = null;
+        state.selectedComicId = null;
+        state.currentPage = 1;
+
+        await syncMetadataToDrive(`Biblioteca restaurada al respaldo: ${label}`, false);
+        renderApp();
+        closeDriveModal();
+        showToast('¡Biblioteca restaurada con éxito!', '✅');
+      } catch (err) {
+        console.error(err);
+        showToast('Error al restaurar el respaldo', '❌');
+      }
+    }
+
     async function initDriveFolderAndLoad() {
       try {
         const folderRes = await gapi.client.drive.files.list({
@@ -3349,6 +3694,9 @@
           });
           state.drive.folderId = createFolder.result.id;
         }
+
+        await ensureBackupsSubfolder();
+        await loadActivityLogFromDrive();
 
         const metaRes = await gapi.client.drive.files.list({
           q: `'${state.drive.folderId}' in parents and name = 'index_metadata.json' and trashed = false`,
@@ -3370,7 +3718,7 @@
         }
 
         state.data = { historiaArtists: [], comicArtists: [], artArtists: [] };
-        await syncMetadataToDrive();
+        await syncMetadataToDrive('Inicialización de biblioteca en Drive');
         renderApp();
         showToast('Carpeta creada en Google Drive', '📁');
       } catch (err) {
@@ -3396,18 +3744,10 @@
       return { id: data.id, blobUrl };
     }
 
-    async function syncMetadataToDrive() {
+    async function syncMetadataToDrive(activityReason = '', createBackup = true) {
       if (!state.drive.connected || !state.drive.folderId) return;
 
-      const cleanClone = JSON.parse(JSON.stringify(state.data));
-      const stripBlob = (obj) => {
-        if (obj.coverDriveId && String(obj.coverUrl || '').startsWith('blob:')) obj.coverUrl = '';
-        if (obj.driveFileId && String(obj.url || '').startsWith('blob:')) obj.url = '';
-      };
-      cleanClone.historiaArtists.forEach(a => { stripBlob(a); (a.stories || []).forEach(stripBlob); });
-      cleanClone.comicArtists.forEach(a => { stripBlob(a); (a.comics || []).forEach(c => (c.pages || []).forEach(stripBlob)); });
-      cleanClone.artArtists.forEach(a => { stripBlob(a); (a.images || []).forEach(stripBlob); });
-
+      const cleanClone = buildCleanSnapshotObject();
       const jsonBlob = new Blob([JSON.stringify(cleanClone, null, 2)], { type: 'application/json' });
 
       if (state.drive.metadataFileId) {
@@ -3429,6 +3769,13 @@
         });
         const data = await res.json();
         state.drive.metadataFileId = data.id;
+      }
+
+      if (activityReason) {
+        await appendActivityLogToDrive(activityReason);
+      }
+      if (createBackup) {
+        await createAutomaticBackupSnapshot(activityReason || 'Sincronización automática');
       }
     }
 
