@@ -276,6 +276,29 @@
         <div id="artist-header-actions" class="hidden flex items-center gap-2"></div>
       </div>
 
+      <!-- Barra de Selección Múltiple para Galería de Artista -->
+      <div id="multi-select-bar" class="hidden flex-wrap items-center justify-between gap-2 bg-indigo-950/60 border border-indigo-500/50 rounded-xl px-3.5 py-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs sm:text-sm font-bold text-indigo-200">
+            ☑️ <span id="multi-select-count">0</span> imagen(es) seleccionada(s)
+          </span>
+          <button onclick="selectAllArtistImagesOnPage(true)" class="px-2.5 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200">
+            Marcar página
+          </button>
+          <button onclick="selectAllArtistImagesOnPage(false)" class="px-2.5 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-400">
+            Limpiar
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openBulkTagModal()" id="bulk-tag-action-btn" disabled class="touch-btn px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:pointer-events-none text-white text-xs font-bold flex items-center gap-1.5 shadow">
+            <span>🏷️</span> Etiquetar seleccionadas
+          </button>
+          <button onclick="toggleArtistMultiSelectMode(false)" class="touch-btn px-3 py-1.5 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300">
+            ✕ Salir
+          </button>
+        </div>
+      </div>
+
       <!-- Nube Compacta de Tags Alfabéticos -->
       <div id="tag-filter-wrapper" class="flex items-center gap-2">
         <button onclick="toggleTagCloudExpanded()" id="toggle-tag-cloud-btn" class="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 flex items-center gap-1">
@@ -538,6 +561,44 @@
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
         <button onclick="closeEditItemModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-sm font-medium text-slate-300">Cancelar</button>
         <button onclick="saveEditItemModal()" class="touch-btn px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 5B: ETIQUETADO MASIVO PARA MÚLTIPLES IMÁGENES       -->
+  <!-- ========================================================= -->
+  <div id="bulk-tag-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-925 border border-indigo-500/40 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">🏷️ Etiquetar en Lote</h3>
+          <p id="bulk-tag-subtitle" class="text-xs text-indigo-300">Aplicar a 0 imagen(es) seleccionada(s)</p>
+        </div>
+        <button onclick="closeBulkTagModal()" class="touch-btn rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">➕ Tags a AÑADIR a todas las seleccionadas</label>
+          <input id="bulk-add-tags-input" type="text" placeholder="Ej. retrato, color, favorita..." class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+          <div class="mt-2">
+            <p class="text-[11px] text-slate-400 mb-1">Top 10 tags más usados (toca para añadir/quitar):</p>
+            <div id="bulk-top-tags" class="flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+
+        <div id="bulk-common-tags-box" class="hidden pt-2 border-t border-slate-800/80">
+          <label class="block text-xs font-semibold text-rose-300 mb-1">➖ Tags presentes en las seleccionadas (toca × para quitar de todas)</label>
+          <div id="bulk-existing-tags-list" class="flex flex-wrap gap-1.5"></div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeBulkTagModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-sm font-medium text-slate-300">Cancelar</button>
+        <button onclick="applyBulkTagsToSelected()" class="touch-btn px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/20">
+          Aplicar a Seleccionadas
+        </button>
       </div>
     </div>
   </div>
@@ -811,7 +872,7 @@
                   id: 'cp-1',
                   name: 'Página 01 — Llegada a Neo-Kyoto',
                   favorite: true,
-                  tags: ['portada', 'ciudad'],
+                  tags: ['cyberpunk', 'accion', 'color', 'portada', 'ciudad'],
                   createdAt: '2026-01-14T11:05:00Z',
                   url: svgCover('#312e81', '#be185d', 'Página 01', 'Horizonte Carmesí', '🌃'),
                   driveFileId: null
@@ -820,7 +881,7 @@
                   id: 'cp-2',
                   name: 'Página 02 — El Encuentro',
                   favorite: false,
-                  tags: ['personajes', 'dialogo'],
+                  tags: ['cyberpunk', 'accion', 'color', 'personajes', 'dialogo'],
                   createdAt: '2026-01-16T16:40:00Z',
                   url: svgCover('#1e1b4b', '#7e22ce', 'Página 02', 'El Encuentro', '⚡'),
                   driveFileId: null
@@ -876,6 +937,10 @@
       sortBy: 'date-desc',
       currentPage: 1,
       data: JSON.parse(JSON.stringify(DEMO_DATA)),
+      // Selección múltiple en galería de artista
+      multiSelectMode: false,
+      selectedArtistImageIds: new Set(),
+      bulkTagsToRemove: new Set(),
       // Lightbox
       lightboxList: [],
       lightboxIndex: 0,
@@ -1058,6 +1123,144 @@
     }
 
     // =========================================================
+    // SELECCIÓN MÚLTIPLE Y ETIQUETADO MASIVO EN GALERÍA DE ARTISTA
+    // =========================================================
+    function toggleArtistMultiSelectMode(force) {
+      const next = typeof force === 'boolean' ? force : !state.multiSelectMode;
+      state.multiSelectMode = next;
+      state.selectedArtistImageIds.clear();
+      renderApp();
+    }
+
+    function toggleSelectArtistImage(imageId) {
+      if (!state.multiSelectMode) {
+        state.multiSelectMode = true;
+      }
+      if (state.selectedArtistImageIds.has(imageId)) {
+        state.selectedArtistImageIds.delete(imageId);
+      } else {
+        state.selectedArtistImageIds.add(imageId);
+      }
+      renderApp();
+    }
+
+    function selectAllArtistImagesOnPage(selectAll) {
+      const art = getCurrentArtist();
+      if (!art || state.category !== 'artistas') return;
+      const filteredImages = (art.images || []).filter(img => matchesSearchAndTags(img.name, img.tags));
+      const sortedImages = sortItems(filteredImages, img => img.name);
+      const { pageItems } = paginateItems(sortedImages);
+
+      if (selectAll) {
+        pageItems.forEach(img => state.selectedArtistImageIds.add(img.id));
+      } else {
+        state.selectedArtistImageIds.clear();
+      }
+      renderApp();
+    }
+
+    function openBulkTagModal() {
+      const art = getCurrentArtist();
+      if (!art || state.category !== 'artistas' || state.selectedArtistImageIds.size === 0) return;
+
+      state.bulkTagsToRemove.clear();
+      document.getElementById('bulk-add-tags-input').value = '';
+      document.getElementById('bulk-tag-subtitle').textContent = `Aplicar a ${state.selectedArtistImageIds.size} imagen(es) seleccionada(s) de ${art.name}`;
+
+      renderTop10TagButtons('bulk-top-tags', () => parseTags(document.getElementById('bulk-add-tags-input').value));
+
+      // Recopilar tags existentes en cualquiera de las imágenes seleccionadas
+      const selectedImgs = (art.images || []).filter(img => state.selectedArtistImageIds.has(img.id));
+      const tagSet = new Set();
+      selectedImgs.forEach(img => normalizeTagList(img.tags).forEach(t => tagSet.add(t)));
+      const existingTags = Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'es'));
+
+      const commonBox = document.getElementById('bulk-common-tags-box');
+      if (existingTags.length > 0) {
+        commonBox.classList.remove('hidden');
+        renderBulkExistingTagsChips(existingTags);
+      } else {
+        commonBox.classList.add('hidden');
+      }
+
+      const modal = document.getElementById('bulk-tag-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function renderBulkExistingTagsChips(existingTags) {
+      const container = document.getElementById('bulk-existing-tags-list');
+      container.innerHTML = existingTags.map(t => {
+        const markedToRemove = state.bulkTagsToRemove.has(t);
+        return `
+          <button type="button" onclick="toggleBulkRemoveTag('${escapeHtml(t)}')" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border transition ${
+            markedToRemove
+              ? 'bg-rose-600/30 border-rose-500 text-rose-200 line-through'
+              : 'bg-slate-850 hover:bg-slate-800 border-slate-700 text-slate-300'
+          }">
+            #${escapeHtml(t)} <span>${markedToRemove ? '↺' : '×'}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function toggleBulkRemoveTag(rawTag) {
+      const tag = normalizeTag(rawTag);
+      if (state.bulkTagsToRemove.has(tag)) state.bulkTagsToRemove.delete(tag);
+      else state.bulkTagsToRemove.add(tag);
+
+      const art = getCurrentArtist();
+      if (!art) return;
+      const selectedImgs = (art.images || []).filter(img => state.selectedArtistImageIds.has(img.id));
+      const tagSet = new Set();
+      selectedImgs.forEach(img => normalizeTagList(img.tags).forEach(t => tagSet.add(t)));
+      renderBulkExistingTagsChips(Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'es')));
+    }
+
+    function closeBulkTagModal() {
+      const modal = document.getElementById('bulk-tag-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function applyBulkTagsToSelected() {
+      const art = getCurrentArtist();
+      if (!art || state.category !== 'artistas') return;
+
+      const tagsToAdd = parseTags(document.getElementById('bulk-add-tags-input').value);
+      const tagsToRemove = state.bulkTagsToRemove;
+
+      if (tagsToAdd.length === 0 && tagsToRemove.size === 0) {
+        showToast('Añade o marca algún tag para aplicar', '⚠️');
+        return;
+      }
+
+      let modifiedCount = 0;
+      (art.images || []).forEach(img => {
+        if (state.selectedArtistImageIds.has(img.id)) {
+          let current = normalizeTagList(img.tags);
+          if (tagsToRemove.size > 0) {
+            current = current.filter(t => !tagsToRemove.has(t));
+          }
+          tagsToAdd.forEach(t => {
+            if (!current.includes(t)) current.push(t);
+          });
+          img.tags = current;
+          modifiedCount++;
+        }
+      });
+
+      closeBulkTagModal();
+      state.multiSelectMode = false;
+      state.selectedArtistImageIds.clear();
+      renderApp();
+
+      const summary = `Etiquetado masivo en ${modifiedCount} imagen(es) de ${art.name}`;
+      showToast(summary, '🏷️');
+      await syncMetadataToDrive(summary);
+    }
+
+    // =========================================================
     // SISTEMA DE FAVORITOS (⭐)
     // =========================================================
     async function toggleFavoriteEntity(kind, artistId, subId = '', pageId = '') {
@@ -1179,6 +1382,8 @@
       state.selectedTags = [];
       state.searchQuery = '';
       state.currentPage = 1;
+      state.multiSelectMode = false;
+      state.selectedArtistImageIds.clear();
       document.getElementById('search-input').value = '';
       document.getElementById('clear-search-btn').classList.add('hidden');
 
@@ -1199,6 +1404,8 @@
       state.formatFilter = 'all';
       state.selectedTags = [];
       state.currentPage = 1;
+      state.multiSelectMode = false;
+      state.selectedArtistImageIds.clear();
       renderApp();
     }
 
@@ -1206,6 +1413,8 @@
       state.selectedComicId = comicId;
       state.selectedTags = [];
       state.currentPage = 1;
+      state.multiSelectMode = false;
+      state.selectedArtistImageIds.clear();
       renderApp();
     }
 
@@ -1215,6 +1424,8 @@
       state.formatFilter = 'all';
       state.selectedTags = [];
       state.currentPage = 1;
+      state.multiSelectMode = false;
+      state.selectedArtistImageIds.clear();
       renderApp();
     }
 
@@ -1222,6 +1433,8 @@
       state.selectedComicId = null;
       state.selectedTags = [];
       state.currentPage = 1;
+      state.multiSelectMode = false;
+      state.selectedArtistImageIds.clear();
       renderApp();
     }
 
@@ -1285,6 +1498,8 @@
       state.selectedTags = tag ? [tag] : [];
       state.searchQuery = '';
       state.currentPage = 1;
+      state.multiSelectMode = false;
+      state.selectedArtistImageIds.clear();
       document.getElementById('search-input').value = '';
       document.getElementById('clear-search-btn').classList.add('hidden');
 
@@ -1462,6 +1677,23 @@
       const showFmt = state.category === 'historia' && Boolean(art);
       document.getElementById('sidebar-format-box').classList.toggle('hidden', !showFmt);
 
+      // Actualizar barra de selección múltiple (solo en galería de imágenes de un artista)
+      const inArtistGallery = state.category === 'artistas' && Boolean(art);
+      if (!inArtistGallery) {
+        state.multiSelectMode = false;
+        state.selectedArtistImageIds.clear();
+      }
+      const multiBar = document.getElementById('multi-select-bar');
+      if (inArtistGallery && state.multiSelectMode) {
+        multiBar.classList.remove('hidden');
+        multiBar.classList.add('flex');
+        document.getElementById('multi-select-count').textContent = state.selectedArtistImageIds.size;
+        document.getElementById('bulk-tag-action-btn').disabled = state.selectedArtistImageIds.size === 0;
+      } else {
+        multiBar.classList.add('hidden');
+        multiBar.classList.remove('flex');
+      }
+
       let primaryLabel = 'Nuevo Artista';
       let ruleTitle = '';
       let ruleDesc = '';
@@ -1486,15 +1718,15 @@
       } else if (state.category === 'artistas') {
         primaryLabel = 'Subir Imágenes';
         ruleTitle = `🎨 ${art.name}`;
-        ruleDesc = 'Cada imagen tiene sus propios tags individuales. Paginación de 50 en 50.';
+        ruleDesc = 'Usa "Seleccionar varias" para etiquetar 2 o más imágenes a la vez.';
       } else if (state.category === 'comics' && !com) {
         primaryLabel = 'Nuevo Cómic';
         ruleTitle = `💬 ${art.name}`;
-        ruleDesc = 'Crea cómics o entra a uno en progreso para añadirle más páginas.';
+        ruleDesc = 'Al crear un cómic, sus páginas heredan automáticamente los tags del cómic.';
       } else if (state.category === 'comics' && com) {
         primaryLabel = 'Añadir Páginas';
         ruleTitle = `📑 ${com.title}`;
-        ruleDesc = 'Toca una página para abrir el visor con zoom táctil y navegación izquierda/derecha.';
+        ruleDesc = 'Las páginas nuevas heredan automáticamente los tags de este cómic.';
       }
 
       document.getElementById('sidebar-primary-label').textContent = primaryLabel;
@@ -1550,7 +1782,18 @@
           </a>
         `).join('');
 
+        const multiSelectBtnHtml = state.category === 'artistas'
+          ? `<button onclick="toggleArtistMultiSelectMode()" class="px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition ${
+              state.multiSelectMode
+                ? 'bg-indigo-600 border-indigo-400 text-white'
+                : 'bg-slate-850 hover:bg-slate-800 border-slate-700 text-indigo-300'
+            }">
+              ☑️ ${state.multiSelectMode ? 'Cancelar selección' : 'Seleccionar varias'}
+            </button>`
+          : '';
+
         actions.innerHTML = `
+          ${multiSelectBtnHtml}
           ${linksHtml}
           <button onclick="openEditArtistModal('${art.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 font-medium">
             ✏️ Artista
@@ -2112,7 +2355,7 @@
       }
 
       // ========================================================
-      // NIVEL 2B: IMÁGENES INDIVIDUALES DE UN ARTISTA
+      // NIVEL 2B: IMÁGENES INDIVIDUALES DE UN ARTISTA (Con Selección Múltiple)
       // ========================================================
       if (state.category === 'artistas') {
         const filteredImages = (art.images || []).filter(img => matchesSearchAndTags(img.name, img.tags));
@@ -2126,12 +2369,27 @@
           const displayUrl = getResolvedDisplayUrl(img.driveFileId, img.url, imgIdAttr);
           const tagsHtml = normalizeTagList(img.tags).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
           const dateLabel = formatShortDate(img.createdAt);
+          const isSelected = state.selectedArtistImageIds.has(img.id);
+
+          const cardClickAction = state.multiSelectMode
+            ? `toggleSelectArtistImage('${img.id}')`
+            : `openArtistImageLightbox(${globalFilteredIdx})`;
 
           return `
-            <article class="group glass-card border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col transition-all">
-              <div onclick="openArtistImageLightbox(${globalFilteredIdx})" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
-                <img id="${imgIdAttr}" src="${escapeHtml(displayUrl)}" alt="${escapeHtml(img.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <article class="group glass-card border ${isSelected ? 'border-indigo-400 ring-2 ring-indigo-500/60' : 'border-slate-800/90 hover:border-indigo-500/70'} rounded-2xl overflow-hidden flex flex-col transition-all">
+              <div onclick="${cardClickAction}" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                <img id="${imgIdAttr}" src="${escapeHtml(displayUrl)}" alt="${escapeHtml(img.name)}" loading="lazy" class="w-full h-full object-cover ${isSelected ? 'scale-[0.97] opacity-90' : 'group-hover:scale-105'} transition-all duration-300" />
                 <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/25"></div>
+
+                <!-- Casilla de selección rápida (siempre accesible arriba a la izquierda) -->
+                <button onclick="event.stopPropagation(); toggleSelectArtistImage('${img.id}')" class="absolute top-2.5 left-2.5 w-9 h-9 rounded-xl border text-sm font-bold flex items-center justify-center transition ${
+                  isSelected
+                    ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg'
+                    : 'bg-black/65 hover:bg-indigo-600/60 border-white/25 text-white/80'
+                }" title="Seleccionar imagen para etiquetar en lote">
+                  ${isSelected ? '✓' : '☐'}
+                </button>
+
                 <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5">
                   <button onclick="event.stopPropagation(); toggleFavoriteEntity('art-img','${art.id}','${img.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-amber-500/30 border border-white/15 text-sm flex items-center justify-center ${img.favorite ? 'text-amber-300' : 'text-white/70'}" title="Favorito">
                     ${img.favorite ? '⭐' : '☆'}
@@ -2553,6 +2811,14 @@
         else list.push(tag);
         inp.value = list.join(', ');
         renderTop10TagButtons('upload-top-tags', () => parseTags(inp.value));
+      } else if (containerId === 'bulk-top-tags') {
+        const inp = document.getElementById('bulk-add-tags-input');
+        const list = parseTags(inp.value);
+        const idx = list.indexOf(tag);
+        if (idx >= 0) list.splice(idx, 1);
+        else list.push(tag);
+        inp.value = list.join(', ');
+        renderTop10TagButtons('bulk-top-tags', () => parseTags(inp.value));
       } else if (containerId === 'edit-top-tags') {
         const idx = state.editTagsBuffer.indexOf(tag);
         if (idx >= 0) state.editTagsBuffer.splice(idx, 1);
@@ -2753,7 +3019,7 @@
       } else if (mode === 'artist-images') {
         document.getElementById('upload-modal-title').textContent = '🎨 Subir Imágenes del Artista';
         titleBox.classList.add('hidden');
-        statusBox.classList.add('hidden');
+        statusBox.classList.hidden();
         fileInput.multiple = true;
         fileInput.accept = 'image/*';
         document.getElementById('upload-file-placeholder').textContent = 'Toca para elegir una o varias imágenes';
@@ -2766,15 +3032,19 @@
         fileInput.multiple = true;
         fileInput.accept = 'image/*';
         document.getElementById('upload-file-placeholder').textContent = 'Selecciona las páginas iniciales del cómic';
-        document.getElementById('upload-tags-label').textContent = 'Tags del cómic (separados por coma)';
+        document.getElementById('upload-tags-label').textContent = 'Tags del cómic (se aplicarán automáticamente a todas sus páginas)';
       } else if (mode === 'comic-pages') {
+        const com = getCurrentComic();
+        const existingComicTags = com ? normalizeTagList(com.tags) : [];
         document.getElementById('upload-modal-title').textContent = '📑 Añadir Páginas al Cómic';
         titleBox.classList.add('hidden');
         statusBox.classList.add('hidden');
         fileInput.multiple = true;
         fileInput.accept = 'image/*';
         document.getElementById('upload-file-placeholder').textContent = 'Selecciona las nuevas páginas a añadir';
-        document.getElementById('upload-tags-label').textContent = 'Tags para estas páginas (opcional)';
+        document.getElementById('upload-tags-label').textContent = existingComicTags.length
+          ? `Tags (heredará automáticamente: #${existingComicTags.join(', #')})`
+          : 'Tags para estas páginas (opcional)';
       }
 
       const modal = document.getElementById('upload-modal');
@@ -2882,6 +3152,7 @@
           showToast(`${uploadedRecords.length} imagen(es) añadida(s)`, '✅');
         } else if (mode === 'new-comic') {
           const status = document.getElementById('upload-comic-status').value;
+          // Cada página del cómic nuevo hereda automáticamente todos los tags del cómic
           const pages = uploadedRecords.map((rec, i) => ({
             id: 'cp-' + (baseNow + i) + '-' + i,
             name: rec.file.name.replace(/\.[^/.]+$/, '') || `Página ${i + 1}`,
@@ -2896,22 +3167,24 @@
             title,
             status,
             favorite: false,
-            tags,
+            tags: [...tags],
             createdAt: nowIso,
             pages
           });
-          logMsg = `Nuevo cómic "${title}" (${pages.length} págs.) en ${art.name}`;
-          showToast('Cómic creado', '✅');
+          logMsg = `Nuevo cómic "${title}" (${pages.length} págs. con tags heredados) en ${art.name}`;
+          showToast('Cómic creado con tags heredados en sus páginas', '✅');
         } else if (mode === 'comic-pages') {
           const com = getCurrentComic();
           if (com) {
             const baseCount = com.pages.length;
+            // Combinar automáticamente los tags del cómic padre + los tags adicionales escritos al subir
+            const mergedPageTags = normalizeTagList([...(com.tags || []), ...tags]);
             uploadedRecords.forEach((rec, i) => {
               com.pages.push({
                 id: 'cp-' + (baseNow + i) + '-' + i,
                 name: rec.file.name.replace(/\.[^/.]+$/, '') || `Página ${baseCount + i + 1}`,
                 favorite: false,
-                tags: [...tags],
+                tags: [...mergedPageTags],
                 createdAt: new Date(baseNow + i).toISOString(),
                 url: rec.url,
                 driveFileId: rec.driveFileId
@@ -3947,12 +4220,13 @@
             art.comics.unshift(targetComic);
           }
 
+          const mergedComicPageTags = normalizeTagList([...(targetComic.tags || []), ...tags]);
           filesToImport.forEach((f, i) => {
             targetComic.pages.push({
               id: 'cp-' + (baseNow + i) + '-' + i,
               name: f.name.replace(/\.[^/.]+$/, ''),
               favorite: false,
-              tags: [...tags],
+              tags: [...mergedComicPageTags],
               createdAt: f.createdTime || new Date(baseNow + i).toISOString(),
               url: '',
               driveFileId: f.id
@@ -4070,7 +4344,6 @@
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
           });
 
-          // Alcance ampliado: drive.file (crear/editar) + drive.readonly (detectar todo lo que subas directo en Drive)
           state.drive.tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: state.drive.clientId,
             scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
