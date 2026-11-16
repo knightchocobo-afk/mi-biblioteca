@@ -1,0 +1,3420 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+  <title>Mi Biblioteca Multimedia — Tablet &amp; Google Drive</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              850: '#151e2e',
+              925: '#0b101b',
+              950: '#070a12'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <!-- Google Identity Services & Google API Client -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background-color: #070a12;
+      color: #f1f5f9;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overscroll-behavior: none;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b101b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    .touch-btn {
+      min-height: 44px;
+      min-width: 44px;
+      touch-action: manipulation;
+    }
+    #lightbox-viewport {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    @keyframes pulse-zone {
+      0% { opacity: 0; }
+      35% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .tap-flash {
+      animation: pulse-zone 0.32s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
+
+  <!-- OVERLAY MÓVIL/TABLET PARA SIDEBAR -->
+  <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 z-30 bg-black/70 backdrop-blur-sm hidden lg:hidden transition-opacity"></div>
+
+  <!-- MENÚ LATERAL IZQUIERDO -->
+  <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-72 bg-slate-925 border-r border-slate-800/90 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-out select-none">
+    <!-- Cabecera Sidebar -->
+    <div class="p-4 border-b border-slate-800/80 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-xl font-bold">
+          📚
+        </div>
+        <div>
+          <h1 class="font-bold text-base tracking-tight text-white leading-tight">Mi Biblioteca</h1>
+          <p id="drive-status-badge" class="text-xs text-amber-400 flex items-center gap-1.5 mt-0.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+            Modo Demo Local
+          </p>
+        </div>
+      </div>
+      <button onclick="toggleSidebar(false)" class="touch-btn lg:hidden flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800" aria-label="Cerrar menú">
+        ✕
+      </button>
+    </div>
+
+    <!-- Navegación Principal (4 Grupos: Historia, Comics, Artistas, Tags) -->
+    <div class="p-3 flex-1 overflow-y-auto space-y-6">
+      <div>
+        <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Colecciones</p>
+        <nav class="space-y-1.5" id="category-nav">
+          <button onclick="selectCategory('historia')" data-cat="historia" class="cat-btn touch-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium transition-all bg-indigo-600/20 text-indigo-300 border border-indigo-500/40">
+            <span class="flex items-center gap-3">
+              <span class="text-xl">📖</span>
+              <span>Historia</span>
+            </span>
+            <span id="count-historia" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold">0</span>
+          </button>
+
+          <button onclick="selectCategory('comics')" data-cat="comics" class="cat-btn touch-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium transition-all text-slate-300 hover:bg-slate-800/70 border border-transparent">
+            <span class="flex items-center gap-3">
+              <span class="text-xl">💬</span>
+              <span>Comics</span>
+            </span>
+            <span id="count-comics" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold">0</span>
+          </button>
+
+          <button onclick="selectCategory('artistas')" data-cat="artistas" class="cat-btn touch-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium transition-all text-slate-300 hover:bg-slate-800/70 border border-transparent">
+            <span class="flex items-center gap-3">
+              <span class="text-xl">🎨</span>
+              <span>Artistas</span>
+            </span>
+            <span id="count-artistas" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold">0</span>
+          </button>
+
+          <div class="pt-2 mt-2 border-t border-slate-800/70">
+            <button onclick="selectCategory('tags')" data-cat="tags" class="cat-btn touch-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium transition-all text-slate-300 hover:bg-slate-800/70 border border-transparent">
+              <span class="flex items-center gap-3">
+                <span class="text-xl">🏷️</span>
+                <span>Directorio de Tags</span>
+              </span>
+              <span id="count-tags" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold">0</span>
+            </button>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Filtro de formato (solo visible dentro de Historias de un artista) -->
+      <div id="sidebar-format-box" class="hidden">
+        <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Formato de Historia</p>
+        <div class="grid grid-cols-2 gap-1.5 px-1">
+          <button onclick="setFormatFilter('all')" data-fmt="all" class="fmt-btn touch-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-800 text-white border border-slate-700">Todos</button>
+          <button onclick="setFormatFilter('pdf')" data-fmt="pdf" class="fmt-btn touch-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-900/70 text-slate-400 border border-slate-800 hover:text-white">📄 PDF</button>
+          <button onclick="setFormatFilter('doc')" data-fmt="doc" class="fmt-btn touch-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-900/70 text-slate-400 border border-slate-800 hover:text-white">📝 Docs</button>
+          <button onclick="setFormatFilter('image')" data-fmt="image" class="fmt-btn touch-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-900/70 text-slate-400 border border-slate-800 hover:text-white">🖼️ Imagen</button>
+          <button onclick="setFormatFilter('video')" data-fmt="video" class="fmt-btn touch-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-900/70 text-slate-400 border border-slate-800 hover:text-white col-span-2">🎬 Video</button>
+        </div>
+      </div>
+
+      <!-- Info de contexto -->
+      <div class="px-3 py-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-slate-400 space-y-1.5">
+        <p class="font-semibold text-slate-300" id="context-rule-title">📌 Nivel: Artistas de Historia</p>
+        <p id="context-rule-desc" class="leading-relaxed">Buscador global: filtra artistas o subcarpetas por tags. Usa + para añadir un nuevo artista.</p>
+      </div>
+    </div>
+
+    <!-- Pie Sidebar: Google Drive & Subida -->
+    <div class="p-3 border-t border-slate-800/80 space-y-2">
+      <button onclick="triggerPrimaryAddAction()" id="sidebar-primary-btn" class="touch-btn w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 transition">
+        <span class="text-lg">＋</span>
+        <span id="sidebar-primary-label">Nuevo Artista</span>
+      </button>
+      <button onclick="openDriveModal()" class="touch-btn w-full py-2.5 px-4 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-slate-200 font-medium text-xs flex items-center justify-center gap-2 transition">
+        <span>☁️</span>
+        <span id="drive-btn-label">Conectar Google Drive</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ÁREA PRINCIPAL -->
+  <main class="flex-1 flex flex-col min-w-0 bg-slate-950">
+    <!-- Barra Superior -->
+    <header class="bg-slate-925/95 backdrop-blur border-b border-slate-800/80 px-3 sm:px-5 py-3 flex flex-col gap-2.5 z-20">
+      <div class="flex items-center gap-2.5">
+        <!-- Botón Hamburguesa Tablet/Móvil -->
+        <button onclick="toggleSidebar(true)" class="touch-btn lg:hidden flex items-center justify-center rounded-xl bg-slate-850 border border-slate-700/80 text-slate-200 hover:bg-slate-800" aria-label="Abrir menú">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+
+        <!-- Buscador Global y Local -->
+        <div class="relative flex-1">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">🔍</span>
+          <input
+            id="search-input"
+            type="text"
+            oninput="handleSearchInput(this.value)"
+            placeholder="Buscar en toda la sección o subcarpetas por nombre o #tag..."
+            class="w-full h-11 pl-10 pr-10 rounded-xl bg-slate-900 border border-slate-700/80 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          />
+          <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">
+            ✕
+          </button>
+        </div>
+
+        <!-- Selector de Ordenamiento (Fecha de subida o Nombre) -->
+        <select
+          id="sort-select"
+          onchange="setSortOrder(this.value)"
+          aria-label="Ordenar elementos"
+          class="touch-btn h-11 px-3 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm font-medium text-slate-200 focus:outline-none focus:border-indigo-500 shrink-0"
+        >
+          <option value="date-desc">🕒 Subida: Más recientes</option>
+          <option value="date-asc">🕒 Subida: Más antiguos</option>
+          <option value="name-asc">🔤 Nombre: A → Z</option>
+          <option value="name-desc">🔤 Nombre: Z → A</option>
+        </select>
+
+        <!-- Botón de acción contextual -->
+        <button onclick="triggerPrimaryAddAction()" class="touch-btn px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center gap-1.5 shrink-0 shadow-md shadow-indigo-600/20">
+          <span class="text-lg">＋</span>
+          <span id="header-primary-label" class="hidden sm:inline">Nuevo Artista</span>
+        </button>
+
+        <!-- Botón directo Conectar Google Drive en cabecera -->
+        <button onclick="quickConnectGoogleDrive()" id="header-drive-btn" class="touch-btn px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/40 text-emerald-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0" title="Conectar o sincronizar con Google Drive">
+          <span>☁️</span>
+          <span id="header-drive-label" class="hidden md:inline">Conectar Drive</span>
+        </button>
+      </div>
+
+      <!-- Breadcrumb / Ruta de Navegación + Banner de Perfil de Artista -->
+      <div id="breadcrumb-bar" class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+        <div id="breadcrumb-trail" class="flex items-center flex-wrap gap-1.5 text-xs sm:text-sm">
+          <!-- Generado dinámicamente -->
+        </div>
+        <div id="artist-header-actions" class="hidden flex items-center gap-2">
+          <!-- Enlaces web rápidos + Editar + Borrar artista -->
+        </div>
+      </div>
+
+      <!-- Nube Compacta de Tags Alfabéticos (Plegable para que no ocupe mucho espacio) -->
+      <div id="tag-filter-wrapper" class="flex items-center gap-2">
+        <button onclick="toggleTagCloudExpanded()" id="toggle-tag-cloud-btn" class="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 flex items-center gap-1">
+          <span>🏷️ Tags (A-Z)</span>
+          <span id="tag-cloud-arrow">▼</span>
+        </button>
+        <div id="tag-cloud-bar" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1">
+          <!-- Generado dinámicamente en orden alfabético -->
+        </div>
+      </div>
+    </header>
+
+    <!-- Paginación Superior -->
+    <div id="pagination-top" class="hidden bg-slate-900/70 border-b border-slate-800/80 px-4 sm:px-6 py-2 flex items-center justify-between gap-3 text-xs">
+      <!-- Generado dinámicamente -->
+    </div>
+
+    <!-- Cuadrícula de Contenido -->
+    <div id="content-scroll" class="flex-1 overflow-y-auto p-4 sm:p-6">
+      <div id="media-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+        <!-- Tarjetas generadas dinámicamente -->
+      </div>
+
+      <!-- Paginación Inferior -->
+      <div id="pagination-bottom" class="hidden mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3 text-xs">
+        <!-- Generado dinámicamente -->
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 1: VISOR DE CÓMICS E IMÁGENES CON ZOOM Y ZONAS TAP -->
+  <!-- ========================================================= -->
+  <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/95 hidden flex-col select-none">
+    <!-- Barra Superior Visor -->
+    <div class="h-14 px-3 sm:px-5 bg-slate-950/90 border-b border-slate-800/80 flex items-center justify-between gap-2 z-20">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <button onclick="closeLightbox()" class="touch-btn px-3 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-200 font-medium text-sm flex items-center gap-1.5">
+          ✕ <span class="hidden sm:inline">Cerrar</span>
+        </button>
+        <div class="min-w-0">
+          <h2 id="lb-title" class="text-sm sm:text-base font-bold text-white truncate">Título</h2>
+          <p id="lb-counter" class="text-xs text-slate-400">Imagen 1 de 1</p>
+        </div>
+      </div>
+
+      <!-- Controles de Zoom + Editar Nombre/Tags + Borrar -->
+      <div class="flex items-center gap-1.5">
+        <button onclick="adjustZoom(-0.35)" class="touch-btn rounded-xl bg-slate-850 hover:bg-slate-800 text-white font-bold text-lg flex items-center justify-center" title="Alejar">−</button>
+        <button onclick="resetZoom()" id="lb-zoom-label" class="touch-btn px-2.5 rounded-xl bg-slate-850 hover:bg-slate-800 text-xs font-semibold text-indigo-300 min-w-[58px]">100%</button>
+        <button onclick="adjustZoom(0.35)" class="touch-btn rounded-xl bg-slate-850 hover:bg-slate-800 text-white font-bold text-lg flex items-center justify-center" title="Acercar">+</button>
+        <button onclick="openEditActiveItemFromLightbox()" class="touch-btn px-3 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 text-xs font-semibold flex items-center gap-1.5 ml-1" title="Editar nombre y tags">
+          <span>✏️</span>
+          <span class="hidden md:inline">Editar</span>
+        </button>
+        <button onclick="deleteActiveLightboxItem()" class="touch-btn px-3 rounded-xl bg-rose-600/25 hover:bg-rose-600/45 border border-rose-500/40 text-rose-200 text-xs font-semibold flex items-center gap-1.5" title="Borrar este archivo">
+          <span>🗑️</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Área Central Interactiva -->
+    <div id="lightbox-viewport" class="relative flex-1 overflow-hidden flex items-center justify-center bg-black">
+      <div id="lb-loading-spinner" class="hidden absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+        <div class="px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-xs text-indigo-300 font-semibold flex items-center gap-2">
+          <span class="animate-spin inline-block">⏳</span> Descargando alta resolución desde Drive...
+        </div>
+      </div>
+
+      <img id="lb-image" src="" alt="Vista ampliada" draggable="false" class="max-w-full max-h-full object-contain transition-transform duration-75 ease-out origin-center will-change-transform" />
+
+      <!-- Indicadores visuales breves al tocar izquierda/derecha -->
+      <div id="tap-zone-left-indicator" class="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-indigo-500/25 to-transparent opacity-0 flex items-center justify-start pl-6">
+        <span class="w-12 h-12 rounded-full bg-black/70 border border-white/20 flex items-center justify-center text-2xl text-white">‹</span>
+      </div>
+      <div id="tap-zone-right-indicator" class="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-indigo-500/25 to-transparent opacity-0 flex items-center justify-end pr-6">
+        <span class="w-12 h-12 rounded-full bg-black/70 border border-white/20 flex items-center justify-center text-2xl text-white">›</span>
+      </div>
+
+      <!-- Botones flotantes laterales para tablet -->
+      <button onclick="stepLightbox(-1)" id="lb-prev-btn" class="touch-btn hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-white text-2xl items-center justify-center shadow-lg z-10" aria-label="Anterior">‹</button>
+      <button onclick="stepLightbox(1)" id="lb-next-btn" class="touch-btn hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-white text-2xl items-center justify-center shadow-lg z-10" aria-label="Siguiente">›</button>
+    </div>
+
+      <!-- Barra Inferior Visor: Tags activos y guía táctil -->
+    <div class="bg-slate-950/95 border-t border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 z-20">
+      <div id="lb-tags-list" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full">
+        <!-- Tags del ítem -->
+      </div>
+      <p class="text-[11px] text-slate-400 hidden md:block">
+        💡 Toca lado <b>izquierdo</b> (siguiente) o <b>derecho</b> (anterior) • Pellizca o doble toque para Zoom
+      </p>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 2: LECTOR MULTIMEDIA PARA HISTORIAS (PDF/DOC/VIDEO) -->
+  <!-- ========================================================= -->
+  <div id="media-viewer-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden flex-col">
+    <div class="h-14 px-4 bg-slate-925 border-b border-slate-800 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <button onclick="closeMediaViewer()" class="touch-btn px-3 rounded-xl bg-slate-850 hover:bg-slate-800 text-sm font-medium text-slate-200">✕ Cerrar</button>
+        <h3 id="mv-title" class="font-bold text-white text-sm sm:text-base truncate">Documento</h3>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="openEditActiveStoryFromViewer()" class="touch-btn px-3 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-xs text-indigo-300 font-semibold">✏️ Editar / Tags</button>
+        <button onclick="deleteActiveStoryFromViewer()" class="touch-btn px-3 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 border border-rose-500/40 text-xs text-rose-200 font-semibold">🗑️ Borrar</button>
+        <a id="mv-external-link" href="#" target="_blank" rel="noopener noreferrer" class="touch-btn px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5">
+          <span>Abrir en Drive</span> ↗
+        </a>
+      </div>
+    </div>
+    <div id="mv-body" class="flex-1 overflow-auto flex items-center justify-center p-2 sm:p-6 bg-slate-950">
+      <!-- Iframe PDF/Docs o reproductor Video -->
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 3: CREAR / EDITAR ARTISTA (Nombre, Portada, 3 URLs) -->
+  <!-- ========================================================= -->
+  <div id="artist-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-925 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="artist-modal-title" class="text-lg font-bold text-white flex items-center gap-2">🎨 Nuevo Artista</h3>
+        <button onclick="closeArtistModal()" class="touch-btn rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre del Artista *</label>
+          <input id="artist-name-input" type="text" placeholder="Ej. Kentaro Miura, Studio Trigger..." class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Imagen de Portada del Artista</label>
+          <label class="touch-btn flex items-center justify-between px-4 py-2.5 rounded-xl border border-dashed border-slate-700 hover:border-indigo-500 bg-slate-900/70 cursor-pointer transition">
+            <span id="artist-cover-label" class="text-xs text-slate-300 truncate">Seleccionar imagen de portada (opcional)...</span>
+            <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-xs text-indigo-300 font-semibold shrink-0">Elegir foto</span>
+            <input id="artist-cover-file" type="file" accept="image/*" class="hidden" onchange="handleArtistCoverSelect(this)" />
+          </label>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold text-slate-300">Direcciones Web / Redes para buscarlo (hasta 3 enlaces)</label>
+          <input id="artist-url-1" type="url" placeholder="https://x.com/artista o Pixiv..." class="w-full h-10 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-indigo-500 focus:outline-none" />
+          <input id="artist-url-2" type="url" placeholder="https://instagram.com/artista (opcional)" class="w-full h-10 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-indigo-500 focus:outline-none" />
+          <input id="artist-url-3" type="url" placeholder="https://artstation.com/artista (opcional)" class="w-full h-10 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Tags del Artista (separados por coma)</label>
+          <input id="artist-tags-input" type="text" placeholder="fantasia, digital, tinta..." class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+          <!-- Top 10 Tags más usados -->
+          <div class="mt-2">
+            <p class="text-[11px] text-slate-400 mb-1">Top 10 tags más usados (toca para añadir/quitar):</p>
+            <div id="artist-top-tags" class="flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
+        <button id="artist-modal-delete-btn" onclick="deleteArtistFromModal()" class="hidden touch-btn px-3.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 border border-rose-500/40 text-xs font-semibold text-rose-200">
+          🗑️ Borrar Artista
+        </button>
+        <div class="flex items-center gap-2 ml-auto">
+          <button onclick="closeArtistModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-sm font-medium text-slate-300">Cancelar</button>
+          <button id="artist-save-btn" onclick="saveArtistModal()" class="touch-btn px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/20">Guardar Artista</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 4: SUBIR ELEMENTOS (Historia, Cómic, Páginas o Arte) -->
+  <!-- ========================================================= -->
+  <div id="upload-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-925 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="upload-modal-title" class="text-lg font-bold text-white flex items-center gap-2">⬆️ Subir Archivo</h3>
+        <button onclick="closeUploadModal()" class="touch-btn rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Título (para Historia o Nuevo Cómic) -->
+        <div id="upload-title-box">
+          <label id="upload-title-label" class="block text-xs font-semibold text-slate-300 mb-1.5">Título *</label>
+          <input id="upload-title" type="text" placeholder="Ej. Capítulo 1..." class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <!-- Estado del Cómic (solo cuando se crea un cómic nuevo) -->
+        <div id="upload-comic-status-box" class="hidden">
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Estado del Cómic</label>
+          <select id="upload-comic-status" class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none">
+            <option value="En progreso">🚧 En progreso (se seguirán añadiendo páginas)</option>
+            <option value="Completado">✅ Completado</option>
+          </select>
+        </div>
+
+        <!-- Selector de Archivos -->
+        <div>
+          <label id="upload-file-label" class="block text-xs font-semibold text-slate-300 mb-1.5">Seleccionar Archivos</label>
+          <label class="touch-btn flex flex-col items-center justify-center p-5 rounded-xl border-2 border-dashed border-slate-700 hover:border-indigo-500 bg-slate-900/60 cursor-pointer transition text-center">
+            <span class="text-3xl mb-1.5">📁</span>
+            <span id="upload-file-placeholder" class="text-sm font-medium text-slate-200">Toca aquí para elegir archivos</span>
+            <span id="upload-hint" class="text-xs text-slate-400 mt-1">PDF, Docs, Imágenes o Videos</span>
+            <input id="upload-file-input" type="file" class="hidden" onchange="handleFileSelection(this)" />
+          </label>
+          <p id="selected-files-summary" class="text-xs text-indigo-300 mt-1.5 font-medium hidden"></p>
+        </div>
+
+        <!-- Tags + Top 10 más usados -->
+        <div>
+          <label id="upload-tags-label" class="block text-xs font-semibold text-slate-300 mb-1.5">Tags (separados por coma)</label>
+          <input id="upload-tags" type="text" placeholder="aventura, lore, boceto..." class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+          <div class="mt-2">
+            <p class="text-[11px] text-slate-400 mb-1">Top 10 tags más usados (toca para añadir/quitar):</p>
+            <div id="upload-top-tags" class="flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+        <button onclick="closeUploadModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-sm font-medium text-slate-300">Cancelar</button>
+        <button id="confirm-upload-btn" onclick="submitUpload()" class="touch-btn px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/20">
+          <span>Guardar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 5: EDITAR NOMBRE Y TAGS (Imagen, Cómic o Historia)   -->
+  <!-- ========================================================= -->
+  <div id="edit-item-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-925 border border-slate-800 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="edit-item-modal-title" class="text-lg font-bold text-white">✏️ Editar Nombre y Tags</h3>
+        <button onclick="closeEditItemModal()" class="touch-btn rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre *</label>
+          <input id="edit-item-name-input" type="text" class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <div id="edit-comic-status-box" class="hidden">
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Estado del Cómic</label>
+          <select id="edit-comic-status-select" class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none">
+            <option value="En progreso">🚧 En progreso</option>
+            <option value="Completado">✅ Completado</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Tags actuales (toca × para quitar)</label>
+          <div id="edit-current-tags" class="flex flex-wrap gap-1.5 min-h-[38px] p-2 rounded-xl bg-slate-900/90 border border-slate-800"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Agregar nuevo tag</label>
+          <div class="flex gap-2">
+            <input id="edit-new-tag-input" type="text" placeholder="Escribe un tag..." onkeydown="if(event.key==='Enter'){event.preventDefault();addTagInEditModal();}" class="flex-1 h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+            <button onclick="addTagInEditModal()" class="touch-btn px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 font-semibold text-sm">Añadir</button>
+          </div>
+          <!-- Top 10 Tags más usados -->
+          <div class="mt-2.5">
+            <p class="text-[11px] text-slate-400 mb-1">Top 10 tags más usados (toca para añadir/quitar):</p>
+            <div id="edit-top-tags" class="flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeEditItemModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-sm font-medium text-slate-300">Cancelar</button>
+        <button onclick="saveEditItemModal()" class="touch-btn px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 6: CONFIRMACIÓN DE BORRADO (Con doble advertencia)  -->
+  <!-- ========================================================= -->
+  <div id="delete-confirm-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-925 border border-rose-500/40 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4">
+      <div class="flex items-center gap-3 border-b border-slate-800 pb-3">
+        <span class="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 flex items-center justify-center text-xl">⚠️</span>
+        <div>
+          <h3 id="del-modal-title" class="text-base sm:text-lg font-bold text-white">Confirmar eliminación</h3>
+          <p id="del-modal-step-badge" class="text-[11px] text-rose-300 font-semibold">Advertencia 1 de 2</p>
+        </div>
+      </div>
+
+      <div id="del-modal-body" class="text-sm text-slate-200 leading-relaxed space-y-2">
+        <!-- Mensaje dinámico -->
+      </div>
+
+      <div id="del-modal-type-box" class="hidden">
+        <label class="block text-xs font-semibold text-rose-300 mb-1">Escribe <b>BORRAR</b> para confirmar definitivamente:</label>
+        <input id="del-modal-confirm-input" type="text" oninput="validateSecondDeleteStep()" placeholder="BORRAR" class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-rose-500/50 text-sm text-white uppercase focus:outline-none" />
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+        <button onclick="closeDeleteModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-sm font-medium text-slate-300">Cancelar</button>
+        <button id="del-modal-confirm-btn" onclick="proceedDeleteModal()" class="touch-btn px-4 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm">
+          Sí, continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 7: CONFIGURACIÓN GOOGLE DRIVE API                   -->
+  <!-- ========================================================= -->
+  <div id="drive-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-925 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">☁️ Conexión con Google Drive</h3>
+        <button onclick="closeDriveModal()" class="touch-btn rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">✕</button>
+      </div>
+
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Todos tus artistas, enlaces, cómics, archivos y etiquetas se guardan automáticamente en la carpeta <code class="px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300">Mi_Biblioteca_Multimedia</code> de tu Google Drive.
+      </p>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Google OAuth Client ID</label>
+          <input id="drive-client-id" type="text" placeholder="123456789-xxxxx.apps.googleusercontent.com" class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-indigo-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Google API Key</label>
+          <input id="drive-api-key" type="text" placeholder="AIzaSy..." class="w-full h-11 px-3.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-indigo-500 focus:outline-none" />
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
+        <button onclick="disconnectDrive()" id="drive-logout-btn" class="hidden touch-btn px-3.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 text-xs font-semibold">
+          Desconectar
+        </button>
+        <div class="flex items-center gap-2 ml-auto">
+          <button onclick="closeDriveModal()" class="touch-btn px-4 rounded-xl bg-slate-850 hover:bg-slate-800 text-xs font-medium text-slate-300">Cerrar</button>
+          <button onclick="saveAndConnectDrive()" class="touch-btn px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20">
+            <span>Conectar y Sincronizar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICACIONES -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl bg-slate-850 border border-slate-700 text-sm text-white shadow-2xl transform translate-y-24 opacity-0 transition-all duration-200 pointer-events-none flex items-center gap-2.5 max-w-sm">
+    <span id="toast-icon">ℹ️</span>
+    <span id="toast-msg">Mensaje</span>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- LÓGICA DE APLICACIÓN, PAGINACIÓN 50, BÚSQUEDA Y GOOGLE DRIVE -->
+  <!-- ========================================================= -->
+  <script>
+    const ITEMS_PER_PAGE = 50;
+    const DEFAULT_GOOGLE_CLIENT_ID = '677459788084-if5cjq3tone74950jlkh35kivu2tbncr.apps.googleusercontent.com';
+    const DEFAULT_GOOGLE_API_KEY = 'AIzaSyD0DhmghaVche_T9E-354b6p51boG6o8CU';
+
+    function svgCover(bg1, bg2, title, subtitle, emoji) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750" viewBox="0 0 600 750">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${bg1}"/><stop offset="100%" stop-color="${bg2}"/></linearGradient></defs>
+        <rect width="600" height="750" fill="url(#g)"/>
+        <circle cx="300" cy="270" r="110" fill="rgba(255,255,255,0.08)"/>
+        <text x="300" y="295" font-size="86" text-anchor="middle" fill="#fff" font-family="sans-serif">${emoji}</text>
+        <text x="300" y="455" font-size="30" font-weight="bold" text-anchor="middle" fill="#fff" font-family="sans-serif">${title}</text>
+        <text x="300" y="500" font-size="20" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-family="sans-serif">${subtitle}</text>
+      </svg>`;
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    const DEMO_DATA = {
+      historiaArtists: [
+        {
+          id: 'hist-art-1',
+          name: 'Archivo Crónicas de Aethel',
+          coverUrl: svgCover('#1e3a8a', '#312e81', 'Crónicas de Aethel', 'Lore y Manuscritos', '📜'),
+          coverDriveId: null,
+          urls: ['https://es.wikipedia.org/wiki/Mitolog%C3%ADa', 'https://archive.org'],
+          tags: ['lore', 'historia', 'mapas'],
+          createdAt: '2026-01-10T10:00:00Z',
+          stories: [
+            {
+              id: 'st-1',
+              title: 'Crónicas de Aethel — Volumen I',
+              format: 'pdf',
+              tags: ['lore', 'pdf', 'medieval'],
+              createdAt: '2026-01-12T14:30:00Z',
+              url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+              driveFileId: null
+            },
+            {
+              id: 'st-2',
+              title: 'Mapa de las Rutas del Norte',
+              format: 'image',
+              tags: ['mapas', 'geografia'],
+              createdAt: '2026-01-15T18:20:00Z',
+              url: svgCover('#065f46', '#0f766e', 'Mapa del Norte', 'Cartografía Oficial', '🗺️'),
+              driveFileId: null
+            }
+          ]
+        }
+      ],
+      comicArtists: [
+        {
+          id: 'com-art-1',
+          name: 'Kaelen Studio',
+          coverUrl: svgCover('#4c1d95', '#831843', 'Kaelen Studio', 'Autor de Cómics Sci-Fi', '🚀'),
+          coverDriveId: null,
+          urls: ['https://x.com', 'https://www.webtoons.com'],
+          tags: ['sci-fi', 'cyberpunk', 'webcomic'],
+          createdAt: '2026-01-11T09:00:00Z',
+          comics: [
+            {
+              id: 'comic-1',
+              title: 'Horizonte Carmesí — Cap. 1',
+              status: 'En progreso',
+              tags: ['cyberpunk', 'accion', 'color'],
+              createdAt: '2026-01-14T11:00:00Z',
+              pages: [
+                {
+                  id: 'cp-1',
+                  name: 'Página 01 — Llegada a Neo-Kyoto',
+                  tags: ['portada', 'ciudad'],
+                  createdAt: '2026-01-14T11:05:00Z',
+                  url: svgCover('#312e81', '#be185d', 'Página 01', 'Horizonte Carmesí', '🌃'),
+                  driveFileId: null
+                },
+                {
+                  id: 'cp-2',
+                  name: 'Página 02 — El Encuentro',
+                  tags: ['personajes', 'dialogo'],
+                  createdAt: '2026-01-16T16:40:00Z',
+                  url: svgCover('#1e1b4b', '#7e22ce', 'Página 02', 'El Encuentro', '⚡'),
+                  driveFileId: null
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      artArtists: [
+        {
+          id: 'art-1',
+          name: 'Sora Takahashi',
+          coverUrl: svgCover('#7c2d12', '#9a3412', 'Sora Takahashi', 'Ilustración & Concept Art', '🎨'),
+          coverDriveId: null,
+          urls: ['https://www.artstation.com', 'https://www.pixiv.net', 'https://instagram.com'],
+          tags: ['concept-art', 'ilustracion', 'retrato'],
+          createdAt: '2026-01-09T12:00:00Z',
+          images: [
+            {
+              id: 'img-1',
+              name: 'Guerrera del Crepúsculo',
+              tags: ['personaje', 'iluminacion', 'armadura'],
+              createdAt: '2026-01-13T15:10:00Z',
+              url: svgCover('#7f1d1d', '#b45309', 'Guerrera del Crepúsculo', 'Sora Takahashi', '⚔️'),
+              driveFileId: null
+            },
+            {
+              id: 'img-2',
+              name: 'Bosque de Cristal Nocturno',
+              tags: ['paisaje', 'fantasia', 'nocturno'],
+              createdAt: '2026-01-18T20:00:00Z',
+              url: svgCover('#0f172a', '#0284c7', 'Bosque de Cristal', 'Sora Takahashi', '🌲'),
+              driveFileId: null
+            }
+          ]
+        }
+      ]
+    };
+
+    const state = {
+      category: 'historia', // 'historia' | 'comics' | 'artistas' | 'tags'
+      selectedArtistId: null,
+      selectedComicId: null,
+      formatFilter: 'all',
+      searchQuery: '',
+      selectedTags: [],
+      tagCloudExpanded: false,
+      sortBy: 'date-desc',
+      currentPage: 1,
+      data: JSON.parse(JSON.stringify(DEMO_DATA)),
+      // Lightbox
+      lightboxList: [],
+      lightboxIndex: 0,
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+      // Active Story Viewer
+      activeStoryId: null,
+      // Modales
+      editingArtistId: null,
+      artistCoverFile: null,
+      uploadMode: null,
+      uploadFiles: [],
+      editTarget: null,
+      editTagsBuffer: [],
+      // Borrado seguro
+      deleteTarget: null,
+      deleteStep: 1,
+      // Google Drive
+      drive: {
+        connected: false,
+        clientId: localStorage.getItem('gdrive_client_id') || DEFAULT_GOOGLE_CLIENT_ID,
+        apiKey: localStorage.getItem('gdrive_api_key') || DEFAULT_GOOGLE_API_KEY,
+        accessToken: null,
+        folderId: null,
+        metadataFileId: null,
+        tokenClient: null
+      }
+    };
+
+    const blobCache = new Map();
+    const pendingFetches = new Set();
+
+    // =========================================================
+    // UTILIDADES GENERALES Y ESTADÍSTICAS GLOBALES DE TAGS
+    // =========================================================
+    function showToast(msg, icon = 'ℹ️') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      document.getElementById('toast-icon').textContent = icon;
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 3400);
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function parseTags(raw) {
+      return [...new Set(
+        String(raw || '')
+          .split(',')
+          .map(t => t.trim().toLowerCase().replace(/^#/, ''))
+          .filter(Boolean)
+      )];
+    }
+
+    function normalizeUrl(raw) {
+      const trimmed = String(raw || '').trim();
+      if (!trimmed) return '';
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      return 'https://' + trimmed;
+    }
+
+    function getDomainLabel(url) {
+      try {
+        const u = new URL(url);
+        return u.hostname.replace(/^www\./, '');
+      } catch {
+        return url;
+      }
+    }
+
+    function formatShortDate(isoStr) {
+      if (!isoStr) return '';
+      try {
+        const d = new Date(isoStr);
+        return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch {
+        return '';
+      }
+    }
+
+    function sortItems(list, getNameFn) {
+      const copy = [...list];
+      copy.sort((a, b) => {
+        if (state.sortBy === 'name-asc' || state.sortBy === 'name-desc') {
+          const na = String(getNameFn(a) || '').toLowerCase();
+          const nb = String(getNameFn(b) || '').toLowerCase();
+          const cmp = na.localeCompare(nb, 'es', { numeric: true, sensitivity: 'base' });
+          return state.sortBy === 'name-asc' ? cmp : -cmp;
+        } else {
+          const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return state.sortBy === 'date-asc' ? da - db : db - da;
+        }
+      });
+      return copy;
+    }
+
+    function setSortOrder(val) {
+      state.sortBy = val;
+      state.currentPage = 1;
+      renderApp();
+    }
+
+    // Recopila estadísticas completas de TODOS los tags en toda la biblioteca
+    function computeGlobalTagStats() {
+      const map = new Map();
+      const ensure = (t) => {
+        const clean = String(t || '').trim().toLowerCase();
+        if (!clean) return null;
+        if (!map.has(clean)) {
+          map.set(clean, {
+            tag: clean,
+            imagesCount: 0,    // Imágenes de artistas + páginas de cómics
+            storiesCount: 0,   // Historias (PDF, Docs, Imágenes/Videos de historia)
+            comicsCount: 0,    // Cómics con este tag
+            artistsCount: 0,   // Artistas con este tag
+            totalUsage: 0
+          });
+        }
+        return map.get(clean);
+      };
+
+      // 1. Historia
+      state.data.historiaArtists.forEach(art => {
+        (art.tags || []).forEach(t => {
+          const e = ensure(t);
+          if (e) { e.artistsCount++; e.totalUsage++; }
+        });
+        (art.stories || []).forEach(st => {
+          (st.tags || []).forEach(t => {
+            const e = ensure(t);
+            if (e) {
+              e.storiesCount++;
+              if (st.format === 'image') e.imagesCount++;
+              e.totalUsage++;
+            }
+          });
+        });
+      });
+
+      // 2. Comics
+      state.data.comicArtists.forEach(art => {
+        (art.tags || []).forEach(t => {
+          const e = ensure(t);
+          if (e) { e.artistsCount++; e.totalUsage++; }
+        });
+        (art.comics || []).forEach(com => {
+          (com.tags || []).forEach(t => {
+            const e = ensure(t);
+            if (e) { e.comicsCount++; e.totalUsage++; }
+          });
+          (com.pages || []).forEach(pg => {
+            (pg.tags || []).forEach(t => {
+              const e = ensure(t);
+              if (e) { e.imagesCount++; e.totalUsage++; }
+            });
+          });
+        });
+      });
+
+      // 3. Artistas
+      state.data.artArtists.forEach(art => {
+        (art.tags || []).forEach(t => {
+          const e = ensure(t);
+          if (e) { e.artistsCount++; e.totalUsage++; }
+        });
+        (art.images || []).forEach(img => {
+          (img.tags || []).forEach(t => {
+            const e = ensure(t);
+            if (e) { e.imagesCount++; e.totalUsage++; }
+          });
+        });
+      });
+
+      return Array.from(map.values());
+    }
+
+    function getTop10Tags() {
+      const stats = computeGlobalTagStats();
+      stats.sort((a, b) => b.totalUsage - a.totalUsage || a.tag.localeCompare(b.tag, 'es'));
+      return stats.slice(0, 10);
+    }
+
+    // =========================================================
+    // NAVEGACIÓN ENTRE SECCIONES Y NIVELES
+    // =========================================================
+    function toggleSidebar(force) {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const isOpen = !sidebar.classList.contains('-translate-x-full');
+      const next = typeof force === 'boolean' ? force : !isOpen;
+      if (next) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function selectCategory(cat) {
+      state.category = cat;
+      state.selectedArtistId = null;
+      state.selectedComicId = null;
+      state.formatFilter = 'all';
+      state.selectedTags = [];
+      state.searchQuery = '';
+      state.currentPage = 1;
+      document.getElementById('search-input').value = '';
+      document.getElementById('clear-search-btn').classList.add('hidden');
+
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        const active = btn.dataset.cat === cat;
+        btn.className = active
+          ? 'cat-btn touch-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium transition-all bg-indigo-600/20 text-indigo-300 border border-indigo-500/40'
+          : 'cat-btn touch-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium transition-all text-slate-300 hover:bg-slate-800/70 border border-transparent';
+      });
+
+      toggleSidebar(false);
+      renderApp();
+    }
+
+    function openArtist(artistId) {
+      state.selectedArtistId = artistId;
+      state.selectedComicId = null;
+      state.formatFilter = 'all';
+      state.selectedTags = [];
+      state.currentPage = 1;
+      renderApp();
+    }
+
+    function openComic(comicId) {
+      state.selectedComicId = comicId;
+      state.selectedTags = [];
+      state.currentPage = 1;
+      renderApp();
+    }
+
+    function goToRootLevel() {
+      state.selectedArtistId = null;
+      state.selectedComicId = null;
+      state.formatFilter = 'all';
+      state.selectedTags = [];
+      state.currentPage = 1;
+      renderApp();
+    }
+
+    function goToArtistLevel() {
+      state.selectedComicId = null;
+      state.selectedTags = [];
+      state.currentPage = 1;
+      renderApp();
+    }
+
+    function setFormatFilter(fmt) {
+      state.formatFilter = fmt;
+      state.currentPage = 1;
+      document.querySelectorAll('.fmt-btn').forEach(btn => {
+        const active = btn.dataset.fmt === fmt;
+        btn.className = active
+          ? 'fmt-btn touch-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-indigo-600/30 text-indigo-200 border border-indigo-500/50'
+          : 'fmt-btn touch-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-900/70 text-slate-400 border border-slate-800 hover:text-white';
+      });
+      renderApp();
+    }
+
+    function handleSearchInput(val) {
+      state.searchQuery = val.trim().toLowerCase();
+      state.currentPage = 1;
+      document.getElementById('clear-search-btn').classList.toggle('hidden', !state.searchQuery);
+      renderApp();
+    }
+
+    function clearSearch() {
+      state.searchQuery = '';
+      state.currentPage = 1;
+      document.getElementById('search-input').value = '';
+      document.getElementById('clear-search-btn').classList.add('hidden');
+      renderApp();
+    }
+
+    function toggleTag(tag) {
+      const idx = state.selectedTags.indexOf(tag);
+      if (idx >= 0) state.selectedTags.splice(idx, 1);
+      else state.selectedTags.push(tag);
+      state.currentPage = 1;
+      renderApp();
+    }
+
+    function toggleTagCloudExpanded() {
+      state.tagCloudExpanded = !state.tagCloudExpanded;
+      const bar = document.getElementById('tag-cloud-bar');
+      const arrow = document.getElementById('tag-cloud-arrow');
+      if (state.tagCloudExpanded) {
+        bar.classList.remove('overflow-x-auto', 'no-scrollbar');
+        bar.classList.add('flex-wrap', 'max-h-36', 'overflow-y-auto');
+        arrow.textContent = '▲';
+      } else {
+        bar.classList.add('overflow-x-auto', 'no-scrollbar');
+        bar.classList.remove('flex-wrap', 'max-h-36', 'overflow-y-auto');
+        arrow.textContent = '▼';
+      }
+    }
+
+    // Al pulsar un tag en el Directorio Global de Tags, busca por ese tag en toda la biblioteca
+    function exploreTagGlobally(tag) {
+      state.category = 'tags';
+      state.selectedArtistId = null;
+      state.selectedComicId = null;
+      state.selectedTags = [tag];
+      state.searchQuery = '';
+      state.currentPage = 1;
+      document.getElementById('search-input').value = '';
+      document.getElementById('clear-search-btn').classList.add('hidden');
+
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        const active = btn.dataset.cat === 'tags';
+        btn.className = active
+          ? 'cat-btn touch-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium transition-all bg-indigo-600/20 text-indigo-300 border border-indigo-500/40'
+          : 'cat-btn touch-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium transition-all text-slate-300 hover:bg-slate-800/70 border border-transparent';
+      });
+      renderApp();
+    }
+
+    // =========================================================
+    // PAGINACIÓN DE 50 EN 50 ELEMENTOS
+    // =========================================================
+    function changePage(delta) {
+      state.currentPage = Math.max(1, state.currentPage + delta);
+      document.getElementById('content-scroll').scrollTop = 0;
+      renderApp();
+    }
+
+    function paginateItems(fullList) {
+      const totalItems = fullList.length;
+      const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+      if (state.currentPage > totalPages) state.currentPage = totalPages;
+      const startIndex = (state.currentPage - 1) * ITEMS_PER_PAGE;
+      const pageItems = fullList.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+      return { pageItems, totalItems, totalPages, startIndex };
+    }
+
+    function renderPaginationControls(totalItems, totalPages, startIndex) {
+      const topBar = document.getElementById('pagination-top');
+      const bottomBar = document.getElementById('pagination-bottom');
+
+      if (totalItems <= ITEMS_PER_PAGE) {
+        topBar.classList.add('hidden');
+        bottomBar.classList.add('hidden');
+        return;
+      }
+
+      const endItem = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
+      const html = `
+        <span class="text-slate-400">Mostrando <b class="text-white">${startIndex + 1}–${endItem}</b> de <b class="text-white">${totalItems}</b> (máx. ${ITEMS_PER_PAGE}/pág.)</span>
+        <div class="flex items-center gap-2">
+          <button onclick="changePage(-1)" ${state.currentPage <= 1 ? 'disabled' : ''} class="touch-btn px-3 py-1.5 rounded-xl bg-slate-850 hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none border border-slate-700 text-slate-200 font-semibold">
+            ← Anterior
+          </button>
+          <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-indigo-300 font-bold">
+            Pág. ${state.currentPage} / ${totalPages}
+          </span>
+          <button onclick="changePage(1)" ${state.currentPage >= totalPages ? 'disabled' : ''} class="touch-btn px-3 py-1.5 rounded-xl bg-slate-850 hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none border border-slate-700 text-slate-200 font-semibold">
+            Siguiente →
+          </button>
+        </div>
+      `;
+
+      topBar.innerHTML = html;
+      bottomBar.innerHTML = html;
+      topBar.classList.remove('hidden');
+      bottomBar.classList.remove('hidden');
+    }
+
+    // =========================================================
+    // HELPERS DE CONTEXTO ACTUAL + BÚSQUEDA PROFUNDA EN SUBCARPETAS
+    // =========================================================
+    function getArtistArrayByCategory(cat = state.category) {
+      if (cat === 'historia') return state.data.historiaArtists;
+      if (cat === 'comics') return state.data.comicArtists;
+      return state.data.artArtists;
+    }
+
+    function getCurrentArtist() {
+      if (!state.selectedArtistId || state.category === 'tags') return null;
+      return getArtistArrayByCategory().find(a => a.id === state.selectedArtistId) || null;
+    }
+
+    function getCurrentComic() {
+      if (state.category !== 'comics' || !state.selectedComicId) return null;
+      const art = getCurrentArtist();
+      return art ? (art.comics || []).find(c => c.id === state.selectedComicId) || null : null;
+    }
+
+    function getAllTagsInArtistSubtree(art) {
+      const set = new Set(art.tags || []);
+      if (state.category === 'historia') {
+        (art.stories || []).forEach(st => (st.tags || []).forEach(t => set.add(t)));
+      } else if (state.category === 'comics') {
+        (art.comics || []).forEach(com => {
+          (com.tags || []).forEach(t => set.add(t));
+          (com.pages || []).forEach(pg => (pg.tags || []).forEach(t => set.add(t)));
+        });
+      } else if (state.category === 'artistas') {
+        (art.images || []).forEach(img => (img.tags || []).forEach(t => set.add(t)));
+      }
+      return Array.from(set);
+    }
+
+    function getAllTagsInComicSubtree(com) {
+      const set = new Set(com.tags || []);
+      (com.pages || []).forEach(pg => (pg.tags || []).forEach(t => set.add(t)));
+      return Array.from(set);
+    }
+
+    function matchesSearchAndTags(name, tagsArray, extraSearchTexts = []) {
+      const tags = tagsArray || [];
+      if (state.selectedTags.length > 0) {
+        const hasAll = state.selectedTags.every(t => tags.includes(t));
+        if (!hasAll) return false;
+      }
+      if (state.searchQuery) {
+        const q = state.searchQuery.replace(/^#/, '');
+        const inName = String(name || '').toLowerCase().includes(q);
+        const inTags = tags.some(t => t.toLowerCase().includes(q));
+        const inExtra = extraSearchTexts.some(txt => String(txt || '').toLowerCase().includes(q));
+        if (!inName && !inTags && !inExtra) return false;
+      }
+      return true;
+    }
+
+    function getArtistChildCount(art) {
+      if (state.category === 'historia') return `${(art.stories || []).length} historias`;
+      if (state.category === 'comics') return `${(art.comics || []).length} cómics`;
+      return `${(art.images || []).length} imágenes`;
+    }
+
+    function getArtistChildTotalNumber(art) {
+      if (state.category === 'historia') return (art.stories || []).length;
+      if (state.category === 'comics') {
+        const comics = art.comics || [];
+        const pages = comics.reduce((acc, c) => acc + (c.pages || []).length, 0);
+        return comics.length + pages;
+      }
+      return (art.images || []).length;
+    }
+
+    function getFormatIcon(fmt) {
+      if (fmt === 'pdf') return '📄';
+      if (fmt === 'doc') return '📝';
+      if (fmt === 'video') return '🎬';
+      return '🖼️';
+    }
+
+    function getFormatBadgeColor(fmt) {
+      if (fmt === 'pdf') return 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+      if (fmt === 'doc') return 'bg-sky-500/20 text-sky-300 border-sky-500/30';
+      if (fmt === 'video') return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+    }
+
+    // =========================================================
+    // RENDERIZADO DE LA INTERFAZ PRINCIPAL
+    // =========================================================
+    function renderApp() {
+      const globalTagStats = computeGlobalTagStats();
+
+      // Contadores del sidebar
+      document.getElementById('count-historia').textContent = state.data.historiaArtists.length;
+      document.getElementById('count-comics').textContent = state.data.comicArtists.length;
+      document.getElementById('count-artistas').textContent = state.data.artArtists.length;
+      document.getElementById('count-tags').textContent = globalTagStats.length;
+
+      const art = getCurrentArtist();
+      const com = getCurrentComic();
+
+      // Mostrar/ocultar filtro de formato en Historia
+      const showFmt = state.category === 'historia' && Boolean(art);
+      document.getElementById('sidebar-format-box').classList.toggle('hidden', !showFmt);
+
+      // Etiquetas de botón primario y contexto
+      let primaryLabel = 'Nuevo Artista';
+      let ruleTitle = '';
+      let ruleDesc = '';
+
+      if (state.category === 'tags') {
+        primaryLabel = 'Nuevo Artista';
+        ruleTitle = '🏷️ Directorio Global de Tags';
+        ruleDesc = 'Tags ordenados alfabéticamente con el conteo exacto de imágenes, cómics e historias.';
+      } else if (!art) {
+        primaryLabel = 'Nuevo Artista';
+        const catName = state.category === 'historia' ? 'Historia' : state.category === 'comics' ? 'Comics' : 'Artistas';
+        ruleTitle = `📌 Nivel: Artistas de ${catName}`;
+        ruleDesc = 'Busca por tags del artista o de cualquiera de sus subcarpetas. Usa + para añadir.';
+      } else if (state.category === 'historia') {
+        primaryLabel = 'Subir Historia';
+        ruleTitle = `📖 Historias de ${art.name}`;
+        ruleDesc = 'Sube PDF, Docs, Imágenes o Videos con tags y ordena por fecha o nombre.';
+      } else if (state.category === 'artistas') {
+        primaryLabel = 'Subir Imágenes';
+        ruleTitle = `🎨 Galería de ${art.name}`;
+        ruleDesc = 'Cada imagen tiene sus propios tags individuales. Paginación automática de 50 en 50.';
+      } else if (state.category === 'comics' && !com) {
+        primaryLabel = 'Nuevo Cómic';
+        ruleTitle = `💬 Cómics de ${art.name}`;
+        ruleDesc = 'Crea cómics o entra a uno en progreso para añadirle más páginas.';
+      } else if (state.category === 'comics' && com) {
+        primaryLabel = 'Añadir Páginas';
+        ruleTitle = `📑 Páginas de "${com.title}"`;
+        ruleDesc = 'Toca una página para abrir el visor con zoom táctil y navegación derecha/izquierda.';
+      }
+
+      document.getElementById('sidebar-primary-label').textContent = primaryLabel;
+      document.getElementById('header-primary-label').textContent = primaryLabel;
+      document.getElementById('context-rule-title').textContent = ruleTitle;
+      document.getElementById('context-rule-desc').textContent = ruleDesc;
+
+      renderBreadcrumb(art, com);
+      renderTagCloud(art, com, globalTagStats);
+      renderGrid(art, com, globalTagStats);
+    }
+
+    function renderBreadcrumb(art, com) {
+      const trail = document.getElementById('breadcrumb-trail');
+      const actions = document.getElementById('artist-header-actions');
+
+      if (state.category === 'tags') {
+        actions.classList.add('hidden');
+        actions.innerHTML = '';
+        let html = `<button onclick="state.selectedTags=[];renderApp();" class="font-bold text-indigo-300 hover:underline">🏷️ Todos los Tags (Orden Alfabético)</button>`;
+        if (state.selectedTags.length > 0) {
+          html += ` <span class="text-slate-600">/</span> <span class="font-bold text-white">#${escapeHtml(state.selectedTags.join(' + #'))}</span>`;
+        }
+        trail.innerHTML = html;
+        return;
+      }
+
+      const catTitle = state.category === 'historia' ? '📖 Historia' : state.category === 'comics' ? '💬 Comics' : '🎨 Artistas';
+
+      let html = `<button onclick="goToRootLevel()" class="font-semibold ${!art ? 'text-white' : 'text-indigo-400 hover:underline'}">${catTitle}</button>`;
+      if (art) {
+        html += `<span class="text-slate-600">/</span>`;
+        html += `<button onclick="goToArtistLevel()" class="font-semibold ${!com ? 'text-white' : 'text-indigo-400 hover:underline'}">${escapeHtml(art.name)}</button>`;
+      }
+      if (com) {
+        html += `<span class="text-slate-600">/</span>`;
+        html += `<span class="font-bold text-white">${escapeHtml(com.title)}</span>`;
+      }
+      trail.innerHTML = html;
+
+      if (art) {
+        actions.classList.remove('hidden');
+        const linksHtml = (art.urls || []).map((u, idx) => `
+          <a href="${escapeHtml(u)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-xs text-indigo-300 flex items-center gap-1" title="${escapeHtml(u)}">
+            <span>🔗</span><span class="hidden sm:inline">${escapeHtml(getDomainLabel(u))}</span><span class="sm:hidden">Web ${idx + 1}</span>
+          </a>
+        `).join('');
+
+        actions.innerHTML = `
+          ${linksHtml}
+          <button onclick="openEditArtistModal('${art.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 font-medium">
+            ✏️ Artista
+          </button>
+          <button onclick="promptDeleteArtist('${art.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 border border-rose-500/40 text-xs text-rose-200 font-medium" title="Borrar este artista">
+            🗑️
+          </button>
+        `;
+      } else {
+        actions.classList.add('hidden');
+        actions.innerHTML = '';
+      }
+    }
+
+    function renderTagCloud(art, com, globalTagStats) {
+      const bar = document.getElementById('tag-cloud-bar');
+      const allTags = new Set();
+
+      if (state.category === 'tags') {
+        globalTagStats.forEach(s => allTags.add(s.tag));
+      } else if (!art) {
+        // Nivel raíz: incluir todos los tags del artista + subcarpetas
+        getArtistArrayByCategory().forEach(a => {
+          getAllTagsInArtistSubtree(a).forEach(t => allTags.add(t));
+        });
+      } else if (state.category === 'historia') {
+        (art.stories || []).forEach(s => (s.tags || []).forEach(t => allTags.add(t)));
+      } else if (state.category === 'artistas') {
+        (art.images || []).forEach(i => (i.tags || []).forEach(t => allTags.add(t)));
+      } else if (state.category === 'comics' && !com) {
+        (art.comics || []).forEach(c => getAllTagsInComicSubtree(c).forEach(t => allTags.add(t)));
+      } else if (state.category === 'comics' && com) {
+        (com.pages || []).forEach(p => (p.tags || []).forEach(t => allTags.add(t)));
+      }
+
+      // Orden alfabético estricto
+      const sortedTags = Array.from(allTags).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+      if (sortedTags.length === 0) {
+        bar.innerHTML = `<span class="text-xs text-slate-500 py-1">Sin tags en este nivel todavía</span>`;
+        return;
+      }
+
+      bar.innerHTML = sortedTags.map(tag => {
+        const active = state.selectedTags.includes(tag);
+        return `
+          <button onclick="toggleTag('${escapeHtml(tag)}')" class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition border ${
+            active
+              ? 'bg-indigo-600 text-white border-indigo-400 shadow-sm'
+              : 'bg-slate-900 text-slate-300 border-slate-700/80 hover:border-slate-500'
+          }">
+            #${escapeHtml(tag)}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderAddPlusCard(label, subtitle) {
+      return `
+        <button onclick="triggerPrimaryAddAction()" class="group min-h-[310px] rounded-2xl border-2 border-dashed border-slate-700/90 hover:border-indigo-500 bg-slate-900/40 hover:bg-indigo-950/20 flex flex-col items-center justify-center p-6 text-center transition-all active:scale-[0.99] cursor-pointer">
+          <div class="w-20 h-20 rounded-2xl bg-slate-850 group-hover:bg-indigo-600 border border-slate-700 group-hover:border-indigo-400 flex items-center justify-center text-5xl font-light text-indigo-400 group-hover:text-white shadow-lg transition-all mb-3">
+            +
+          </div>
+          <span class="font-bold text-base text-slate-200 group-hover:text-white">${escapeHtml(label)}</span>
+          <span class="text-xs text-slate-400 mt-1">${escapeHtml(subtitle)}</span>
+        </button>
+      `;
+    }
+
+    function renderGrid(art, com, globalTagStats) {
+      const grid = document.getElementById('media-grid');
+
+      // ========================================================
+      // VISTA ESPECIAL: DIRECTORIO ALFABÉTICO DE TAGS
+      // ========================================================
+      if (state.category === 'tags') {
+        if (state.selectedTags.length === 0) {
+          renderPaginationControls(0, 1, 0);
+          const sortedStats = [...globalTagStats].sort((a, b) => a.tag.localeCompare(b.tag, 'es', { sensitivity: 'base' }));
+          const q = state.searchQuery.replace(/^#/, '');
+          const filteredStats = q ? sortedStats.filter(s => s.tag.includes(q)) : sortedStats;
+
+          if (filteredStats.length === 0) {
+            grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-400">No hay tags registrados que coincidan con tu búsqueda.</div>`;
+            return;
+          }
+
+          grid.innerHTML = filteredStats.map(s => `
+            <button onclick="exploreTagGlobally('${escapeHtml(s.tag)}')" class="group bg-slate-925 border border-slate-800 hover:border-indigo-500/70 rounded-2xl p-4 text-left flex flex-col justify-between gap-3 shadow-md transition-all">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-base font-bold text-indigo-300 group-hover:text-white truncate">#${escapeHtml(s.tag)}</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-indigo-600/20 border border-indigo-500/30 text-xs font-bold text-indigo-200 shrink-0">${s.totalUsage} usos</span>
+              </div>
+              <div class="grid grid-cols-3 gap-1.5 text-[11px] text-slate-300 pt-2 border-t border-slate-800/80">
+                <div class="bg-slate-900/90 rounded-lg px-2 py-1.5 text-center">
+                  <div class="font-bold text-white text-sm">${s.imagesCount}</div>
+                  <div class="text-slate-400">Imágenes</div>
+                </div>
+                <div class="bg-slate-900/90 rounded-lg px-2 py-1.5 text-center">
+                  <div class="font-bold text-white text-sm">${s.comicsCount}</div>
+                  <div class="text-slate-400">Cómics</div>
+                </div>
+                <div class="bg-slate-900/90 rounded-lg px-2 py-1.5 text-center">
+                  <div class="font-bold text-white text-sm">${s.storiesCount}</div>
+                  <div class="text-slate-400">Historias</div>
+                </div>
+              </div>
+            </button>
+          `).join('');
+          return;
+        }
+
+        // Si se seleccionó un tag en el directorio, mostrar todos los resultados globales
+        const hasAll = (tags) => state.selectedTags.every(t => (tags || []).includes(t));
+        const globalResults = [];
+
+        state.data.artArtists.forEach(a => {
+          (a.images || []).forEach(img => {
+            if (hasAll([...(a.tags || []), ...(img.tags || [])])) {
+              globalResults.push({ kind: 'art-img', artist: a, item: img, name: img.name, createdAt: img.createdAt });
+            }
+          });
+        });
+        state.data.comicArtists.forEach(a => {
+          (a.comics || []).forEach(c => {
+            (c.pages || []).forEach(pg => {
+              if (hasAll([...(a.tags || []), ...(c.tags || []), ...(pg.tags || [])])) {
+                globalResults.push({ kind: 'comic-page', artist: a, comic: c, item: pg, name: `${c.title} — ${pg.name}`, createdAt: pg.createdAt });
+              }
+            });
+          });
+        });
+        state.data.historiaArtists.forEach(a => {
+          (a.stories || []).forEach(st => {
+            if (hasAll([...(a.tags || []), ...(st.tags || [])])) {
+              globalResults.push({ kind: 'story', artist: a, item: st, name: st.title, createdAt: st.createdAt });
+            }
+          });
+        });
+
+        const sortedGlobal = sortItems(globalResults, x => x.name);
+        const { pageItems, totalItems, totalPages, startIndex } = paginateItems(sortedGlobal);
+        renderPaginationControls(totalItems, totalPages, startIndex);
+
+        const backBanner = `
+          <div class="col-span-full flex items-center justify-between gap-2 bg-indigo-950/40 border border-indigo-500/40 rounded-xl px-4 py-2.5">
+            <span class="text-xs sm:text-sm text-indigo-200">🏷️ <b>${totalItems} resultado(s)</b> con #${escapeHtml(state.selectedTags.join(' + #'))}</span>
+            <button onclick="state.selectedTags=[];renderApp();" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white">← Volver a lista de Tags</button>
+          </div>
+        `;
+
+        grid.innerHTML = backBanner + pageItems.map(entry => {
+          const it = entry.item;
+          const imgIdAttr = `global-tag-item-${it.id}`;
+          let thumb = '';
+          let clickAction = '';
+          let badge = '';
+
+          if (entry.kind === 'art-img') {
+            thumb = getResolvedDisplayUrl(it.driveFileId, it.url, imgIdAttr);
+            clickAction = `openGlobalImageInLightbox('art-img','${entry.artist.id}','','${it.id}')`;
+            badge = `🎨 ${escapeHtml(entry.artist.name)}`;
+          } else if (entry.kind === 'comic-page') {
+            thumb = getResolvedDisplayUrl(it.driveFileId, it.url, imgIdAttr);
+            clickAction = `openGlobalImageInLightbox('comic-page','${entry.artist.id}','${entry.comic.id}','${it.id}')`;
+            badge = `💬 ${escapeHtml(entry.comic.title)}`;
+          } else {
+            thumb = it.format === 'image'
+              ? getResolvedDisplayUrl(it.driveFileId, it.url, imgIdAttr)
+              : svgCover('#1e293b', '#312e81', it.format.toUpperCase(), it.title.slice(0, 22), getFormatIcon(it.format));
+            clickAction = `openGlobalStory('${entry.artist.id}','${it.id}')`;
+            badge = `📖 ${escapeHtml(entry.artist.name)}`;
+          }
+
+          return `
+            <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
+              <div onclick="${clickAction}" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                <img id="${imgIdAttr}" src="${escapeHtml(thumb)}" alt="${escapeHtml(entry.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/30"></div>
+                <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-black/75 border border-white/15 text-indigo-200">${badge}</span>
+                <div class="absolute bottom-3 left-3 right-3">
+                  <h3 class="font-bold text-sm text-white leading-snug line-clamp-2">${escapeHtml(entry.name)}</h3>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('');
+        return;
+      }
+
+      // ========================================================
+      // NIVEL 1: CUADRÍCULA DE ARTISTAS O RESULTADOS CRUZADOS POR TAG
+      // ========================================================
+      if (!art) {
+        const hasCrossFilter = state.selectedTags.length > 0 || state.searchQuery.length > 0;
+
+        // Si hay tags seleccionados o búsqueda activa en Artistas, Comics o Historia,
+        // mostramos directamente TODOS los elementos coincidentes de TODOS los artistas
+        if (hasCrossFilter) {
+          const matchesQueryAndTags = (itemName, itemTags, artistName) => {
+            const tags = itemTags || [];
+            if (state.selectedTags.length > 0) {
+              if (!state.selectedTags.every(t => tags.includes(t))) return false;
+            }
+            if (state.searchQuery) {
+              const q = state.searchQuery.replace(/^#/, '');
+              const inName = String(itemName || '').toLowerCase().includes(q);
+              const inTags = tags.some(t => t.toLowerCase().includes(q));
+              const inArtist = String(artistName || '').toLowerCase().includes(q);
+              if (!inName && !inTags && !inArtist) return false;
+            }
+            return true;
+          };
+
+          if (state.category === 'artistas') {
+            const crossImages = [];
+            state.data.artArtists.forEach(a => {
+              (a.images || []).forEach(img => {
+                const combinedTags = [...new Set([...(a.tags || []), ...(img.tags || [])])];
+                if (matchesQueryAndTags(img.name, combinedTags, a.name)) {
+                  crossImages.push({ artist: a, img, createdAt: img.createdAt, name: img.name });
+                }
+              });
+            });
+
+            const sortedCross = sortItems(crossImages, x => x.name);
+            const { pageItems, totalItems, totalPages, startIndex } = paginateItems(sortedCross);
+            renderPaginationControls(totalItems, totalPages, startIndex);
+
+            const banner = `
+              <div class="col-span-full flex flex-wrap items-center justify-between gap-2 bg-indigo-950/40 border border-indigo-500/40 rounded-xl px-4 py-2.5">
+                <span class="text-xs sm:text-sm text-indigo-200">
+                  🔍 Mostrando <b>${totalItems} imagen(es)</b> de todos los artistas que coinciden con tu filtro
+                </span>
+                <button onclick="state.selectedTags=[];clearSearch();" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white">
+                  ✕ Ver lista de artistas
+                </button>
+              </div>
+            `;
+
+            if (pageItems.length === 0) {
+              grid.innerHTML = banner + `<div class="col-span-full py-10 text-center text-slate-400">No se encontraron imágenes con ese tag en ningún artista.</div>`;
+              return;
+            }
+
+            grid.innerHTML = banner + pageItems.map((entry, idxOnPage) => {
+              const globalFilteredIdx = startIndex + idxOnPage;
+              const img = entry.img;
+              const imgIdAttr = `cross-art-img-${img.id}`;
+              const displayUrl = getResolvedDisplayUrl(img.driveFileId, img.url, imgIdAttr);
+              const tagsHtml = (img.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+              return `
+                <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
+                  <div onclick="openCrossArtistImagesLightbox(${globalFilteredIdx})" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                    <img id="${imgIdAttr}" src="${escapeHtml(displayUrl)}" alt="${escapeHtml(img.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/30"></div>
+                    <span onclick="event.stopPropagation();openArtist('${entry.artist.id}')" class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-black/75 hover:bg-indigo-600 border border-white/15 text-indigo-200 hover:text-white transition">
+                      🎨 ${escapeHtml(entry.artist.name)}
+                    </span>
+                    <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                      <button onclick="event.stopPropagation(); openEditArtistImageModal('${img.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-indigo-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Editar nombre y tags">✏️</button>
+                      <button onclick="event.stopPropagation(); openDeleteConfirmModal({target:{type:'art-img',artistId:'${entry.artist.id}',imageId:'${img.id}'},hasChildren:true,title:'Borrar Imagen',step1Html:'<p>¿Seguro que deseas eliminar la imagen <b>${escapeHtml(img.name)}</b>?</p>',step2Html:'<p class=\\'text-rose-200 font-semibold\\'>Se eliminará permanentemente esta imagen de tu biblioteca y Drive.</p>'})" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-rose-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Borrar imagen">🗑️</button>
+                    </div>
+                    <div class="absolute bottom-3 left-3 right-3">
+                      <h3 class="font-bold text-sm sm:text-base text-white leading-snug line-clamp-2">${escapeHtml(img.name)}</h3>
+                    </div>
+                  </div>
+                  <div class="p-3.5 flex-1 flex flex-col justify-between gap-2">
+                    <div class="flex flex-wrap gap-1.5">${tagsHtml || '<span class="text-[11px] text-slate-500">Sin tags individuales</span>'}</div>
+                  </div>
+                </article>
+              `;
+            }).join('');
+            return;
+          }
+
+          if (state.category === 'comics') {
+            const crossComics = [];
+            state.data.comicArtists.forEach(a => {
+              (a.comics || []).forEach(c => {
+                const combinedTags = [...new Set([...(a.tags || []), ...getAllTagsInComicSubtree(c)])];
+                if (matchesQueryAndTags(c.title, combinedTags, a.name)) {
+                  crossComics.push({ artist: a, comic: c, createdAt: c.createdAt, name: c.title });
+                }
+              });
+            });
+
+            const sortedCross = sortItems(crossComics, x => x.name);
+            const { pageItems, totalItems, totalPages, startIndex } = paginateItems(sortedCross);
+            renderPaginationControls(totalItems, totalPages, startIndex);
+
+            const banner = `
+              <div class="col-span-full flex flex-wrap items-center justify-between gap-2 bg-indigo-950/40 border border-indigo-500/40 rounded-xl px-4 py-2.5">
+                <span class="text-xs sm:text-sm text-indigo-200">
+                  🔍 Mostrando <b>${totalItems} cómic(s)</b> de todos los artistas que coinciden con tu filtro
+                </span>
+                <button onclick="state.selectedTags=[];clearSearch();" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white">
+                  ✕ Ver lista de artistas
+                </button>
+              </div>
+            `;
+
+            if (pageItems.length === 0) {
+              grid.innerHTML = banner + `<div class="col-span-full py-10 text-center text-slate-400">No se encontraron cómics con ese tag en ningún artista.</div>`;
+              return;
+            }
+
+            grid.innerHTML = banner + pageItems.map(entry => {
+              const c = entry.comic;
+              const firstPage = (c.pages || [])[0];
+              const imgIdAttr = `cross-comic-cover-${c.id}`;
+              const coverUrl = firstPage
+                ? getResolvedDisplayUrl(firstPage.driveFileId, firstPage.url, imgIdAttr)
+                : svgCover('#312e81', '#6d28d9', c.title.slice(0, 18), 'Sin páginas aún', '💬');
+              const tagsHtml = (c.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+              return `
+                <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
+                  <div onclick="openArtist('${entry.artist.id}');openComic('${c.id}');" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                    <img id="${imgIdAttr}" src="${escapeHtml(coverUrl)}" alt="${escapeHtml(c.title)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/30"></div>
+                    <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-black/75 border border-white/15 text-indigo-200">
+                      🎨 ${escapeHtml(entry.artist.name)} • ${(c.pages || []).length} págs.
+                    </span>
+                    <div class="absolute bottom-3 left-3 right-3">
+                      <h3 class="font-bold text-base text-white leading-snug line-clamp-2">${escapeHtml(c.title)}</h3>
+                    </div>
+                  </div>
+                  <div class="p-3.5 flex-1 flex flex-col justify-between gap-2">
+                    <div class="flex flex-wrap gap-1.5">${tagsHtml}</div>
+                  </div>
+                </article>
+              `;
+            }).join('');
+            return;
+          }
+
+          if (state.category === 'historia') {
+            const crossStories = [];
+            state.data.historiaArtists.forEach(a => {
+              (a.stories || []).forEach(st => {
+                const combinedTags = [...new Set([...(a.tags || []), ...(st.tags || [])])];
+                if (matchesQueryAndTags(st.title, combinedTags, a.name)) {
+                  crossStories.push({ artist: a, story: st, createdAt: st.createdAt, name: st.title });
+                }
+              });
+            });
+
+            const sortedCross = sortItems(crossStories, x => x.name);
+            const { pageItems, totalItems, totalPages, startIndex } = paginateItems(sortedCross);
+            renderPaginationControls(totalItems, totalPages, startIndex);
+
+            const banner = `
+              <div class="col-span-full flex flex-wrap items-center justify-between gap-2 bg-indigo-950/40 border border-indigo-500/40 rounded-xl px-4 py-2.5">
+                <span class="text-xs sm:text-sm text-indigo-200">
+                  🔍 Mostrando <b>${totalItems} historia(s)</b> de todos los artistas que coinciden con tu filtro
+                </span>
+                <button onclick="state.selectedTags=[];clearSearch();" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white">
+                  ✕ Ver lista de artistas
+                </button>
+              </div>
+            `;
+
+            if (pageItems.length === 0) {
+              grid.innerHTML = banner + `<div class="col-span-full py-10 text-center text-slate-400">No se encontraron historias con ese tag en ningún artista.</div>`;
+              return;
+            }
+
+            grid.innerHTML = banner + pageItems.map(entry => {
+              const st = entry.story;
+              const imgIdAttr = `cross-story-thumb-${st.id}`;
+              const previewUrl = st.format === 'image'
+                ? getResolvedDisplayUrl(st.driveFileId, st.url, imgIdAttr)
+                : svgCover('#1e293b', '#312e81', st.format.toUpperCase(), st.title.slice(0, 22), getFormatIcon(st.format));
+              const tagsHtml = (st.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+              return `
+                <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
+                  <div onclick="openArtist('${entry.artist.id}');openStoryViewer('${st.id}');" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                    <img id="${imgIdAttr}" src="${escapeHtml(previewUrl)}" alt="${escapeHtml(st.title)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/25"></div>
+                    <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-black/75 border border-white/15 text-indigo-200">
+                      📖 ${escapeHtml(entry.artist.name)}
+                    </span>
+                    <div class="absolute bottom-3 left-3 right-3">
+                      <h3 class="font-bold text-base text-white leading-snug line-clamp-2">${escapeHtml(st.title)}</h3>
+                    </div>
+                  </div>
+                  <div class="p-3.5 flex-1 flex flex-col justify-between gap-2">
+                    <div class="flex flex-wrap gap-1.5">${tagsHtml}</div>
+                  </div>
+                </article>
+              `;
+            }).join('');
+            return;
+          }
+        }
+
+        const sortedArtists = sortItems(getArtistArrayByCategory(), a => a.name);
+        const { pageItems, totalItems, totalPages, startIndex } = paginateItems(sortedArtists);
+        renderPaginationControls(totalItems, totalPages, startIndex);
+
+        const cardsHtml = pageItems.map(a => {
+          const imgIdAttr = `artist-cover-${a.id}`;
+          const displayCover = getResolvedDisplayUrl(a.coverDriveId, a.coverUrl, imgIdAttr);
+          const linksHtml = (a.urls || []).map((u, idx) => `
+            <a href="${escapeHtml(u)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="px-2 py-1 rounded-lg bg-slate-850 hover:bg-indigo-600/30 border border-slate-700/80 text-[11px] text-indigo-300 flex items-center gap-1 truncate max-w-[130px]" title="${escapeHtml(u)}">
+              <span>🔗</span><span class="truncate">${escapeHtml(getDomainLabel(u))}</span>
+            </a>
+          `).join('');
+
+          const tagsHtml = (a.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const dateLabel = formatShortDate(a.createdAt);
+
+          return `
+            <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
+              <div onclick="openArtist('${a.id}')" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                <img id="${imgIdAttr}" src="${escapeHtml(displayCover)}" alt="${escapeHtml(a.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/30"></div>
+                <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-semibold bg-black/70 border border-white/10 text-slate-200">
+                  ${escapeHtml(getArtistChildCount(a))}
+                </span>
+                <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                  <button onclick="event.stopPropagation(); openEditArtistModal('${a.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-indigo-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Editar artista">
+                    ✏️
+                  </button>
+                  <button onclick="event.stopPropagation(); promptDeleteArtist('${a.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-rose-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Borrar artista">
+                    🗑️
+                  </button>
+                </div>
+                <div class="absolute bottom-3 left-3 right-3">
+                  <h3 class="font-bold text-base sm:text-lg text-white leading-snug line-clamp-2">${escapeHtml(a.name)}</h3>
+                  ${dateLabel ? `<p class="text-[11px] text-slate-300/80 mt-0.5">🕒 ${dateLabel}</p>` : ''}
+                </div>
+              </div>
+              <div class="p-3.5 flex-1 flex flex-col justify-between gap-2.5">
+                ${linksHtml ? `<div class="flex flex-wrap gap-1.5">${linksHtml}</div>` : '<p class="text-[11px] text-slate-500">Sin enlaces web registrados</p>'}
+                <div class="flex flex-wrap gap-1.5">${tagsHtml}</div>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        grid.innerHTML = cardsHtml + renderAddPlusCard('Agregar Artista', 'Añadir nuevo artista con portada y enlaces');
+        return;
+      }
+
+      // ========================================================
+      // NIVEL 2A: HISTORIAS DE UN ARTISTA
+      // ========================================================
+      if (state.category === 'historia') {
+        const filteredStories = (art.stories || []).filter(st => {
+          if (state.formatFilter !== 'all' && st.format !== state.formatFilter) return false;
+          return matchesSearchAndTags(st.title, st.tags);
+        });
+
+        const sortedStories = sortItems(filteredStories, st => st.title);
+        const { pageItems, totalItems, totalPages, startIndex } = paginateItems(sortedStories);
+        renderPaginationControls(totalItems, totalPages, startIndex);
+
+        const cardsHtml = pageItems.map(st => {
+          const imgIdAttr = `story-thumb-${st.id}`;
+          const previewUrl = st.format === 'image'
+            ? getResolvedDisplayUrl(st.driveFileId, st.url, imgIdAttr)
+            : svgCover('#1e293b', '#312e81', st.format.toUpperCase(), st.title.slice(0, 22), getFormatIcon(st.format));
+          const tagsHtml = (st.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const dateLabel = formatShortDate(st.createdAt);
+
+          return `
+            <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
+              <div onclick="openStoryViewer('${st.id}')" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                <img id="${imgIdAttr}" src="${escapeHtml(previewUrl)}" alt="${escapeHtml(st.title)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/25"></div>
+                <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-semibold uppercase border backdrop-blur-md ${getFormatBadgeColor(st.format)}">
+                  ${getFormatIcon(st.format)} ${escapeHtml(st.format)}
+                </span>
+                <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                  <button onclick="event.stopPropagation(); openEditStoryModal('${st.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-indigo-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Editar nombre y tags">
+                    ✏️
+                  </button>
+                  <button onclick="event.stopPropagation(); promptDeleteStory('${st.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-rose-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Borrar historia">
+                    🗑️
+                  </button>
+                </div>
+                <div class="absolute bottom-3 left-3 right-3">
+                  <h3 class="font-bold text-base text-white leading-snug line-clamp-2">${escapeHtml(st.title)}</h3>
+                  ${dateLabel ? `<p class="text-[11px] text-slate-300/80 mt-0.5">🕒 ${dateLabel}</p>` : ''}
+                </div>
+              </div>
+              <div class="p-3.5 flex-1 flex flex-col justify-between gap-2">
+                <div class="flex flex-wrap gap-1.5">${tagsHtml}</div>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        grid.innerHTML = cardsHtml + renderAddPlusCard('Agregar Historia', 'Subir PDF, Doc, Imagen o Video');
+        return;
+      }
+
+      // ========================================================
+      // NIVEL 2B: IMÁGENES INDIVIDUALES DE UN ARTISTA
+      // ========================================================
+      if (state.category === 'artistas') {
+        const filteredImages = (art.images || []).filter(img => matchesSearchAndTags(img.name, img.tags));
+        const sortedImages = sortItems(filteredImages, img => img.name);
+        const { pageItems, totalItems, totalPages, startIndex } = paginateItems(sortedImages);
+        renderPaginationControls(totalItems, totalPages, startIndex);
+
+        const cardsHtml = pageItems.map((img, idxOnPage) => {
+          const globalFilteredIdx = startIndex + idxOnPage;
+          const imgIdAttr = `art-img-${img.id}`;
+          const displayUrl = getResolvedDisplayUrl(img.driveFileId, img.url, imgIdAttr);
+          const tagsHtml = (img.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const dateLabel = formatShortDate(img.createdAt);
+
+          return `
+            <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
+              <div onclick="openArtistImageLightbox(${globalFilteredIdx})" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                <img id="${imgIdAttr}" src="${escapeHtml(displayUrl)}" alt="${escapeHtml(img.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/25"></div>
+                <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                  <button onclick="event.stopPropagation(); openEditArtistImageModal('${img.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-indigo-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Editar nombre y tags individuales">
+                    ✏️
+                  </button>
+                  <button onclick="event.stopPropagation(); promptDeleteArtistImage('${img.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-rose-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Borrar imagen">
+                    🗑️
+                  </button>
+                </div>
+                <div class="absolute bottom-3 left-3 right-3">
+                  <h3 class="font-bold text-sm sm:text-base text-white leading-snug line-clamp-2">${escapeHtml(img.name)}</h3>
+                  ${dateLabel ? `<p class="text-[11px] text-slate-300/80 mt-0.5">🕒 ${dateLabel}</p>` : ''}
+                </div>
+              </div>
+              <div class="p-3.5 flex-1 flex flex-col justify-between gap-2">
+                <div class="flex flex-wrap gap-1.5">
+                  ${tagsHtml || '<span class="text-[11px] text-slate-500">Sin tags individuales</span>'}
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        grid.innerHTML = cardsHtml + renderAddPlusCard('Agregar Imágenes', 'Subir ilustraciones con tags individuales');
+        return;
+      }
+
+      // ========================================================
+      // NIVEL 2C: CÓMICS DE UN ARTISTA (Búsqueda incluye páginas)
+      // ========================================================
+      if (state.category === 'comics' && !com) {
+        const filteredComics = (art.comics || []).filter(c => {
+          const combinedTags = getAllTagsInComicSubtree(c);
+          const pageNames = (c.pages || []).map(p => p.name);
+          return matchesSearchAndTags(c.title, combinedTags, pageNames);
+        });
+        const sortedComics = sortItems(filteredComics, c => c.title);
+        const { pageItems, totalItems, totalPages, startIndex } = paginateItems(sortedComics);
+        renderPaginationControls(totalItems, totalPages, startIndex);
+
+        const cardsHtml = pageItems.map(c => {
+          const firstPage = (c.pages || [])[0];
+          const imgIdAttr = `comic-cover-${c.id}`;
+          const coverUrl = firstPage
+            ? getResolvedDisplayUrl(firstPage.driveFileId, firstPage.url, imgIdAttr)
+            : svgCover('#312e81', '#6d28d9', c.title.slice(0, 18), 'Sin páginas aún', '💬');
+          const tagsHtml = (c.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const isInProgress = c.status === 'En progreso';
+          const dateLabel = formatShortDate(c.createdAt);
+
+          return `
+            <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
+              <div onclick="openComic('${c.id}')" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                <img id="${imgIdAttr}" src="${escapeHtml(coverUrl)}" alt="${escapeHtml(c.title)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/30"></div>
+                <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${isInProgress ? 'bg-amber-500/20 text-amber-200 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40'}">
+                  ${isInProgress ? '🚧 En progreso' : '✅ Completado'} • ${(c.pages || []).length} págs.
+                </span>
+                <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                  <button onclick="event.stopPropagation(); openEditComicModal('${c.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-indigo-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Editar cómic">
+                    ✏️
+                  </button>
+                  <button onclick="event.stopPropagation(); promptDeleteComic('${c.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-rose-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Borrar cómic">
+                    🗑️
+                  </button>
+                </div>
+                <div class="absolute bottom-3 left-3 right-3">
+                  <h3 class="font-bold text-base text-white leading-snug line-clamp-2">${escapeHtml(c.title)}</h3>
+                  ${dateLabel ? `<p class="text-[11px] text-slate-300/80 mt-0.5">🕒 ${dateLabel}</p>` : ''}
+                </div>
+              </div>
+              <div class="p-3.5 flex-1 flex flex-col justify-between gap-2">
+                <div class="flex flex-wrap gap-1.5">${tagsHtml}</div>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        grid.innerHTML = cardsHtml + renderAddPlusCard('Agregar Cómic', 'Crear nuevo cómic para este artista');
+        return;
+      }
+
+      // ========================================================
+      // NIVEL 3: PÁGINAS DENTRO DE UN CÓMIC
+      // ========================================================
+      if (state.category === 'comics' && com) {
+        const filteredPages = (com.pages || []).filter(pg => matchesSearchAndTags(pg.name, pg.tags));
+        const sortedPages = sortItems(filteredPages, pg => pg.name);
+        const { pageItems, totalItems, totalPages, startIndex } = paginateItems(sortedPages);
+        renderPaginationControls(totalItems, totalPages, startIndex);
+
+        const cardsHtml = pageItems.map((pg, idxOnPage) => {
+          const globalFilteredIdx = startIndex + idxOnPage;
+          const imgIdAttr = `comic-pg-${pg.id}`;
+          const displayUrl = getResolvedDisplayUrl(pg.driveFileId, pg.url, imgIdAttr);
+          const tagsHtml = (pg.tags || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-850 text-indigo-300 text-[11px] font-medium">#${escapeHtml(t)}</span>`).join('');
+          const dateLabel = formatShortDate(pg.createdAt);
+
+          return `
+            <article class="group bg-slate-925 border border-slate-800/90 hover:border-indigo-500/70 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all">
+              <div onclick="openComicPageLightbox(${globalFilteredIdx})" class="relative aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer">
+                <img id="${imgIdAttr}" src="${escapeHtml(displayUrl)}" alt="${escapeHtml(pg.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/25"></div>
+                <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-black/75 border border-white/10 text-white">
+                  #${globalFilteredIdx + 1}
+                </span>
+                <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                  <button onclick="event.stopPropagation(); openEditComicPageModal('${pg.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-indigo-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Editar nombre y tags">
+                    ✏️
+                  </button>
+                  <button onclick="event.stopPropagation(); promptDeleteComicPage('${pg.id}')" class="w-9 h-9 rounded-xl bg-black/70 hover:bg-rose-600 border border-white/15 text-white text-sm flex items-center justify-center" title="Borrar página">
+                    🗑️
+                  </button>
+                </div>
+                <div class="absolute bottom-3 left-3 right-3">
+                  <h3 class="font-bold text-sm text-white leading-snug line-clamp-2">${escapeHtml(pg.name)}</h3>
+                  ${dateLabel ? `<p class="text-[11px] text-slate-300/80 mt-0.5">🕒 ${dateLabel}</p>` : ''}
+                </div>
+              </div>
+              <div class="p-3.5 flex-1 flex flex-col justify-between gap-2">
+                <div class="flex flex-wrap gap-1.5">${tagsHtml}</div>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        grid.innerHTML = cardsHtml + renderAddPlusCard('Añadir Más Páginas', 'Subir nuevas páginas al cómic');
+      }
+    }
+
+    // =========================================================
+    // SISTEMA DE BORRADO CON DOBLE ADVERTENCIA PARA ARTISTAS
+    // =========================================================
+    function openDeleteConfirmModal({ target, hasChildren, title, step1Html, step2Html }) {
+      state.deleteTarget = target;
+      state.deleteStep = 1;
+      state.deleteHasDoubleWarning = Boolean(hasChildren);
+
+      document.getElementById('del-modal-title').textContent = title;
+      document.getElementById('del-modal-step-badge').textContent = hasChildren
+        ? 'Advertencia 1 de 2 — Contiene archivos'
+        : 'Confirmación de borrado';
+      document.getElementById('del-modal-body').innerHTML = step1Html;
+      document.getElementById('del-modal-type-box').classList.add('hidden');
+      document.getElementById('del-modal-confirm-input').value = '';
+
+      const btn = document.getElementById('del-modal-confirm-btn');
+      btn.disabled = false;
+      btn.textContent = hasChildren ? 'Entiendo, continuar (1/2)' : 'Sí, borrar definitivamente';
+
+      state._step2Html = step2Html || '';
+
+      const modal = document.getElementById('delete-confirm-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDeleteModal() {
+      const modal = document.getElementById('delete-confirm-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      state.deleteTarget = null;
+      state.deleteStep = 1;
+    }
+
+    function validateSecondDeleteStep() {
+      const val = document.getElementById('del-modal-confirm-input').value.trim().toUpperCase();
+      document.getElementById('del-modal-confirm-btn').disabled = (val !== 'BORRAR');
+    }
+
+    function proceedDeleteModal() {
+      if (!state.deleteTarget) return;
+
+      // Si tiene doble advertencia y estamos en paso 1, pasamos al paso 2
+      if (state.deleteHasDoubleWarning && state.deleteStep === 1) {
+        state.deleteStep = 2;
+        document.getElementById('del-modal-step-badge').textContent = '⚠️ SEGUNDA ADVERTENCIA (2 de 2) — Acción irreversible';
+        document.getElementById('del-modal-body').innerHTML = state._step2Html;
+        document.getElementById('del-modal-type-box').classList.remove('hidden');
+        document.getElementById('del-modal-confirm-input').value = '';
+        const btn = document.getElementById('del-modal-confirm-btn');
+        btn.disabled = true;
+        btn.textContent = 'Borrar Artista y Todo su Contenido';
+        setTimeout(() => document.getElementById('del-modal-confirm-input').focus(), 50);
+        return;
+      }
+
+      executeDeletion(state.deleteTarget);
+      closeDeleteModal();
+    }
+
+    function promptDeleteArtist(artistId) {
+      const arr = getArtistArrayByCategory();
+      const art = arr.find(a => a.id === artistId);
+      if (!art) return;
+
+      const totalCount = getArtistChildTotalNumber(art);
+      const hasChildren = totalCount > 0;
+
+      openDeleteConfirmModal({
+        target: { type: 'artist', artistId },
+        hasChildren,
+        title: `Borrar artista "${art.name}"`,
+        step1Html: hasChildren
+          ? `<p>Estás a punto de eliminar al artista <b>${escapeHtml(art.name)}</b>.</p>
+             <p class="p-3 rounded-xl bg-rose-950/50 border border-rose-500/30 text-rose-200">
+               Este artista tiene <b>${totalCount} elemento(s)</b> guardados dentro (imágenes, cómics o historias).
+             </p>`
+          : `<p>¿Seguro que deseas eliminar al artista vacío <b>${escapeHtml(art.name)}</b>?</p>`,
+        step2Html: `<p class="text-rose-200 font-semibold">¡ATENCIÓN! Se borrará permanentemente el artista <b>${escapeHtml(art.name)}</b> junto con sus <b>${totalCount} archivo(s)</b>.</p>
+                    <p class="text-xs text-slate-400">Esta acción eliminará su registro de la biblioteca y sincronizará el cambio con Google Drive.</p>`
+      });
+    }
+
+    function deleteArtistFromModal() {
+      const id = state.editingArtistId;
+      if (!id) return;
+      closeArtistModal();
+      promptDeleteArtist(id);
+    }
+
+    function promptDeleteStory(storyId) {
+      const art = getCurrentArtist();
+      if (!art) return;
+      const st = (art.stories || []).find(s => s.id === storyId);
+      if (!st) return;
+
+      openDeleteConfirmModal({
+        target: { type: 'story', artistId: art.id, storyId },
+        hasChildren: true,
+        title: 'Borrar Historia / Documento',
+        step1Html: `<p>¿Seguro que deseas eliminar <b>"${escapeHtml(st.title)}"</b> (${escapeHtml(st.format.toUpperCase())})?</p>`,
+        step2Html: `<p class="text-rose-200 font-semibold">Esta acción enviará el archivo a la papelera de Google Drive y lo quitará de tu biblioteca.</p>`
+      });
+    }
+
+    function promptDeleteArtistImage(imageId) {
+      const art = getCurrentArtist();
+      if (!art) return;
+      const img = (art.images || []).find(i => i.id === imageId);
+      if (!img) return;
+
+      openDeleteConfirmModal({
+        target: { type: 'art-img', artistId: art.id, imageId },
+        hasChildren: true,
+        title: 'Borrar Imagen',
+        step1Html: `<p>¿Seguro que deseas eliminar la imagen <b>"${escapeHtml(img.name)}"</b>?</p>`,
+        step2Html: `<p class="text-rose-200 font-semibold">Esta acción eliminará la imagen de tu artista y la enviará a la papelera de Drive.</p>`
+      });
+    }
+
+    function promptDeleteArtistImage(imageId) {
+      const art = getCurrentArtist();
+      if (!art) return;
+      const img = (art.images || []).find(i => i.id === imageId);
+      if (!img) return;
+
+      openDeleteConfirmModal({
+        target: { type: 'art-img', artistId: art.id, imageId },
+        hasChildren: false,
+        title: 'Borrar Imagen',
+        step1Html: `<p>¿Seguro que deseas eliminar la imagen <b>"${escapeHtml(img.name)}"</b>?</p>`
+      });
+    }
+
+    function promptDeleteComic(comicId) {
+      const art = getCurrentArtist();
+      if (!art) return;
+      const com = (art.comics || []).find(c => c.id === comicId);
+      if (!com) return;
+      const pageCount = (com.pages || []).length;
+
+      openDeleteConfirmModal({
+        target: { type: 'comic', artistId: art.id, comicId },
+        hasChildren: pageCount > 0,
+        title: `Borrar Cómic "${com.title}"`,
+        step1Html: pageCount > 0
+          ? `<p>El cómic <b>"${escapeHtml(com.title)}"</b> contiene <b>${pageCount} página(s)</b>.</p><p>¿Deseas eliminarlo?</p>`
+          : `<p>¿Seguro que deseas eliminar el cómic vacío <b>"${escapeHtml(com.title)}"</b>?</p>`,
+        step2Html: `<p class="text-rose-200 font-semibold">Se eliminará el cómic <b>"${escapeHtml(com.title)}"</b> y todas sus <b>${pageCount} página(s)</b>.</p>`
+      });
+    }
+
+    function promptDeleteComicPage(pageId) {
+      const art = getCurrentArtist();
+      const com = getCurrentComic();
+      if (!art || !com) return;
+      const pg = (com.pages || []).find(p => p.id === pageId);
+      if (!pg) return;
+
+      openDeleteConfirmModal({
+        target: { type: 'comic-page', artistId: art.id, comicId: com.id, pageId },
+        hasChildren: true,
+        title: 'Borrar Página de Cómic',
+        step1Html: `<p>¿Seguro que deseas eliminar la página <b>"${escapeHtml(pg.name)}"</b>?</p>`,
+        step2Html: `<p class="text-rose-200 font-semibold">Esta acción eliminará la página del cómic y la enviará a la papelera de Drive.</p>`
+      });
+    }
+
+    async function executeDeletion(target) {
+      const driveIdsToTrash = [];
+
+      if (target.type === 'artist') {
+        const arr = getArtistArrayByCategory();
+        const idx = arr.findIndex(a => a.id === target.artistId);
+        if (idx >= 0) {
+          const art = arr[idx];
+          if (art.coverDriveId) driveIdsToTrash.push(art.coverDriveId);
+          (art.stories || []).forEach(s => { if (s.driveFileId) driveIdsToTrash.push(s.driveFileId); });
+          (art.images || []).forEach(i => { if (i.driveFileId) driveIdsToTrash.push(i.driveFileId); });
+          (art.comics || []).forEach(c => (c.pages || []).forEach(p => { if (p.driveFileId) driveIdsToTrash.push(p.driveFileId); }));
+          arr.splice(idx, 1);
+          if (state.selectedArtistId === target.artistId) {
+            state.selectedArtistId = null;
+            state.selectedComicId = null;
+          }
+          showToast(`Artista "${art.name}" eliminado`, '🗑️');
+        }
+      } else if (target.type === 'story') {
+        const art = getArtistArrayByCategory('historia').find(a => a.id === target.artistId);
+        if (art) {
+          const idx = (art.stories || []).findIndex(s => s.id === target.storyId);
+          if (idx >= 0) {
+            if (art.stories[idx].driveFileId) driveIdsToTrash.push(art.stories[idx].driveFileId);
+            art.stories.splice(idx, 1);
+            if (state.activeStoryId === target.storyId) closeMediaViewer();
+            showToast('Historia eliminada', '🗑️');
+          }
+        }
+      } else if (target.type === 'art-img') {
+        const art = getArtistArrayByCategory('artistas').find(a => a.id === target.artistId);
+        if (art) {
+          const idx = (art.images || []).findIndex(i => i.id === target.imageId);
+          if (idx >= 0) {
+            if (art.images[idx].driveFileId) driveIdsToTrash.push(art.images[idx].driveFileId);
+            art.images.splice(idx, 1);
+            showToast('Imagen eliminada', '🗑️');
+          }
+        }
+      } else if (target.type === 'comic') {
+        const art = getArtistArrayByCategory('comics').find(a => a.id === target.artistId);
+        if (art) {
+          const idx = (art.comics || []).findIndex(c => c.id === target.comicId);
+          if (idx >= 0) {
+            (art.comics[idx].pages || []).forEach(p => { if (p.driveFileId) driveIdsToTrash.push(p.driveFileId); });
+            art.comics.splice(idx, 1);
+            if (state.selectedComicId === target.comicId) state.selectedComicId = null;
+            showToast('Cómic eliminado', '🗑️');
+          }
+        }
+      } else if (target.type === 'comic-page') {
+        const art = getArtistArrayByCategory('comics').find(a => a.id === target.artistId);
+        const com = art ? (art.comics || []).find(c => c.id === target.comicId) : null;
+        if (com) {
+          const idx = (com.pages || []).findIndex(p => p.id === target.pageId);
+          if (idx >= 0) {
+            if (com.pages[idx].driveFileId) driveIdsToTrash.push(com.pages[idx].driveFileId);
+            com.pages.splice(idx, 1);
+            showToast('Página eliminada', '🗑️');
+          }
+        }
+      }
+
+      renderApp();
+
+      // Enviar archivos borrados a la papelera de Drive en segundo plano si está conectado
+      if (state.drive.connected && driveIdsToTrash.length > 0) {
+        for (const fid of driveIdsToTrash) {
+          trashDriveFile(fid).catch(() => {});
+        }
+      }
+      await syncMetadataToDrive();
+    }
+
+    // =========================================================
+    // RENDERIZADO DE TOP 10 TAGS EN MODALES (Fácil de pulsar)
+    // =========================================================
+    function renderTop10TagButtons(containerId, getCurrentTagsFn, setCurrentTagsFn) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const top10 = getTop10Tags();
+      if (top10.length === 0) {
+        container.innerHTML = `<span class="text-[11px] text-slate-500">Aún no hay tags registrados.</span>`;
+        return;
+      }
+
+      const activeTags = getCurrentTagsFn();
+      container.innerHTML = top10.map(item => {
+        const isSelected = activeTags.includes(item.tag);
+        return `
+          <button type="button" onclick="toggleQuickTopTag('${containerId}', '${escapeHtml(item.tag)}')" class="px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
+            isSelected
+              ? 'bg-indigo-600 text-white border-indigo-400'
+              : 'bg-slate-850 hover:bg-slate-800 text-slate-300 border-slate-700'
+          }">
+            ${isSelected ? '✓ ' : '+ '}#${escapeHtml(item.tag)} <span class="opacity-60 text-[10px]">(${item.totalUsage})</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function toggleQuickTopTag(containerId, tag) {
+      if (containerId === 'artist-top-tags') {
+        const inp = document.getElementById('artist-tags-input');
+        const list = parseTags(inp.value);
+        const idx = list.indexOf(tag);
+        if (idx >= 0) list.splice(idx, 1);
+        else list.push(tag);
+        inp.value = list.join(', ');
+        renderTop10TagButtons('artist-top-tags', () => parseTags(inp.value));
+      } else if (containerId === 'upload-top-tags') {
+        const inp = document.getElementById('upload-tags');
+        const list = parseTags(inp.value);
+        const idx = list.indexOf(tag);
+        if (idx >= 0) list.splice(idx, 1);
+        else list.push(tag);
+        inp.value = list.join(', ');
+        renderTop10TagButtons('upload-top-tags', () => parseTags(inp.value));
+      } else if (containerId === 'edit-top-tags') {
+        const idx = state.editTagsBuffer.indexOf(tag);
+        if (idx >= 0) state.editTagsBuffer.splice(idx, 1);
+        else state.editTagsBuffer.push(tag);
+        renderEditTagsChips();
+        renderTop10TagButtons('edit-top-tags', () => state.editTagsBuffer);
+      }
+    }
+
+    // =========================================================
+    // ACCIÓN PRIMARIA "+" SEGÚN EL NIVEL ACTUAL
+    // =========================================================
+    function triggerPrimaryAddAction() {
+      if (state.category === 'tags') {
+        selectCategory('artistas');
+        openNewArtistModal();
+        return;
+      }
+      const art = getCurrentArtist();
+      const com = getCurrentComic();
+
+      if (!art) {
+        openNewArtistModal();
+      } else if (state.category === 'historia') {
+        openUploadModal('story');
+      } else if (state.category === 'artistas') {
+        openUploadModal('artist-images');
+      } else if (state.category === 'comics' && !com) {
+        openUploadModal('new-comic');
+      } else if (state.category === 'comics' && com) {
+        openUploadModal('comic-pages');
+      }
+    }
+
+    // =========================================================
+    // MODAL CREAR / EDITAR ARTISTA
+    // =========================================================
+    function openNewArtistModal() {
+      state.editingArtistId = null;
+      state.artistCoverFile = null;
+      document.getElementById('artist-modal-title').textContent = '➕ Nuevo Artista';
+      document.getElementById('artist-name-input').value = '';
+      document.getElementById('artist-cover-label').textContent = 'Seleccionar imagen de portada (opcional)...';
+      document.getElementById('artist-cover-file').value = '';
+      document.getElementById('artist-url-1').value = '';
+      document.getElementById('artist-url-2').value = '';
+      document.getElementById('artist-url-3').value = '';
+      document.getElementById('artist-tags-input').value = '';
+      document.getElementById('artist-modal-delete-btn').classList.add('hidden');
+      renderTop10TagButtons('artist-top-tags', () => parseTags(document.getElementById('artist-tags-input').value));
+
+      const modal = document.getElementById('artist-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function openEditArtistModal(artistId) {
+      const art = getArtistArrayByCategory().find(a => a.id === artistId);
+      if (!art) return;
+
+      state.editingArtistId = artistId;
+      state.artistCoverFile = null;
+      document.getElementById('artist-modal-title').textContent = '✏️ Editar Artista';
+      document.getElementById('artist-name-input').value = art.name;
+      document.getElementById('artist-cover-label').textContent = 'Cambiar imagen de portada (opcional)...';
+      document.getElementById('artist-cover-file').value = '';
+      document.getElementById('artist-url-1').value = (art.urls || [])[0] || '';
+      document.getElementById('artist-url-2').value = (art.urls || [])[1] || '';
+      document.getElementById('artist-url-3').value = (art.urls || [])[2] || '';
+      document.getElementById('artist-tags-input').value = (art.tags || []).join(', ');
+      document.getElementById('artist-modal-delete-btn').classList.remove('hidden');
+      renderTop10TagButtons('artist-top-tags', () => parseTags(document.getElementById('artist-tags-input').value));
+
+      const modal = document.getElementById('artist-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeArtistModal() {
+      const modal = document.getElementById('artist-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function handleArtistCoverSelect(input) {
+      const file = input.files[0];
+      if (!file) return;
+      state.artistCoverFile = file;
+      document.getElementById('artist-cover-label').textContent = file.name;
+    }
+
+    async function saveArtistModal() {
+      const name = document.getElementById('artist-name-input').value.trim();
+      if (!name) {
+        showToast('Escribe el nombre del artista', '⚠️');
+        return;
+      }
+
+      const urls = [
+        normalizeUrl(document.getElementById('artist-url-1').value),
+        normalizeUrl(document.getElementById('artist-url-2').value),
+        normalizeUrl(document.getElementById('artist-url-3').value)
+      ].filter(Boolean);
+
+      const tags = parseTags(document.getElementById('artist-tags-input').value);
+      const btn = document.getElementById('artist-save-btn');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      try {
+        let coverUrl = null;
+        let coverDriveId = null;
+
+        if (state.artistCoverFile) {
+          if (state.drive.connected) {
+            const uploaded = await uploadSingleFileToDrive(state.artistCoverFile);
+            coverDriveId = uploaded.id;
+            coverUrl = uploaded.blobUrl;
+            blobCache.set(coverDriveId, coverUrl);
+          } else {
+            coverUrl = URL.createObjectURL(state.artistCoverFile);
+          }
+        }
+
+        const arr = getArtistArrayByCategory();
+
+        if (state.editingArtistId) {
+          const existing = arr.find(a => a.id === state.editingArtistId);
+          if (existing) {
+            existing.name = name;
+            existing.urls = urls;
+            existing.tags = tags;
+            if (coverUrl) {
+              existing.coverUrl = coverUrl;
+              existing.coverDriveId = coverDriveId;
+            }
+          }
+          showToast('Artista actualizado', '✅');
+        } else {
+          const defaultEmoji = state.category === 'historia' ? '📖' : state.category === 'comics' ? '💬' : '🎨';
+          const newArtist = {
+            id: 'art-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+            name,
+            coverUrl: coverUrl || svgCover('#1e293b', '#4338ca', name.slice(0, 18), 'Artista', defaultEmoji),
+            coverDriveId,
+            urls,
+            tags,
+            createdAt: new Date().toISOString()
+          };
+          if (state.category === 'historia') newArtist.stories = [];
+          if (state.category === 'comics') newArtist.comics = [];
+          if (state.category === 'artistas') newArtist.images = [];
+          arr.unshift(newArtist);
+          showToast('Nuevo artista añadido', '✅');
+        }
+
+        await syncMetadataToDrive();
+        closeArtistModal();
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        showToast('Error al guardar artista', '❌');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar Artista';
+      }
+    }
+
+    // =========================================================
+    // MODAL SUBIR HISTORIAS, IMÁGENES, CÓMICS O PÁGINAS
+    // =========================================================
+    function openUploadModal(mode) {
+      state.uploadMode = mode;
+      state.uploadFiles = [];
+      document.getElementById('upload-file-input').value = '';
+      document.getElementById('selected-files-summary').classList.add('hidden');
+      document.getElementById('upload-title').value = '';
+      document.getElementById('upload-tags').value = '';
+      renderTop10TagButtons('upload-top-tags', () => parseTags(document.getElementById('upload-tags').value));
+
+      const titleBox = document.getElementById('upload-title-box');
+      const statusBox = document.getElementById('upload-comic-status-box');
+      const fileInput = document.getElementById('upload-file-input');
+
+      if (mode === 'story') {
+        document.getElementById('upload-modal-title').textContent = '📖 Subir Historia';
+        titleBox.classList.remove('hidden');
+        document.getElementById('upload-title-label').textContent = 'Título de la Historia *';
+        statusBox.classList.add('hidden');
+        fileInput.multiple = false;
+        fileInput.accept = '.pdf,.doc,.docx,image/*,video/*';
+        document.getElementById('upload-file-placeholder').textContent = 'Toca para elegir PDF, Doc, Imagen o Video';
+        document.getElementById('upload-tags-label').textContent = 'Tags de la historia (separados por coma)';
+      } else if (mode === 'artist-images') {
+        document.getElementById('upload-modal-title').textContent = '🎨 Subir Imágenes del Artista';
+        titleBox.classList.add('hidden');
+        statusBox.classList.add('hidden');
+        fileInput.multiple = true;
+        fileInput.accept = 'image/*';
+        document.getElementById('upload-file-placeholder').textContent = 'Toca para elegir una o varias imágenes';
+        document.getElementById('upload-tags-label').textContent = 'Tags iniciales para cada imagen (luego editables individualmente)';
+      } else if (mode === 'new-comic') {
+        document.getElementById('upload-modal-title').textContent = '💬 Nuevo Cómic';
+        titleBox.classList.remove('hidden');
+        document.getElementById('upload-title-label').textContent = 'Título del Cómic *';
+        statusBox.classList.remove('hidden');
+        fileInput.multiple = true;
+        fileInput.accept = 'image/*';
+        document.getElementById('upload-file-placeholder').textContent = 'Selecciona las páginas iniciales del cómic';
+        document.getElementById('upload-tags-label').textContent = 'Tags del cómic (separados por coma)';
+      } else if (mode === 'comic-pages') {
+        document.getElementById('upload-modal-title').textContent = '📑 Añadir Páginas al Cómic';
+        titleBox.classList.add('hidden');
+        statusBox.classList.add('hidden');
+        fileInput.multiple = true;
+        fileInput.accept = 'image/*';
+        document.getElementById('upload-file-placeholder').textContent = 'Selecciona las nuevas páginas a añadir';
+        document.getElementById('upload-tags-label').textContent = 'Tags para estas páginas (opcional)';
+      }
+
+      const modal = document.getElementById('upload-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeUploadModal() {
+      const modal = document.getElementById('upload-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function handleFileSelection(input) {
+      const files = Array.from(input.files || []);
+      state.uploadFiles = files;
+      const summary = document.getElementById('selected-files-summary');
+      if (files.length > 0) {
+        summary.textContent = files.length === 1
+          ? `Archivo seleccionado: ${files[0].name}`
+          : `${files.length} archivos seleccionados`;
+        summary.classList.remove('hidden');
+        if (!document.getElementById('upload-title').value.trim()) {
+          document.getElementById('upload-title').value = files[0].name.replace(/\.[^/.]+$/, '');
+        }
+      } else {
+        summary.classList.add('hidden');
+      }
+    }
+
+    function detectStoryFormat(file) {
+      const mime = (file.type || '').toLowerCase();
+      const name = (file.name || '').toLowerCase();
+      if (mime.includes('pdf') || name.endsWith('.pdf')) return 'pdf';
+      if (mime.includes('word') || mime.includes('document') || name.endsWith('.doc') || name.endsWith('.docx')) return 'doc';
+      if (mime.startsWith('video/') || /\.(mp4|webm|mov|mkv)$/.test(name)) return 'video';
+      return 'image';
+    }
+
+    async function submitUpload() {
+      const art = getCurrentArtist();
+      if (!art) return;
+
+      const mode = state.uploadMode;
+      const title = document.getElementById('upload-title').value.trim();
+      const tags = parseTags(document.getElementById('upload-tags').value);
+      const files = state.uploadFiles;
+
+      if ((mode === 'story' || mode === 'new-comic') && !title) {
+        showToast('Por favor escribe un título', '⚠️');
+        return;
+      }
+      if (files.length === 0 && mode !== 'new-comic') {
+        showToast('Selecciona al menos un archivo', '⚠️');
+        return;
+      }
+
+      const btn = document.getElementById('confirm-upload-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ Guardando...</span>';
+
+      try {
+        const uploadedRecords = [];
+        for (const f of files) {
+          if (state.drive.connected) {
+            const up = await uploadSingleFileToDrive(f);
+            blobCache.set(up.id, up.blobUrl);
+            uploadedRecords.push({ file: f, url: up.blobUrl, driveFileId: up.id });
+          } else {
+            uploadedRecords.push({ file: f, url: URL.createObjectURL(f), driveFileId: null });
+          }
+        }
+
+        const nowIso = new Date().toISOString();
+
+        if (mode === 'story') {
+          const rec = uploadedRecords[0];
+          art.stories.unshift({
+            id: 'st-' + Date.now(),
+            title,
+            format: detectStoryFormat(rec.file),
+            tags,
+            createdAt: nowIso,
+            url: rec.url,
+            driveFileId: rec.driveFileId
+          });
+          showToast('Historia guardada', '✅');
+        } else if (mode === 'artist-images') {
+          uploadedRecords.forEach((rec, i) => {
+            art.images.unshift({
+              id: 'img-' + Date.now() + '-' + i,
+              name: rec.file.name.replace(/\.[^/.]+$/, ''),
+              tags: [...tags],
+              createdAt: new Date(Date.now() + i).toISOString(),
+              url: rec.url,
+              driveFileId: rec.driveFileId
+            });
+          });
+          showToast(`${uploadedRecords.length} imagen(es) añadida(s)`, '✅');
+        } else if (mode === 'new-comic') {
+          const status = document.getElementById('upload-comic-status').value;
+          const pages = uploadedRecords.map((rec, i) => ({
+            id: 'cp-' + Date.now() + '-' + i,
+            name: rec.file.name.replace(/\.[^/.]+$/, '') || `Página ${i + 1}`,
+            tags: [...tags],
+            createdAt: new Date(Date.now() + i).toISOString(),
+            url: rec.url,
+            driveFileId: rec.driveFileId
+          }));
+          art.comics.unshift({
+            id: 'comic-' + Date.now(),
+            title,
+            status,
+            tags,
+            createdAt: nowIso,
+            pages
+          });
+          showToast('Cómic creado', '✅');
+        } else if (mode === 'comic-pages') {
+          const com = getCurrentComic();
+          if (com) {
+            const baseCount = com.pages.length;
+            uploadedRecords.forEach((rec, i) => {
+              com.pages.push({
+                id: 'cp-' + Date.now() + '-' + i,
+                name: rec.file.name.replace(/\.[^/.]+$/, '') || `Página ${baseCount + i + 1}`,
+                tags: [...tags],
+                createdAt: new Date(Date.now() + i).toISOString(),
+                url: rec.url,
+                driveFileId: rec.driveFileId
+              });
+            });
+            showToast(`${uploadedRecords.length} página(s) añadida(s)`, '✅');
+          }
+        }
+
+        await syncMetadataToDrive();
+        closeUploadModal();
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        showToast('Error al subir archivo', '❌');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Guardar</span>';
+      }
+    }
+
+    // =========================================================
+    // MODAL EDITAR NOMBRE Y TAGS INDIVIDUALES
+    // =========================================================
+    function openEditStoryModal(storyId) {
+      const art = getCurrentArtist();
+      const st = art ? (art.stories || []).find(s => s.id === storyId) : null;
+      if (!st) return;
+      openEditItemModal({ type: 'story', id: st.id }, st.title, st.tags || [], null);
+    }
+
+    function openEditArtistImageModal(imageId) {
+      const art = getCurrentArtist();
+      const img = art ? (art.images || []).find(i => i.id === imageId) : null;
+      if (!img) return;
+      openEditItemModal({ type: 'artist-image', id: img.id }, img.name, img.tags || [], null);
+    }
+
+    function openEditComicModal(comicId) {
+      const art = getCurrentArtist();
+      const c = art ? (art.comics || []).find(x => x.id === comicId) : null;
+      if (!c) return;
+      openEditItemModal({ type: 'comic', id: c.id }, c.title, c.tags || [], c.status || 'En progreso');
+    }
+
+    function openEditComicPageModal(pageId) {
+      const com = getCurrentComic();
+      const pg = com ? (com.pages || []).find(p => p.id === pageId) : null;
+      if (!pg) return;
+      openEditItemModal({ type: 'comic-page', id: pg.id }, pg.name, pg.tags || [], null);
+    }
+
+    function openEditItemModal(target, currentName, currentTags, comicStatus) {
+      state.editTarget = target;
+      state.editTagsBuffer = [...currentTags];
+      document.getElementById('edit-item-name-input').value = currentName;
+      document.getElementById('edit-new-tag-input').value = '';
+
+      const statusBox = document.getElementById('edit-comic-status-box');
+      if (target.type === 'comic') {
+        statusBox.classList.remove('hidden');
+        document.getElementById('edit-comic-status-select').value = comicStatus || 'En progreso';
+      } else {
+        statusBox.classList.add('hidden');
+      }
+
+      renderEditTagsChips();
+      renderTop10TagButtons('edit-top-tags', () => state.editTagsBuffer);
+
+      const modal = document.getElementById('edit-item-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeEditItemModal() {
+      const modal = document.getElementById('edit-item-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      state.editTarget = null;
+    }
+
+    function renderEditTagsChips() {
+      const container = document.getElementById('edit-current-tags');
+      if (state.editTagsBuffer.length === 0) {
+        container.innerHTML = `<span class="text-xs text-slate-500">Sin tags asignados</span>`;
+        return;
+      }
+      container.innerHTML = state.editTagsBuffer.map(t => `
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-xs text-indigo-200">
+          #${escapeHtml(t)}
+          <button onclick="removeTagInEditModal('${escapeHtml(t)}')" class="hover:text-white font-bold">×</button>
+        </span>
+      `).join('');
+    }
+
+    function addTagInEditModal() {
+      const input = document.getElementById('edit-new-tag-input');
+      const news = parseTags(input.value);
+      news.forEach(t => {
+        if (!state.editTagsBuffer.includes(t)) state.editTagsBuffer.push(t);
+      });
+      input.value = '';
+      renderEditTagsChips();
+      renderTop10TagButtons('edit-top-tags', () => state.editTagsBuffer);
+    }
+
+    function removeTagInEditModal(tag) {
+      state.editTagsBuffer = state.editTagsBuffer.filter(t => t !== tag);
+      renderEditTagsChips();
+      renderTop10TagButtons('edit-top-tags', () => state.editTagsBuffer);
+    }
+
+    async function saveEditItemModal() {
+      const newName = document.getElementById('edit-item-name-input').value.trim();
+      if (!newName) {
+        showToast('El nombre no puede quedar vacío', '⚠️');
+        return;
+      }
+
+      const target = state.editTarget;
+      if (!target) return;
+
+      const art = getCurrentArtist();
+      if (target.type === 'story' && art) {
+        const st = (art.stories || []).find(s => s.id === target.id);
+        if (st) {
+          st.title = newName;
+          st.tags = [...state.editTagsBuffer];
+          if (state.activeStoryId === st.id) document.getElementById('mv-title').textContent = newName;
+        }
+      } else if (target.type === 'artist-image') {
+        // Buscar en artista activo o globalmente si venimos de vista Tags
+        let img = art ? (art.images || []).find(i => i.id === target.id) : null;
+        if (!img) {
+          state.data.artArtists.forEach(a => {
+            const found = (a.images || []).find(i => i.id === target.id);
+            if (found) img = found;
+          });
+        }
+        if (img) {
+          img.name = newName;
+          img.tags = [...state.editTagsBuffer];
+        }
+      } else if (target.type === 'comic' && art) {
+        const c = (art.comics || []).find(x => x.id === target.id);
+        if (c) {
+          c.title = newName;
+          c.tags = [...state.editTagsBuffer];
+          c.status = document.getElementById('edit-comic-status-select').value;
+        }
+      } else if (target.type === 'comic-page') {
+        const com = getCurrentComic();
+        let pg = com ? (com.pages || []).find(p => p.id === target.id) : null;
+        if (!pg) {
+          state.data.comicArtists.forEach(a => (a.comics || []).forEach(c => {
+            const found = (c.pages || []).find(p => p.id === target.id);
+            if (found) pg = found;
+          }));
+        }
+        if (pg) {
+          pg.name = newName;
+          pg.tags = [...state.editTagsBuffer];
+        }
+      }
+
+      await syncMetadataToDrive();
+      closeEditItemModal();
+      renderApp();
+
+      if (!document.getElementById('lightbox-modal').classList.contains('hidden')) {
+        updateLightboxSlide();
+      }
+      showToast('Cambios guardados', '✅');
+    }
+
+    // =========================================================
+    // VISOR LIGHTBOX CON ZOOM TÁCTIL Y TAP IZQUIERDA / DERECHA
+    // =========================================================
+    function openArtistImageLightbox(index) {
+      const art = getCurrentArtist();
+      if (!art) return;
+      const filtered = (art.images || []).filter(img => matchesSearchAndTags(img.name, img.tags));
+      const sorted = sortItems(filtered, img => img.name);
+      state.lightboxList = sorted.map(img => ({
+        id: img.id,
+        artistId: art.id,
+        itemType: 'artist-image',
+        title: img.name,
+        url: img.url,
+        driveFileId: img.driveFileId,
+        tags: img.tags || []
+      }));
+      state.lightboxIndex = index;
+      launchLightbox();
+    }
+
+    function openCrossArtistImagesLightbox(index) {
+      const matchesQueryAndTags = (itemName, itemTags, artistName) => {
+        const tags = itemTags || [];
+        if (state.selectedTags.length > 0 && !state.selectedTags.every(t => tags.includes(t))) return false;
+        if (state.searchQuery) {
+          const q = state.searchQuery.replace(/^#/, '');
+          if (!String(itemName || '').toLowerCase().includes(q) &&
+              !tags.some(t => t.toLowerCase().includes(q)) &&
+              !String(artistName || '').toLowerCase().includes(q)) return false;
+        }
+        return true;
+      };
+
+      const crossImages = [];
+      state.data.artArtists.forEach(a => {
+        (a.images || []).forEach(img => {
+          const combinedTags = [...new Set([...(a.tags || []), ...(img.tags || [])])];
+          if (matchesQueryAndTags(img.name, combinedTags, a.name)) {
+            crossImages.push({ artist: a, img, createdAt: img.createdAt, name: img.name });
+          }
+        });
+      });
+
+      const sorted = sortItems(crossImages, x => x.name);
+      state.lightboxList = sorted.map(entry => ({
+        id: entry.img.id,
+        artistId: entry.artist.id,
+        itemType: 'artist-image',
+        title: `${entry.img.name} (${entry.artist.name})`,
+        rawName: entry.img.name,
+        url: entry.img.url,
+        driveFileId: entry.img.driveFileId,
+        tags: entry.img.tags || []
+      }));
+      state.lightboxIndex = index;
+      launchLightbox();
+    }
+
+    function openGlobalImageInLightbox(type, artistId, comicId, imageId) {
+      const hasAll = (tags) => state.selectedTags.every(t => (tags || []).includes(t));
+      const list = [];
+
+      if (type === 'art-img') {
+        const a = state.data.artArtists.find(x => x.id === artistId);
+        if (!a) return;
+        sortItems((a.images || []).filter(i => hasAll(i.tags)), i => i.name).forEach(img => {
+          list.push({
+            id: img.id,
+            artistId: a.id,
+            itemType: 'artist-image',
+            title: img.name,
+            url: img.url,
+            driveFileId: img.driveFileId,
+            tags: img.tags || []
+          });
+        });
+      } else {
+        const a = state.data.comicArtists.find(x => x.id === artistId);
+        const c = a ? (a.comics || []).find(x => x.id === comicId) : null;
+        if (!a || !c) return;
+        sortItems((c.pages || []).filter(p => hasAll(p.tags)), p => p.name).forEach(pg => {
+          list.push({
+            id: pg.id,
+            artistId: a.id,
+            comicId: c.id,
+            itemType: 'comic-page',
+            title: `${c.title} — ${pg.name}`,
+            rawName: pg.name,
+            url: pg.url,
+            driveFileId: pg.driveFileId,
+            tags: pg.tags || []
+          });
+        });
+      }
+
+      const idx = Math.max(0, list.findIndex(x => x.id === imageId));
+      state.lightboxList = list;
+      state.lightboxIndex = idx;
+      launchLightbox();
+    }
+
+    function launchLightbox() {
+      const modal = document.getElementById('lightbox-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      resetZoom();
+      updateLightboxSlide();
+    }
+
+    function closeLightbox() {
+      const modal = document.getElementById('lightbox-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      resetZoom();
+    }
+
+    async function updateLightboxSlide() {
+      const item = state.lightboxList[state.lightboxIndex];
+      if (!item) {
+        closeLightbox();
+        return;
+      }
+
+      document.getElementById('lb-title').textContent = item.title;
+      document.getElementById('lb-counter').textContent = `Imagen ${state.lightboxIndex + 1} de ${state.lightboxList.length}`;
+      document.getElementById('lb-prev-btn').classList.toggle('opacity-30', state.lightboxList.length <= 1);
+      document.getElementById('lb-next-btn').classList.toggle('opacity-30', state.lightboxList.length <= 1);
+
+      const tagsContainer = document.getElementById('lb-tags-list');
+      tagsContainer.innerHTML = item.tags.length
+        ? item.tags.map(t => `<span class="shrink-0 px-2.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-200 text-xs font-medium">#${escapeHtml(t)}</span>`).join('')
+        : `<span class="text-xs text-slate-500">Sin tags asignados</span>`;
+
+      const imgEl = document.getElementById('lb-image');
+      const spinner = document.getElementById('lb-loading-spinner');
+
+      if (item.driveFileId && state.drive.connected) {
+        if (blobCache.has(item.driveFileId)) {
+          imgEl.src = blobCache.get(item.driveFileId);
+          spinner.classList.add('hidden');
+        } else {
+          spinner.classList.remove('hidden');
+          const blobUrl = await fetchDriveMediaBlobUrl(item.driveFileId);
+          spinner.classList.add('hidden');
+          if (blobUrl) imgEl.src = blobUrl;
+        }
+      } else {
+        spinner.classList.add('hidden');
+        imgEl.src = item.url;
+      }
+    }
+
+    function openEditActiveItemFromLightbox() {
+      const item = state.lightboxList[state.lightboxIndex];
+      if (!item) return;
+      openEditItemModal(
+        { type: item.itemType, id: item.id },
+        item.rawName || item.title,
+        item.tags || [],
+        null
+      );
+    }
+
+    function deleteActiveLightboxItem() {
+      const item = state.lightboxList[state.lightboxIndex];
+      if (!item) return;
+      closeLightbox();
+      if (item.itemType === 'artist-image') {
+        openDeleteConfirmModal({
+          target: { type: 'art-img', artistId: item.artistId, imageId: item.id },
+          hasChildren: true,
+          title: 'Borrar Imagen',
+          step1Html: `<p>¿Seguro que deseas eliminar la imagen <b>"${escapeHtml(item.title)}"</b>?</p>`,
+          step2Html: `<p class="text-rose-200 font-semibold">Se eliminará permanentemente esta imagen de tu biblioteca y Drive.</p>`
+        });
+      } else {
+        openDeleteConfirmModal({
+          target: { type: 'comic-page', artistId: item.artistId, comicId: item.comicId, pageId: item.id },
+          hasChildren: true,
+          title: 'Borrar Página de Cómic',
+          step1Html: `<p>¿Seguro que deseas eliminar la página <b>"${escapeHtml(item.rawName || item.title)}"</b>?</p>`,
+          step2Html: `<p class="text-rose-200 font-semibold">Se eliminará permanentemente esta página de tu biblioteca y Drive.</p>`
+        });
+      }
+    }
+
+    function stepLightbox(delta) {
+      if (state.lightboxList.length <= 1) return;
+      const len = state.lightboxList.length;
+      state.lightboxIndex = (state.lightboxIndex + delta + len) % len;
+      resetZoom();
+      updateLightboxSlide();
+
+      // Izquierda avanza (+1), Derecha retrocede (-1)
+      const indId = delta > 0 ? 'tap-zone-left-indicator' : 'tap-zone-right-indicator';
+      const ind = document.getElementById(indId);
+      ind.classList.remove('tap-flash');
+      void ind.offsetWidth;
+      ind.classList.add('tap-flash');
+    }
+
+    function applyTransform() {
+      const img = document.getElementById('lb-image');
+      img.style.transform = `translate3d(${state.panX}px, ${state.panY}px, 0) scale(${state.zoom})`;
+      document.getElementById('lb-zoom-label').textContent = `${Math.round(state.zoom * 100)}%`;
+    }
+
+    function adjustZoom(delta) {
+      state.zoom = Math.min(5, Math.max(1, +(state.zoom + delta).toFixed(2)));
+      if (state.zoom === 1) {
+        state.panX = 0;
+        state.panY = 0;
+      }
+      applyTransform();
+    }
+
+    function resetZoom() {
+      state.zoom = 1;
+      state.panX = 0;
+      state.panY = 0;
+      applyTransform();
+    }
+
+    (function setupLightboxGestures() {
+      const vp = document.getElementById('lightbox-viewport');
+      let pointers = new Map();
+      let startDist = 0;
+      let startZoom = 1;
+      let lastPanX = 0;
+      let lastPanY = 0;
+      let downX = 0;
+      let downY = 0;
+      let downTime = 0;
+      let moved = false;
+      let lastTapTime = 0;
+
+      vp.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('button')) return;
+        vp.setPointerCapture(e.pointerId);
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (pointers.size === 1) {
+          downX = e.clientX;
+          downY = e.clientY;
+          lastPanX = state.panX;
+          lastPanY = state.panY;
+          downTime = Date.now();
+          moved = false;
+        } else if (pointers.size === 2) {
+          const pts = Array.from(pointers.values());
+          startDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+          startZoom = state.zoom;
+        }
+      });
+
+      vp.addEventListener('pointermove', (e) => {
+        if (!pointers.has(e.pointerId)) return;
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (pointers.size === 2) {
+          const pts = Array.from(pointers.values());
+          const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+          if (startDist > 0) {
+            state.zoom = Math.min(5, Math.max(1, +(startZoom * (dist / startDist)).toFixed(2)));
+            if (state.zoom === 1) { state.panX = 0; state.panY = 0; }
+            applyTransform();
+          }
+          moved = true;
+        } else if (pointers.size === 1) {
+          const dx = e.clientX - downX;
+          const dy = e.clientY - downY;
+          if (Math.hypot(dx, dy) > 8) moved = true;
+          if (state.zoom > 1) {
+            state.panX = lastPanX + dx;
+            state.panY = lastPanY + dy;
+            applyTransform();
+          }
+        }
+      });
+
+      vp.addEventListener('pointerup', (e) => {
+        if (e.target.closest('button')) return;
+        const wasSingle = pointers.size === 1;
+        pointers.delete(e.pointerId);
+
+        if (wasSingle && !moved && (Date.now() - downTime) < 300) {
+          const now = Date.now();
+          if (now - lastTapTime < 260) {
+            if (state.zoom > 1) resetZoom();
+            else { state.zoom = 2.2; applyTransform(); }
+            lastTapTime = 0;
+            return;
+          }
+          lastTapTime = now;
+
+          const rect = vp.getBoundingClientRect();
+          const relX = (e.clientX - rect.left) / rect.width;
+          // Mitad izquierda avanza (+1), mitad derecha retrocede (-1)
+          if (relX < 0.5) stepLightbox(1);
+          else stepLightbox(-1);
+        }
+      });
+
+      vp.addEventListener('pointercancel', (e) => pointers.delete(e.pointerId));
+      vp.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        adjustZoom(e.deltaY < 0 ? 0.25 : -0.25);
+      }, { passive: false });
+    })();
+
+    document.addEventListener('keydown', (e) => {
+      if (document.getElementById('lightbox-modal').classList.contains('hidden')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowRight') stepLightbox(1);
+      if (e.key === 'ArrowLeft') stepLightbox(-1);
+    });
+
+    // =========================================================
+    // LECTOR MULTIMEDIA PARA HISTORIAS (PDF / DOCS / VIDEO / IMG)
+    // =========================================================
+    async function openStoryViewer(storyId) {
+      const art = getCurrentArtist();
+      const st = art ? (art.stories || []).find(s => s.id === storyId) : null;
+      if (!st) return;
+
+      state.activeStoryId = st.id;
+      state._activeStoryArtistId = art.id;
+      document.getElementById('mv-title').textContent = st.title;
+      const extLink = document.getElementById('mv-external-link');
+      extLink.href = st.driveFileId ? `https://drive.google.com/file/d/${st.driveFileId}/view` : st.url;
+
+      const body = document.getElementById('mv-body');
+      const modal = document.getElementById('media-viewer-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      let resolvedUrl = st.url;
+      if (st.driveFileId && state.drive.connected) {
+        body.innerHTML = `<div class="text-center text-indigo-300 text-sm"><span class="animate-spin inline-block mr-2">⏳</span> Cargando archivo desde Google Drive...</div>`;
+        const fetched = await fetchDriveMediaBlobUrl(st.driveFileId);
+        if (fetched) resolvedUrl = fetched;
+      }
+
+      if (st.format === 'video') {
+        body.innerHTML = `<video src="${escapeHtml(resolvedUrl)}" controls autoplay class="max-w-full max-h-full rounded-xl shadow-2xl bg-black"></video>`;
+      } else if (st.format === 'image') {
+        body.innerHTML = `<img src="${escapeHtml(resolvedUrl)}" alt="${escapeHtml(st.title)}" class="max-w-full max-h-full object-contain rounded-xl shadow-2xl" />`;
+      } else if (st.format === 'pdf') {
+        body.innerHTML = `<iframe src="${escapeHtml(resolvedUrl)}" class="w-full h-full min-h-[75vh] rounded-xl bg-white border-0" title="${escapeHtml(st.title)}"></iframe>`;
+      } else {
+        const viewerUrl = st.driveFileId
+          ? `https://drive.google.com/file/d/${st.driveFileId}/preview`
+          : `https://docs.google.com/gview?url=${encodeURIComponent(resolvedUrl)}&embedded=true`;
+        body.innerHTML = `<iframe src="${escapeHtml(viewerUrl)}" class="w-full h-full min-h-[75vh] rounded-xl bg-white border-0" title="${escapeHtml(st.title)}"></iframe>`;
+      }
+    }
+
+    function openGlobalStory(artistId, storyId) {
+      selectCategory('historia');
+      openArtist(artistId);
+      openStoryViewer(storyId);
+    }
+
+    function closeMediaViewer() {
+      const modal = document.getElementById('media-viewer-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.getElementById('mv-body').innerHTML = '';
+      state.activeStoryId = null;
+    }
+
+    function openEditActiveStoryFromViewer() {
+      if (state.activeStoryId) openEditStoryModal(state.activeStoryId);
+    }
+
+    function deleteActiveStoryFromViewer() {
+      if (!state.activeStoryId) return;
+      const sid = state.activeStoryId;
+      closeMediaViewer();
+      promptDeleteStory(sid);
+    }
+
+    // =========================================================
+    // INTEGRACIÓN REAL CON GOOGLE DRIVE API + BLOB URLS
+    // =========================================================
+    function openDriveModal() {
+      document.getElementById('drive-client-id').value = state.drive.clientId || DEFAULT_GOOGLE_CLIENT_ID;
+      document.getElementById('drive-api-key').value = state.drive.apiKey || DEFAULT_GOOGLE_API_KEY;
+      document.getElementById('drive-logout-btn').classList.toggle('hidden', !state.drive.connected);
+      const modal = document.getElementById('drive-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDriveModal() {
+      const modal = document.getElementById('drive-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function updateDriveStatusUI() {
+      const badge = document.getElementById('drive-status-badge');
+      const btnLabel = document.getElementById('drive-btn-label');
+      const headerBtn = document.getElementById('header-drive-btn');
+      const headerLabel = document.getElementById('header-drive-label');
+      if (state.drive.connected) {
+        badge.className = 'text-xs text-emerald-400 flex items-center gap-1.5 mt-0.5';
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Drive Conectado`;
+        btnLabel.textContent = 'Google Drive Activo';
+        if (headerBtn && headerLabel) {
+          headerBtn.className = 'touch-btn px-3 rounded-xl bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0';
+          headerLabel.textContent = 'Drive Activo';
+        }
+      } else {
+        badge.className = 'text-xs text-amber-400 flex items-center gap-1.5 mt-0.5';
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Modo Demo Local`;
+        btnLabel.textContent = 'Conectar Google Drive';
+        if (headerBtn && headerLabel) {
+          headerBtn.className = 'touch-btn px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 text-amber-200 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shrink-0';
+          headerLabel.textContent = 'Conectar Drive';
+        }
+      }
+    }
+
+    function disconnectDrive() {
+      state.drive.connected = false;
+      state.drive.accessToken = null;
+      blobCache.clear();
+      updateDriveStatusUI();
+      closeDriveModal();
+      renderApp();
+      showToast('Desconectado de Google Drive', 'ℹ️');
+    }
+
+    function initGoogleDriveClient(silentAuto = false) {
+      const clientId = (state.drive.clientId || DEFAULT_GOOGLE_CLIENT_ID).trim();
+      const apiKey = (state.drive.apiKey || DEFAULT_GOOGLE_API_KEY).trim();
+      state.drive.clientId = clientId;
+      state.drive.apiKey = apiKey;
+      localStorage.setItem('gdrive_client_id', clientId);
+      localStorage.setItem('gdrive_api_key', apiKey);
+
+      if (!window.google || !window.gapi) {
+        if (silentAuto) {
+          setTimeout(() => initGoogleDriveClient(true), 600);
+        } else {
+          showToast('Cargando librerías de Google, intenta en 1 segundo...', '⏳');
+        }
+        return;
+      }
+
+      gapi.load('client', async () => {
+        try {
+          await gapi.client.init({
+            apiKey: state.drive.apiKey,
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+          });
+
+          state.drive.tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: state.drive.clientId,
+            scope: 'https://www.googleapis.com/auth/drive.file',
+            callback: async (tokenResponse) => {
+              if (tokenResponse.error) {
+                if (!silentAuto) showToast('Error OAuth: ' + tokenResponse.error, '❌');
+                return;
+              }
+              state.drive.accessToken = tokenResponse.access_token;
+              state.drive.connected = true;
+              updateDriveStatusUI();
+              closeDriveModal();
+              showToast('Conectado. Sincronizando biblioteca...', '☁️');
+              await initDriveFolderAndLoad();
+            }
+          });
+
+          // Solo abrir el popup tras un clic explícito del usuario para evitar bloqueo del navegador
+          if (!silentAuto) {
+            state.drive.tokenClient.requestAccessToken({ prompt: 'consent' });
+          }
+        } catch (err) {
+          console.error(err);
+          if (!silentAuto) showToast('Error iniciando Google API', '❌');
+        }
+      });
+    }
+
+    function quickConnectGoogleDrive() {
+      if (state.drive.connected) {
+        openDriveModal();
+      } else if (state.drive.tokenClient) {
+        state.drive.tokenClient.requestAccessToken({ prompt: 'consent' });
+      } else {
+        initGoogleDriveClient(false);
+      }
+    }
+
+    function saveAndConnectDrive() {
+      const clientId = document.getElementById('drive-client-id').value.trim() || DEFAULT_GOOGLE_CLIENT_ID;
+      const apiKey = document.getElementById('drive-api-key').value.trim() || DEFAULT_GOOGLE_API_KEY;
+      state.drive.clientId = clientId;
+      state.drive.apiKey = apiKey;
+      localStorage.setItem('gdrive_client_id', clientId);
+      localStorage.setItem('gdrive_api_key', apiKey);
+      initGoogleDriveClient(false);
+    }
+
+    function getResolvedDisplayUrl(driveFileId, fallbackUrl, imgElementId) {
+      if (!driveFileId || !state.drive.connected) return fallbackUrl;
+      if (blobCache.has(driveFileId)) return blobCache.get(driveFileId);
+      hydrateDriveImageElement(driveFileId, imgElementId);
+      return svgCover('#0f172a', '#1e293b', 'Cargando...', 'Google Drive', '⏳');
+    }
+
+    async function hydrateDriveImageElement(driveFileId, imgElementId) {
+      const blobUrl = await fetchDriveMediaBlobUrl(driveFileId);
+      if (blobUrl && imgElementId) {
+        const el = document.getElementById(imgElementId);
+        if (el) el.src = blobUrl;
+      }
+    }
+
+    async function fetchDriveMediaBlobUrl(driveFileId) {
+      if (!driveFileId || !state.drive.accessToken) return null;
+      if (blobCache.has(driveFileId)) return blobCache.get(driveFileId);
+      if (pendingFetches.has(driveFileId)) {
+        await new Promise(r => setTimeout(r, 350));
+        return blobCache.get(driveFileId) || null;
+      }
+
+      pendingFetches.add(driveFileId);
+      try {
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(driveFileId)}?alt=media`, {
+          headers: { Authorization: 'Bearer ' + state.drive.accessToken }
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        blobCache.set(driveFileId, blobUrl);
+        return blobUrl;
+      } catch (err) {
+        console.error('Error descargando media desde Drive:', err);
+        return null;
+      } finally {
+        pendingFetches.delete(driveFileId);
+      }
+    }
+
+    async function trashDriveFile(fileId) {
+      if (!state.drive.connected || !fileId) return;
+      await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: 'Bearer ' + state.drive.accessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ trashed: true })
+      });
+    }
+
+    async function initDriveFolderAndLoad() {
+      try {
+        const folderRes = await gapi.client.drive.files.list({
+          q: "name = 'Mi_Biblioteca_Multimedia' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+          fields: 'files(id, name)'
+        });
+
+        if (folderRes.result.files && folderRes.result.files.length > 0) {
+          state.drive.folderId = folderRes.result.files[0].id;
+        } else {
+          const createFolder = await gapi.client.drive.files.create({
+            resource: { name: 'Mi_Biblioteca_Multimedia', mimeType: 'application/vnd.google-apps.folder' },
+            fields: 'id'
+          });
+          state.drive.folderId = createFolder.result.id;
+        }
+
+        const metaRes = await gapi.client.drive.files.list({
+          q: `'${state.drive.folderId}' in parents and name = 'index_metadata.json' and trashed = false`,
+          fields: 'files(id, name)'
+        });
+
+        if (metaRes.result.files && metaRes.result.files.length > 0) {
+          state.drive.metadataFileId = metaRes.result.files[0].id;
+          const fileContent = await fetch(`https://www.googleapis.com/drive/v3/files/${state.drive.metadataFileId}?alt=media`, {
+            headers: { Authorization: 'Bearer ' + state.drive.accessToken }
+          });
+          const parsed = await fileContent.json();
+          if (parsed && parsed.historiaArtists && parsed.comicArtists && parsed.artArtists) {
+            state.data = parsed;
+            renderApp();
+            showToast('Biblioteca cargada desde Drive', '✅');
+            return;
+          }
+        }
+
+        state.data = { historiaArtists: [], comicArtists: [], artArtists: [] };
+        await syncMetadataToDrive();
+        renderApp();
+        showToast('Carpeta creada en Google Drive', '📁');
+      } catch (err) {
+        console.error(err);
+        showToast('Error leyendo carpeta de Drive', '❌');
+      }
+    }
+
+    async function uploadSingleFileToDrive(file) {
+      const metadata = { name: file.name, parents: [state.drive.folderId] };
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + state.drive.accessToken },
+        body: form
+      });
+      if (!res.ok) throw new Error('Error subiendo archivo');
+      const data = await res.json();
+      const blobUrl = URL.createObjectURL(file);
+      return { id: data.id, blobUrl };
+    }
+
+    async function syncMetadataToDrive() {
+      if (!state.drive.connected || !state.drive.folderId) return;
+
+      const cleanClone = JSON.parse(JSON.stringify(state.data));
+      const stripBlob = (obj) => {
+        if (obj.coverDriveId && String(obj.coverUrl || '').startsWith('blob:')) obj.coverUrl = '';
+        if (obj.driveFileId && String(obj.url || '').startsWith('blob:')) obj.url = '';
+      };
+      cleanClone.historiaArtists.forEach(a => { stripBlob(a); (a.stories || []).forEach(stripBlob); });
+      cleanClone.comicArtists.forEach(a => { stripBlob(a); (a.comics || []).forEach(c => (c.pages || []).forEach(stripBlob)); });
+      cleanClone.artArtists.forEach(a => { stripBlob(a); (a.images || []).forEach(stripBlob); });
+
+      const jsonBlob = new Blob([JSON.stringify(cleanClone, null, 2)], { type: 'application/json' });
+
+      if (state.drive.metadataFileId) {
+        await fetch(`https://www.googleapis.com/upload/drive/v3/files/${state.drive.metadataFileId}?uploadType=media`, {
+          method: 'PATCH',
+          headers: { Authorization: 'Bearer ' + state.drive.accessToken, 'Content-Type': 'application/json' },
+          body: jsonBlob
+        });
+      } else {
+        const metadata = { name: 'index_metadata.json', parents: [state.drive.folderId], mimeType: 'application/json' };
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', jsonBlob);
+
+        const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + state.drive.accessToken },
+          body: form
+        });
+        const data = await res.json();
+        state.drive.metadataFileId = data.id;
+      }
+    }
+
+    // =========================================================
+    // INICIALIZACIÓN
+    // =========================================================
+    updateDriveStatusUI();
+    renderApp();
+    window.addEventListener('load', () => {
+      initGoogleDriveClient(true);
+    });
+  </script>
+</body>
+</html>
