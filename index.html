@@ -2751,6 +2751,27 @@
     // =========================================================
     // VISOR LIGHTBOX CON ZOOM TÁCTIL Y TAP IZQUIERDA / DERECHA
     // =========================================================
+    function openComicPageLightbox(index) {
+      const art = getCurrentArtist();
+      const com = getCurrentComic();
+      if (!art || !com) return;
+      const filtered = (com.pages || []).filter(pg => matchesSearchAndTags(pg.name, pg.tags));
+      const sorted = sortItems(filtered, pg => pg.name);
+      state.lightboxList = sorted.map(pg => ({
+        id: pg.id,
+        artistId: art.id,
+        comicId: com.id,
+        itemType: 'comic-page',
+        title: `${com.title} — ${pg.name}`,
+        rawName: pg.name,
+        url: pg.url,
+        driveFileId: pg.driveFileId,
+        tags: pg.tags || []
+      }));
+      state.lightboxIndex = index;
+      launchLightbox();
+    }
+
     function openArtistImageLightbox(index) {
       const art = getCurrentArtist();
       if (!art) return;
