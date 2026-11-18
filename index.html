@@ -193,11 +193,12 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1">API Key</label>
           <input id="input-api-key" type="password" placeholder="Ej: AIzaSy..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none" />
         </div>
+        <div id="drive-connect-feedback" class="hidden p-3 rounded-xl bg-slate-950 border border-slate-700 text-xs text-amber-300"></div>
         <p class="text-[11px] text-slate-400">Almacenamiento ilimitado según tu espacio libre en Google Drive. Organiza automáticamente <code class="text-indigo-300">Comics / Artista / Cómic</code>, <code class="text-indigo-300">Artistas / Artista</code> e <code class="text-indigo-300">Historia / Artista</code>.</p>
       </div>
 
       <div class="flex items-center gap-2.5 pt-1">
-        <button onclick="connectGoogleDrive()" class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/20">
+        <button id="connect-drive-submit-btn" onclick="connectGoogleDrive()" class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/20">
           ☁️ Conectar y Sincronizar
         </button>
         <button onclick="disconnectGoogleDrive()" id="disconnect-btn" class="hidden px-4 py-3 rounded-xl bg-slate-800 hover:bg-rose-900/50 text-slate-300 hover:text-rose-200 text-sm font-medium">
@@ -556,6 +557,7 @@
       apiKey: '',
       accessToken: null,
       tokenClient: null,
+      lastClientId: '',
       rootFolderId: null,
       backupFolderId: null,
       sectionFolderIds: {
@@ -2315,6 +2317,21 @@
       }
     }
 
+    function setDriveConnectFeedback(message, isError = false) {
+      const box = document.getElementById('drive-connect-feedback');
+      if (!box) return;
+      if (!message) {
+        box.classList.add('hidden');
+        box.textContent = '';
+        return;
+      }
+      box.textContent = message;
+      box.className = isError
+        ? 'p-3 rounded-xl bg-rose-950/80 border border-rose-500/50 text-xs text-rose-200'
+        : 'p-3 rounded-xl bg-slate-950 border border-indigo-500/40 text-xs text-indigo-200';
+      box.classList.remove('hidden');
+    }
+
     async function connectGoogleDrive() {
       const clientId = document.getElementById('input-client-id').value.trim();
       const apiKey = document.getElementById('input-api-key').value.trim();
@@ -2326,27 +2343,65 @@
       driveConfig.clientId = clientId;
       driveConfig.apiKey = apiKey;
       localStorage.setItem(CREDS_KEY, JSON.stringify({ clientId, apiKey }));
+      setDriveConnectFeedback('Abriendo ventana de autorización de Google...', false);
 
       if (!window.google || !google.accounts || !google.accounts.oauth2) {
-        alert('Las librerías de Google aún están cargando. Espera 2 segundos y vuelve a pulsar Conectar.');
+        setDriveConnectFeedback('Las librerías de Google aún están cargando (o un bloqueador de anuncios bloqueó accounts.google.com). Espera 2 segundos o desactiva el escudo para esta página e inténtalo de nuevo.', true);
         return;
       }
 
-      driveConfig.tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
-        callback: async (tokenResponse) => {
-          if (tokenResponse && tokenResponse.access_token) {
-            driveConfig.accessToken = tokenResponse.access_token;
-            updateDriveConnectedUI(true);
-            closeModal('drive-modal');
-            showToast('☁️ Conectado a Google Drive');
-            await initializeDriveWorkspace();
-          }
-        }
-      });
+      const btn = document.getElementById('connect-drive-submit-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Esperando autorización...';
+      }
 
-      driveConfig.tokenClient.requestAccessToken({ prompt: 'consent' });
+      try {
+        if (!driveConfig.tokenClient || driveConfig.lastClientId !== clientId) {
+          driveConfig.lastClientId = clientId;
+          driveConfig.tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: clientId,
+            scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+            callback: async (tokenResponse) => {
+              if (btn) {
+                btn.disabled = false;
+                btn.textContent = '☁️ Conectar y Sincronizar';
+              }
+              if (tokenResponse && tokenResponse.error) {
+                const desc = tokenResponse.error_description || tokenResponse.error;
+                setDriveConnectFeedback(`Google devolvió un error: ${desc}. Verifica que el correo esté en "Usuarios de prueba" y que el origen esté autorizado en Google Cloud.`, true);
+                return;
+              }
+              if (tokenResponse && tokenResponse.access_token) {
+                driveConfig.accessToken = tokenResponse.access_token;
+                setDriveConnectFeedback('', false);
+                updateDriveConnectedUI(true);
+                closeModal('drive-modal');
+                showToast('☁️ Conectado a Google Drive');
+                await initializeDriveWorkspace();
+              } else {
+                setDriveConnectFeedback('No se recibió token de acceso de Google. Asegúrate de marcar las casillas de permisos de Google Drive antes de pulsar Continuar.', true);
+              }
+            },
+            error_callback: (err) => {
+              if (btn) {
+                btn.disabled = false;
+                btn.textContent = '☁️ Conectar y Sincronizar';
+              }
+              const type = (err && err.type) || 'desconocido';
+              setDriveConnectFeedback(`La ventana de Google no pudo completarse (${type}). Permite las ventanas emergentes (popups) en tu navegador y vuelve a intentarlo.`, true);
+            }
+          });
+        }
+
+        driveConfig.tokenClient.requestAccessToken({ prompt: 'consent' });
+      } catch (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '☁️ Conectar y Sincronizar';
+        }
+        setDriveConnectFeedback(`Error iniciando OAuth: ${err.message || err}`, true);
+      }
     }
 
     function disconnectGoogleDrive() {
