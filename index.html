@@ -157,6 +157,7 @@
         <select id="sort-select" onchange="handleSort(this.value)" class="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
           <option value="date-desc">🕒 Recientes</option>
           <option value="date-asc">🕒 Antiguos</option>
+          <option value="similarity">👯 Semejanza visual</option>
           <option value="size-desc">⚖️ Mayor peso</option>
           <option value="size-asc">⚖️ Menor peso</option>
           <option value="name-asc">🔤 A → Z</option>
@@ -223,6 +224,7 @@
 
     <!-- CUADRÍCULA PRINCIPAL -->
     <main class="flex-1 px-4 pb-8">
+      <div id="pagination-top-bar" class="mb-3 flex items-center justify-center gap-2"></div>
       <div id="main-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5"></div>
       <div id="pagination-bar" class="mt-6 flex items-center justify-center gap-2"></div>
     </main>
@@ -657,11 +659,12 @@
       activityLogFileId: null,
       driveBlobCache: new Map(),
       driveSizeCache: new Map(),
+      imageHashCache: new Map(),
       untrackedFiles: []
     };
 
     let state = {
-      section: 'artistas',     // 'historia' | 'comics' | 'artistas' | 'favoritos' | 'tags' | 'drive-browser'
+      section: 'artistas',
       artistId: null,
       comicId: null,
       search: '',
@@ -3337,7 +3340,196 @@
     function handleSort(val) {
       state.sortBy = val;
       state.page = 1;
+      if (val === 'similarity') {
+        computeVisibleContextImageHashes();
+        return;
+      }
       renderAll();
+    }
+
+    // =========================================================================
+    // DETECCIÓN DE SEMEJANZA VISUAL (HUELLA PERCEPTUAL DHASH + COLOR)
+    // =========================================================================
+    function getItemCacheKeyForHash(item) {
+      if (!item) return '';
+      if (item.mimeType === 'application/vnd.google-apps.shortcut' && item.shortcutDetails) {
+        return item.shortcutDetails.targetId || item.id;
+      }
+      return item.driveId || item.id || item.url || '';
+    }
+
+    async function computePerceptualFingerprintFromUrl(url) {
+      return new Promise((resolve) => {
+        if (!url) return resolve(null);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const w = 9;
+            const h = 8;
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const data = ctx.getImageData(0, 0, w, h).data;
+
+            const gray = [];
+            let sumR = 0, sumG = 0, sumB = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              const r = data[i], g = data[i + 1], b = data[i + 2];
+              sumR += r; sumG += g; sumB += b;
+              gray.push(r * 0.299 + g * 0.587 + b * 0.114);
+            }
+
+            let bits = '';
+            for (let y = 0; y < h; y++) {
+              for (let x = 0; x < h; x++) {
+                const left = gray[y * w + x];
+                const right = gray[y * w + x + 1];
+                bits += left > right ? '1' : '0';
+              }
+            }
+            const pixels = w * h;
+            resolve({
+              bits,
+              r: Math.round(sumR / pixels),
+              g: Math.round(sumG / pixels),
+              b: Math.round(sumB / pixels)
+            });
+          } catch (e) {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+    }
+
+    function getVisualDistance(fpA, fpB) {
+      if (!fpA || !fpB) return 9999;
+      let hamming = 0;
+      for (let i = 0; i < fpA.bits.length; i++) {
+        if (fpA.bits[i] !== fpB.bits[i]) hamming++;
+      }
+      const colorDist = (Math.abs(fpA.r - fpB.r) + Math.abs(fpA.g - fpB.g) + Math.abs(fpA.b - fpB.b)) / 3;
+      return hamming * 3 + colorDist * 0.25;
+    }
+
+    function getCurrentContextImageItemsForSimilarity() {
+      if (state.section === 'drive-browser') {
+        const rawSource = driveBrowserState.isGlobalTagSearch ? driveBrowserState.globalTagResults : driveBrowserState.items;
+        return rawSource.filter(f => {
+          const m = (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails)
+            ? (f.shortcutDetails.targetMimeType || '')
+            : (f.mimeType || '');
+          return m.startsWith('image/');
+        });
+      }
+      if (state.section === 'artistas' && state.artistId) {
+        const artist = libraryData.artistas.find(a => a.id === state.artistId);
+        return artist ? (artist.images || []) : [];
+      }
+      if (state.section === 'comics' && state.artistId && state.comicId) {
+        const artist = libraryData.comics.find(a => a.id === state.artistId);
+        const comic = artist ? artist.comics.find(c => c.id === state.comicId) : null;
+        return comic ? (comic.pages || []) : [];
+      }
+      return [];
+    }
+
+    async function computeVisibleContextImageHashes() {
+      const items = getCurrentContextImageItemsForSimilarity();
+      if (!items.length) {
+        renderAll();
+        return;
+      }
+
+      const pending = items.filter(it => {
+        const key = getItemCacheKeyForHash(it);
+        return key && !driveConfig.imageHashCache.has(key);
+      });
+
+      if (!pending.length) {
+        renderAll();
+        return;
+      }
+
+      const syncInd = document.getElementById('sync-indicator');
+      const syncText = document.getElementById('sync-text');
+      syncInd.classList.remove('hidden');
+
+      try {
+        const batchSize = 8;
+        for (let i = 0; i < pending.length; i += batchSize) {
+          syncText.textContent = `Analizando semejanza ${Math.min(i + batchSize, pending.length)}/${pending.length}...`;
+          const batch = pending.slice(i, i + batchSize);
+          await Promise.all(batch.map(async (it) => {
+            const key = getItemCacheKeyForHash(it);
+            let url = it.url || '';
+            if (!url && key) {
+              url = await resolveDriveBlobUrl(key);
+            }
+            const fp = await computePerceptualFingerprintFromUrl(url);
+            if (fp) {
+              driveConfig.imageHashCache.set(key, fp);
+            }
+          }));
+        }
+        showToast('👯 Imágenes agrupadas por semejanza visual');
+      } finally {
+        syncInd.classList.add('hidden');
+        renderAll();
+      }
+    }
+
+    function sortByVisualSimilarity(list) {
+      const withFp = [];
+      const withoutFp = [];
+      for (const item of list) {
+        const key = getItemCacheKeyForHash(item);
+        const fp = key ? driveConfig.imageHashCache.get(key) : null;
+        if (fp) {
+          withFp.push({ item, fp, size: getItemEffectiveSize(item) });
+        } else {
+          withoutFp.push(item);
+        }
+      }
+
+      if (withFp.length <= 1) {
+        return [...withFp.map(x => x.item), ...withoutFp];
+      }
+
+      // Empezar por el archivo más pesado para ir emparejando cada original con su copia comprimida
+      withFp.sort((a, b) => b.size - a.size);
+      const used = new Array(withFp.length).fill(false);
+      const ordered = [];
+
+      let currentIdx = 0;
+      used[0] = true;
+      ordered.push(withFp[0].item);
+
+      while (ordered.length < withFp.length) {
+        let bestIdx = -1;
+        let bestDist = Infinity;
+        const currFp = withFp[currentIdx].fp;
+
+        for (let j = 0; j < withFp.length; j++) {
+          if (used[j]) continue;
+          const dist = getVisualDistance(currFp, withFp[j].fp);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = j;
+          }
+        }
+
+        if (bestIdx === -1) break;
+        used[bestIdx] = true;
+        ordered.push(withFp[bestIdx].item);
+        currentIdx = bestIdx;
+      }
+
+      return [...ordered, ...withoutFp];
     }
 
     // =========================================================================
@@ -3379,6 +3571,9 @@
     }
 
     function sortItems(list, nameKey = 'title') {
+      if (state.sortBy === 'similarity') {
+        return sortByVisualSimilarity(list);
+      }
       const copy = [...list];
       copy.sort((a, b) => {
         if (state.sortBy === 'fav-first') {
@@ -3546,14 +3741,16 @@
       const breadcrumb = document.getElementById('breadcrumb-bar');
       const actions = document.getElementById('context-actions');
       const grid = document.getElementById('main-grid');
+      const paginationTop = document.getElementById('pagination-top-bar');
       const pagination = document.getElementById('pagination-bar');
 
       breadcrumb.innerHTML = '';
       actions.innerHTML = '';
+      paginationTop.innerHTML = '';
       pagination.innerHTML = '';
 
       if (state.section === 'drive-browser') {
-        renderDriveBrowserView(breadcrumb, actions, grid, pagination);
+        renderDriveBrowserView(breadcrumb, actions, grid, pagination, paginationTop);
         hydrateDriveImages();
         return;
       }
@@ -3788,7 +3985,7 @@
         }).join('');
 
         grid.innerHTML = html;
-        renderPagination(pagination, totalPages);
+        renderPagination(pagination, totalPages, paginationTop);
         hydrateDriveImages();
         return;
       }
@@ -3861,7 +4058,7 @@
         }).join('');
 
         grid.innerHTML = html;
-        renderPagination(pagination, totalPages);
+        renderPagination(pagination, totalPages, paginationTop);
         hydrateDriveImages();
         return;
       }
@@ -3928,7 +4125,7 @@
       }
     }
 
-    function renderDriveBrowserView(breadcrumb, actions, grid, pagination) {
+    function renderDriveBrowserView(breadcrumb, actions, grid, pagination, paginationTop) {
       if (driveBrowserState.isGlobalTagSearch && state.activeTag) {
         breadcrumb.innerHTML = `
           <span class="font-bold text-white">📂 Explorador Drive</span>
@@ -4070,7 +4267,7 @@
         `;
       }).join('');
 
-      renderPagination(pagination, totalPages);
+      renderPagination(pagination, totalPages, paginationTop);
     }
 
     function renderTagsDirectoryView(breadcrumb, actions, grid) {
@@ -4199,16 +4396,24 @@
       if (mimeType.startsWith('video/')) return '🎬';
       if (mimeType.startsWith('audio/')) return '🎧';
       if (mimeType.startsWith('image/')) return '🖼️';
+      if (mimeType.includes('text')) return '📜';
       return '📄';
     }
 
-    function renderPagination(container, totalPages) {
-      if (totalPages <= 1) return;
-      container.innerHTML = `
-        <button ${state.page <= 1 ? 'disabled' : ''} onclick="state.page--; renderAll();" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs disabled:opacity-40">◀ Anterior</button>
+    function renderPagination(container, totalPages, topContainer = null) {
+      if (totalPages <= 1) {
+        if (topContainer) topContainer.innerHTML = '';
+        return;
+      }
+      const controlsHtml = `
+        <button ${state.page <= 1 ? 'disabled' : ''} onclick="state.page = 1; renderAll(); window.scrollTo({top: 0, behavior: 'smooth'});" class="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs disabled:opacity-40">⏮ 1</button>
+        <button ${state.page <= 1 ? 'disabled' : ''} onclick="state.page--; renderAll(); window.scrollTo({top: 0, behavior: 'smooth'});" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs disabled:opacity-40">◀ Anterior</button>
         <span class="text-xs text-slate-400">Página <strong class="text-white">${state.page}</strong> de ${totalPages}</span>
-        <button ${state.page >= totalPages ? 'disabled' : ''} onclick="state.page++; renderAll();" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs disabled:opacity-40">Siguiente ▶</button>
+        <button ${state.page >= totalPages ? 'disabled' : ''} onclick="state.page++; renderAll(); window.scrollTo({top: 0, behavior: 'smooth'});" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs disabled:opacity-40">Siguiente ▶</button>
+        <button ${state.page >= totalPages ? 'disabled' : ''} onclick="state.page = ${totalPages}; renderAll(); window.scrollTo({top: 0, behavior: 'smooth'});" class="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs disabled:opacity-40">${totalPages} ⏭</button>
       `;
+      container.innerHTML = controlsHtml;
+      if (topContainer) topContainer.innerHTML = controlsHtml;
     }
 
     // =========================================================================
