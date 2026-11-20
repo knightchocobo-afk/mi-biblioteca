@@ -1203,6 +1203,24 @@
       }
     }
 
+    // Descarga TODAS las páginas de resultados de Google Drive sin límite de 300
+    async function driveFetchAllPages(baseUrl, maxItems = 10000) {
+      const allFiles = [];
+      let pageToken = '';
+      do {
+        const sep = baseUrl.includes('?') ? '&' : '?';
+        const pageParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+        const res = await driveApiFetch(`${baseUrl}${sep}pageSize=1000${pageParam}`);
+        if (!res.ok) break;
+        const data = await res.json();
+        if (Array.isArray(data.files)) {
+          allFiles.push(...data.files);
+        }
+        pageToken = data.nextPageToken || '';
+      } while (pageToken && allFiles.length < maxItems);
+      return allFiles;
+    }
+
     async function trashDriveItemById(driveId) {
       if (!driveConfig.accessToken || !driveId || driveId === 'root') return;
       try {
@@ -1463,10 +1481,9 @@
 
       try {
         const q = encodeURIComponent(`trashed=false and mimeType!='application/vnd.google-apps.folder'`);
-        const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=500&fields=files(id,size)`);
-        const data = await res.json();
+        const files = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,size)`);
         const sizeMap = new Map();
-        for (const f of (data.files || [])) {
+        for (const f of files) {
           if (f.id && f.size) {
             sizeMap.set(f.id, Number(f.size));
             driveConfig.driveSizeCache.set(f.id, Number(f.size));
@@ -1656,7 +1673,7 @@
     }
 
     // =========================================================================
-    // ESCÁNER DE ARCHIVOS SUBIDOS DIRECTAMENTE A GOOGLE DRIVE
+    // ESCÁNER DE ARCHIVOS SUBIDOS DIRECTAMENTE A GOOGLE DRIVE (SIN LÍMITE)
     // =========================================================================
     function getAllKnownDriveIds() {
       const ids = new Set();
@@ -1706,10 +1723,9 @@
         await ensureDriveStructure();
         const knownIds = getAllKnownDriveIds();
         const q = encodeURIComponent(`trashed=false and mimeType!='application/vnd.google-apps.folder' and name!='${METADATA_FILENAME}' and name!='${ACTIVITY_LOG_FILENAME}'`);
-        const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime desc&pageSize=200&fields=files(id,name,mimeType,size,parents,createdTime,description,appProperties)`);
-        const data = await res.json();
+        const allFiles = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime desc&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties)`);
 
-        const untracked = (data.files || []).filter(f => {
+        const untracked = allFiles.filter(f => {
           if (knownIds.has(f.id)) return false;
           if (f.name && f.name.startsWith('respaldo_') && f.name.endsWith('.json')) return false;
           return true;
@@ -1924,7 +1940,7 @@
     }
 
     // =========================================================================
-    // EXPLORADOR DIRECTO DE GOOGLE DRIVE (BÚSQUEDA POR TAG + PORTADAS + PESO)
+    // EXPLORADOR DIRECTO DE GOOGLE DRIVE (SIN LÍMITE DE 300 + BÚSQUEDA POR TAG)
     // =========================================================================
     function extractDriveFileTags(file) {
       const fromProps = file.appProperties && file.appProperties.tags ? file.appProperties.tags.split(',') : [];
@@ -1957,10 +1973,8 @@
 
       try {
         const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-        const url = `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=folder,name&pageSize=300&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
-        const res = await driveApiFetch(url);
-        const data = await res.json();
-        driveBrowserState.items = data.files || [];
+        const baseUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=folder,name&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
+        driveBrowserState.items = await driveFetchAllPages(baseUrl);
 
         for (const f of driveBrowserState.items) {
           if (f.id && f.size) {
@@ -1992,12 +2006,11 @@
       try {
         const escaped = cleanTag.replace(/'/g, "\\'");
         const q = encodeURIComponent(`trashed=false and (description contains '${escaped}' or appProperties has { key='tags' and value='${escaped}' })`);
-        const url = `https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=300&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
-        const res = await driveApiFetch(url);
-        const data = await res.json();
+        const baseUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
+        const apiFiles = await driveFetchAllPages(baseUrl);
         const foundMap = new Map();
 
-        for (const f of (data.files || [])) {
+        for (const f of apiFiles) {
           if (extractDriveFileTags(f).includes(cleanTag)) {
             foundMap.set(f.id, f);
           }
@@ -2011,7 +2024,7 @@
           }
         }
 
-        for (const dId of missingDriveIds.slice(0, 60)) {
+        for (const dId of missingDriveIds) {
           try {
             const fRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${dId}?supportsAllDrives=true&fields=id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails`);
             if (fRes.ok) {
@@ -2322,9 +2335,8 @@
       listEl.innerHTML = '<div class="text-xs text-indigo-300 py-4 text-center">Cargando carpetas...</div>';
       try {
         const q = encodeURIComponent(`'${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-        const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=name&pageSize=100&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=files(id,name)`);
-        const data = await res.json();
-        const folders = (data.files || []).filter(f => !driveBrowserState.selectedIds.has(f.id));
+        const allFolders = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=name&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name)`);
+        const folders = allFolders.filter(f => !driveBrowserState.selectedIds.has(f.id));
         driveBrowserState.moveFolders = folders;
 
         if (!folders.length) {
@@ -3938,6 +3950,7 @@
               ${escapeHtml(p.name)}
             </button>
           `).join('')}
+          ${!driveBrowserState.loading ? `<span class="ml-1 text-xs text-slate-400">(${driveBrowserState.items.length} elementos)</span>` : ''}
         `;
 
         const currentFolder = driveBrowserState.path[driveBrowserState.path.length - 1];
@@ -3963,7 +3976,7 @@
       }
 
       if (driveBrowserState.loading) {
-        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-indigo-300">${driveBrowserState.isGlobalTagSearch ? `Buscando #${escapeHtml(state.activeTag)} en todo Google Drive...` : 'Cargando contenido de Google Drive...'}</div>`;
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-indigo-300">${driveBrowserState.isGlobalTagSearch ? `Buscando #${escapeHtml(state.activeTag)} en todo Google Drive...` : 'Cargando todo el contenido de la carpeta en Google Drive...'}</div>`;
         return;
       }
 
