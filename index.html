@@ -192,6 +192,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button onclick="openBulkTagModal()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow">🏷️ Etiquetar seleccionadas</button>
+          <button onclick="deleteSelectedArtistImages()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs shadow">🗑️ Borrar</button>
           <button onclick="toggleBulkSelectMode(false)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs">Salir</button>
         </div>
       </div>
@@ -695,7 +696,7 @@
     let editingArtistContext = null;
     let uploadContext = null;
     let editingTagsContext = null;
-    let pickedFileSystemEntries = []; // { file, handle, parentDirHandle }
+    let pickedFileSystemEntries = [];
 
     let lightboxState = {
       items: [],
@@ -1202,6 +1203,21 @@
       }
     }
 
+    async function trashDriveItemById(driveId) {
+      if (!driveConfig.accessToken || !driveId || driveId === 'root') return;
+      try {
+        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?supportsAllDrives=true`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trashed: true })
+        });
+        driveConfig.driveBlobCache.delete(driveId);
+        driveConfig.driveSizeCache.delete(driveId);
+      } catch (e) {
+        console.warn('No se pudo enviar elemento a la papelera de Drive:', driveId, e);
+      }
+    }
+
     async function findOrCreateFolder(name, parentId = null) {
       const safeName = sanitizeFolderName(name);
       const escaped = safeName.replace(/'/g, "\\'");
@@ -1285,8 +1301,13 @@
       }, 120000);
       if (!res.ok) throw new Error(`Error subiendo ${file.name}`);
       const uploaded = await res.json();
-      if (uploaded.id && uploaded.size) {
-        driveConfig.driveSizeCache.set(uploaded.id, Number(uploaded.size));
+      if (uploaded.id) {
+        if (uploaded.size) {
+          driveConfig.driveSizeCache.set(uploaded.id, Number(uploaded.size));
+        }
+        if (cleanTags.length) {
+          await updateDriveFileTagsMetadata(uploaded.id, cleanTags);
+        }
       }
       return uploaded;
     }
@@ -1982,7 +2003,6 @@
           }
         }
 
-        // Incluir también archivos etiquetados en el catálogo que coincidan con el tag
         const catalogMap = getCatalogTagsByDriveIdMap();
         const missingDriveIds = [];
         for (const [dId, dTags] of catalogMap.entries()) {
@@ -2160,11 +2180,7 @@
           if (!confirmed) return false;
         }
 
-        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${folderId}?supportsAllDrives=true`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trashed: true })
-        });
+        await trashDriveItemById(folderId);
         showToast(`🗑️ Carpeta vacía "${folderName}" enviada a la papelera`);
         return true;
       } catch (e) {
@@ -2194,11 +2210,7 @@
 
       try {
         for (const id of ids) {
-          await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${id}?supportsAllDrives=true`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ trashed: true })
-          });
+          await trashDriveItemById(id);
           removeDriveIdFromCatalog(id);
         }
 
@@ -2248,11 +2260,7 @@
       });
       if (!confirmed) return;
 
-      await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trashed: true })
-      });
+      await trashDriveItemById(fileId);
       removeDriveIdFromCatalog(fileId);
       await persistLibrary(`Eliminado archivo "${fileName}" desde Explorador Drive`);
       driveBrowserState.folderCoverCache.clear();
@@ -2449,7 +2457,6 @@
           ]);
           await updateDriveFileTagsMetadata(id, merged);
 
-          // Actualizar también si el archivo existe dentro de la biblioteca local/Drive
           for (const a of libraryData.artistas) {
             for (const img of (a.images || [])) {
               if (img.driveId === id) { img.tags = [...merged]; catalogUpdated = true; }
@@ -2584,7 +2591,7 @@
     }
 
     // =========================================================================
-    // CRUD: ARTISTAS, CÓMICS, IMÁGENES E HISTORIAS
+    // CRUD: ARTISTAS, CÓMICS, IMÁGENES E HISTORIAS (CON BORRADO EN DRIVE)
     // =========================================================================
     function openArtistModal(section, artistId = null) {
       editingArtistContext = { section, artistId };
@@ -2656,7 +2663,6 @@
       renderAll();
       showToast(`✅ Artista "${name}" guardado`);
 
-      // Subir avatar y sincronizar en segundo plano sin bloquear UI
       (async () => {
         try {
           if (targetArtist && driveConfig.accessToken) {
@@ -2679,23 +2685,47 @@
       if (!artist) return;
 
       const confirmed = await askYesNoConfirm({
-        title: 'Eliminar Artista',
-        message: `¿Deseas eliminar al artista "${artist.name}" y todo su contenido del catálogo?`,
+        title: 'Eliminar Artista y Carpeta de Drive',
+        message: `¿Deseas eliminar al artista "${artist.name}", su carpeta y todo su contenido tanto en la app como en Google Drive?`,
         doubleStep: true,
         icon: '🗑️',
-        yesLabel: 'Sí, eliminar',
+        yesLabel: 'Sí, eliminar todo',
         noLabel: 'No'
       });
       if (!confirmed) return;
+
+      // Enviar a la papelera de Google Drive su carpeta y archivos asociados
+      if (driveConfig.accessToken) {
+        if (artist.driveFolderId) {
+          await trashDriveItemById(artist.driveFolderId);
+        }
+        if (artist.avatarDriveId) {
+          await trashDriveItemById(artist.avatarDriveId);
+        }
+        for (const img of (artist.images || [])) {
+          if (img.driveId) await trashDriveItemById(img.driveId);
+        }
+        for (const c of (artist.comics || [])) {
+          if (c.driveFolderId) await trashDriveItemById(c.driveFolderId);
+          if (c.coverDriveId) await trashDriveItemById(c.coverDriveId);
+          for (const p of (c.pages || [])) {
+            if (p.driveId) await trashDriveItemById(p.driveId);
+          }
+        }
+        for (const st of (artist.items || [])) {
+          if (st.driveId) await trashDriveItemById(st.driveId);
+        }
+      }
 
       libraryData[section] = libraryData[section].filter(a => a.id !== artistId);
       if (state.artistId === artistId) {
         state.artistId = null;
         state.comicId = null;
       }
-      await persistLibrary(`Eliminado artista "${artist.name}"`);
+      driveBrowserState.folderCoverCache.clear();
+      await persistLibrary(`Eliminado artista "${artist.name}" y su carpeta de Drive`);
       renderAll();
-      showToast('🗑️ Artista eliminado');
+      showToast('🗑️ Artista y carpeta eliminados de Drive');
     }
 
     function openUploadModal(mode, artistId, comicId = null) {
@@ -2724,7 +2754,7 @@
         comicTitleGroup.classList.remove('hidden');
         coverGroup.classList.remove('hidden');
         filesInput.accept = 'image/*';
-        tagsHint.textContent = 'Todas las páginas iniciales heredarán automáticamente los tags de este cómic.';
+        tagsHint.textContent = 'Todas las páginas iniciales heredarán automáticamente los tags de este cómic y se guardarán en Drive.';
         tagsHint.classList.remove('hidden');
       } else if (mode === 'comic-pages') {
         const artist = libraryData.comics.find(a => a.id === artistId);
@@ -2734,7 +2764,7 @@
         coverGroup.classList.add('hidden');
         filesInput.accept = 'image/*';
         if (comic && (comic.tags || []).length) {
-          tagsHint.textContent = `Se combinarán automáticamente con los tags del cómic: ${(comic.tags || []).map(t => '#' + t).join(', ')}`;
+          tagsHint.textContent = `Se combinarán y guardarán en Drive con los tags del cómic: ${(comic.tags || []).map(t => '#' + t).join(', ')}`;
           tagsHint.classList.remove('hidden');
         }
       } else if (mode === 'artist-images') {
@@ -2745,7 +2775,7 @@
         coverGroup.classList.add('hidden');
         filesInput.accept = 'image/*';
         if (autoNames.length) {
-          tagsHint.textContent = `Tags automáticos del artista: ${autoNames.map(t => '#' + t).join(', ')}`;
+          tagsHint.textContent = `Tags automáticos (también en Drive): ${autoNames.map(t => '#' + t).join(', ')}`;
           tagsHint.classList.remove('hidden');
         }
       } else if (mode === 'story-files') {
@@ -2811,7 +2841,7 @@
           }
 
           for (let i = 0; i < files.length; i++) {
-            statusBox.textContent = `Subiendo página ${i + 1} de ${files.length}...`;
+            statusBox.textContent = `Subiendo página ${i + 1} de ${files.length} y guardando tags en Drive...`;
             const f = files[i];
             let driveId = '';
             let blobUrl = '';
@@ -2848,7 +2878,7 @@
           const targetFolderId = await ensureTargetFolderForContext('comics', artist, comic);
 
           for (let i = 0; i < files.length; i++) {
-            statusBox.textContent = `Subiendo página ${i + 1} de ${files.length}...`;
+            statusBox.textContent = `Subiendo página ${i + 1} de ${files.length} y guardando tags en Drive...`;
             const f = files[i];
             let driveId = '';
             let blobUrl = '';
@@ -2884,7 +2914,7 @@
           const targetFolderId = await ensureTargetFolderForContext('artistas', artist, null);
 
           for (let i = 0; i < files.length; i++) {
-            statusBox.textContent = `Subiendo imagen ${i + 1} de ${files.length}...`;
+            statusBox.textContent = `Subiendo imagen ${i + 1} de ${files.length} y guardando tags en Drive...`;
             const f = files[i];
             let driveId = '';
             let blobUrl = '';
@@ -2914,7 +2944,7 @@
           const targetFolderId = await ensureTargetFolderForContext('historia', artist, null);
 
           for (let i = 0; i < files.length; i++) {
-            statusBox.textContent = `Subiendo archivo ${i + 1} de ${files.length}...`;
+            statusBox.textContent = `Subiendo archivo ${i + 1} de ${files.length} y guardando tags en Drive...`;
             const f = files[i];
             let driveId = '';
             let blobUrl = '';
@@ -2951,8 +2981,8 @@
         closeModal('upload-modal');
         renderAll();
         showToast(deletedLocalCount > 0
-          ? `✅ Subidos ${files.length} y borrados ${deletedLocalCount} de la tablet`
-          : `✅ ${files.length} archivo(s) subidos correctamente`);
+          ? `✅ Subidos ${files.length} con tags en Drive y borrados ${deletedLocalCount} de la tablet`
+          : `✅ ${files.length} archivo(s) subidos con sus tags en Drive`);
       } catch (err) {
         console.error(err);
         statusBox.textContent = `⚠️ Error durante la subida: ${err.message}`;
@@ -2992,7 +3022,7 @@
           comic.tags = newTags;
           for (const p of (comic.pages || [])) {
             p.tags = normalizeTags([...(p.tags || []), ...newTags]);
-            if (p.driveId) updateDriveFileTagsMetadata(p.driveId, p.tags);
+            if (p.driveId) await updateDriveFileTagsMetadata(p.driveId, p.tags);
           }
         }
       } else if (type === 'comic-page') {
@@ -3002,7 +3032,7 @@
         if (page) {
           if (newTitle) page.title = newTitle;
           page.tags = newTags;
-          if (page.driveId) updateDriveFileTagsMetadata(page.driveId, newTags);
+          if (page.driveId) await updateDriveFileTagsMetadata(page.driveId, newTags);
         }
       } else if (type === 'artist-image') {
         const artist = libraryData.artistas.find(a => a.id === artistId);
@@ -3010,7 +3040,7 @@
         if (img) {
           if (newTitle) img.title = newTitle;
           img.tags = newTags;
-          if (img.driveId) updateDriveFileTagsMetadata(img.driveId, newTags);
+          if (img.driveId) await updateDriveFileTagsMetadata(img.driveId, newTags);
         }
       } else if (type === 'story-item') {
         const artist = libraryData.historia.find(a => a.id === artistId);
@@ -3018,14 +3048,14 @@
         if (st) {
           if (newTitle) st.title = newTitle;
           st.tags = newTags;
-          if (st.driveId) updateDriveFileTagsMetadata(st.driveId, newTags);
+          if (st.driveId) await updateDriveFileTagsMetadata(st.driveId, newTags);
         }
       }
 
       closeModal('edit-tags-modal');
       await persistLibrary('Actualizados tags/título');
       renderAll();
-      showToast('🏷️ Cambios guardados');
+      showToast('🏷️ Cambios guardados en app y Drive');
     }
 
     function toggleBulkSelectMode(force) {
@@ -3093,7 +3123,7 @@
           const kept = (img.tags || []).filter(t => !removeTagsSet.has(t));
           img.tags = normalizeTags([...kept, ...addTags]);
           if (img.driveId) {
-            updateDriveFileTagsMetadata(img.driveId, img.tags);
+            await updateDriveFileTagsMetadata(img.driveId, img.tags);
           }
           modified++;
         }
@@ -3102,11 +3132,43 @@
       closeModal('bulk-tag-modal');
       await persistLibrary(`Etiquetadas en bloque ${modified} imagen(es) de ${artist.name}`);
       renderAll();
-      showToast(`🏷️ Tags aplicados a ${modified} imagen(es)`);
+      showToast(`🏷️ Tags aplicados en app y Drive a ${modified} imagen(es)`);
+    }
+
+    async function deleteSelectedArtistImages() {
+      const artist = libraryData.artistas.find(a => a.id === state.artistId);
+      if (!artist) return;
+      const count = state.selectedImageIds.size;
+      if (!count) return;
+
+      const confirmed = await askYesNoConfirm({
+        title: 'Borrar imágenes seleccionadas',
+        message: `¿Deseas eliminar ${count} imagen(es) tanto de la app como de Google Drive?`,
+        doubleStep: true,
+        icon: '🗑️',
+        yesLabel: 'Sí, borrar',
+        noLabel: 'No'
+      });
+      if (!confirmed) return;
+
+      const toDelete = (artist.images || []).filter(img => state.selectedImageIds.has(img.id));
+      if (driveConfig.accessToken) {
+        for (const img of toDelete) {
+          if (img.driveId) await trashDriveItemById(img.driveId);
+        }
+      }
+
+      artist.images = (artist.images || []).filter(img => !state.selectedImageIds.has(img.id));
+      state.selectedImageIds.clear();
+      state.bulkSelectMode = false;
+
+      await persistLibrary(`Eliminadas ${count} imagen(es) de ${artist.name} en app y Drive`);
+      renderAll();
+      showToast(`🗑️ ${count} imagen(es) eliminadas de la app y de Drive`);
     }
 
     // =========================================================================
-    // FAVORITOS, ELIMINACIÓN DE ELEMENTOS Y NAVEGACIÓN
+    // FAVORITOS, ELIMINACIÓN DE ELEMENTOS (CON BORRADO EN DRIVE) Y NAVEGACIÓN
     // =========================================================================
     async function toggleFavorite(type, artistId, comicId = null, itemId = null) {
       if (type === 'artist') {
@@ -3136,8 +3198,8 @@
 
     async function deleteSubItem(type, artistId, comicId, itemId) {
       const confirmed = await askYesNoConfirm({
-        title: 'Eliminar elemento',
-        message: '¿Deseas eliminar este elemento de tu biblioteca?',
+        title: 'Eliminar de la app y de Google Drive',
+        message: '¿Deseas eliminar este elemento tanto de tu biblioteca como de Google Drive?',
         doubleStep: true,
         icon: '🗑️',
         yesLabel: 'Sí, eliminar',
@@ -3147,23 +3209,44 @@
 
       if (type === 'comic') {
         const artist = libraryData.comics.find(a => a.id === artistId);
+        const comic = artist ? (artist.comics || []).find(c => c.id === comicId) : null;
+        if (comic && driveConfig.accessToken) {
+          if (comic.driveFolderId) await trashDriveItemById(comic.driveFolderId);
+          if (comic.coverDriveId) await trashDriveItemById(comic.coverDriveId);
+          for (const p of (comic.pages || [])) {
+            if (p.driveId) await trashDriveItemById(p.driveId);
+          }
+        }
         if (artist) artist.comics = artist.comics.filter(c => c.id !== comicId);
         if (state.comicId === comicId) state.comicId = null;
       } else if (type === 'comic-page') {
         const artist = libraryData.comics.find(a => a.id === artistId);
         const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
+        const page = comic ? (comic.pages || []).find(p => p.id === itemId) : null;
+        if (page && page.driveId && driveConfig.accessToken) {
+          await trashDriveItemById(page.driveId);
+        }
         if (comic) comic.pages = comic.pages.filter(p => p.id !== itemId);
       } else if (type === 'artist-image') {
         const artist = libraryData.artistas.find(a => a.id === artistId);
+        const img = artist ? (artist.images || []).find(i => i.id === itemId) : null;
+        if (img && img.driveId && driveConfig.accessToken) {
+          await trashDriveItemById(img.driveId);
+        }
         if (artist) artist.images = artist.images.filter(i => i.id !== itemId);
       } else if (type === 'story-item') {
         const artist = libraryData.historia.find(a => a.id === artistId);
+        const st = artist ? (artist.items || []).find(i => i.id === itemId) : null;
+        if (st && st.driveId && driveConfig.accessToken) {
+          await trashDriveItemById(st.driveId);
+        }
         if (artist) artist.items = artist.items.filter(i => i.id !== itemId);
       }
 
-      await persistLibrary('Eliminado elemento de la biblioteca');
+      driveBrowserState.folderCoverCache.clear();
+      await persistLibrary('Eliminado elemento de la biblioteca y de Drive');
       renderAll();
-      showToast('🗑️ Elemento eliminado');
+      showToast('🗑️ Eliminado de la app y de Google Drive');
     }
 
     function selectSection(section) {
@@ -4172,7 +4255,6 @@
         if (resolved) imgEl.src = resolved;
       }
 
-      // Precargar siguiente página en segundo plano
       const nextItem = lightboxState.items[lightboxState.index + 1];
       if (nextItem && nextItem.driveId) {
         resolveDriveBlobUrl(nextItem.driveId);
@@ -4227,7 +4309,6 @@
       applyLightboxTransform();
     }
 
-    // Gestos táctiles y clic en el visor (Mitad izquierda = Siguiente +1, Mitad derecha = Anterior -1)
     (function initLightboxGestures() {
       const viewport = document.getElementById('lightbox-viewport');
       let lastTapTime = 0;
@@ -4280,9 +4361,9 @@
           const rect = viewport.getBoundingClientRect();
           const clickX = e.clientX - rect.left;
           if (clickX < rect.width / 2) {
-            stepLightbox(1);   // Izquierda -> Siguiente (+1)
+            stepLightbox(1);
           } else {
-            stepLightbox(-1);  // Derecha -> Anterior (-1)
+            stepLightbox(-1);
           }
         }, 265);
       });
@@ -4380,3 +4461,8 @@
   </script>
 </body>
 </html>
+```
+
+He actualizado el archivo **`index.html`** completo con ambas sincronizaciones:
+1. **Tags guardados en Google Drive al subir desde la app (`uploadFileToDrive` + `updateDriveFileTagsMetadata`)**: Cada imagen, página de cómic o documento que subas desde la app guarda sus tags tanto en `description` (`Tags: #tag | [#tag]`) como en `appProperties.tags` de Google Drive, quedando localizables al instante en Drive y en la búsqueda por `#tag`.
+2. **Borrado sincronizado en Google Drive (`trashDriveItemById`)**: Al eliminar un artista (se envía su carpeta completa y su contenido a la papelera de Drive), un cómic (se envía su carpeta y páginas a la papelera de Drive) o cualquier imagen/página/historia individual (incluido el borrado múltiple `🗑️ Borrar` en la galería del artista), también se envía automáticamente a la papelera de Google Drive.
