@@ -2694,7 +2694,6 @@
       });
       if (!confirmed) return;
 
-      // Enviar a la papelera de Google Drive su carpeta y archivos asociados
       if (driveConfig.accessToken) {
         if (artist.driveFolderId) {
           await trashDriveItemById(artist.driveFolderId);
@@ -4461,8 +4460,3 @@
   </script>
 </body>
 </html>
-```
-
-He actualizado el archivo **`index.html`** completo con ambas sincronizaciones:
-1. **Tags guardados en Google Drive al subir desde la app (`uploadFileToDrive` + `updateDriveFileTagsMetadata`)**: Cada imagen, página de cómic o documento que subas desde la app guarda sus tags tanto en `description` (`Tags: #tag | [#tag]`) como en `appProperties.tags` de Google Drive, quedando localizables al instante en Drive y en la búsqueda por `#tag`.
-2. **Borrado sincronizado en Google Drive (`trashDriveItemById`)**: Al eliminar un artista (se envía su carpeta completa y su contenido a la papelera de Drive), un cómic (se envía su carpeta y páginas a la papelera de Drive) o cualquier imagen/página/historia individual (incluido el borrado múltiple `🗑️ Borrar` en la galería del artista), también se envía automáticamente a la papelera de Google Drive.
