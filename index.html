@@ -3262,20 +3262,33 @@
       }
     }
 
-    async function fetchAllImagesInsideDriveFolder(folderId) {
+    async function fetchAllImagesInsideDriveFolder(folderId, depth = 0) {
+      if (!folderId || depth > 4) return [];
       const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
       const baseUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=name&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
       const children = await driveFetchAllPages(baseUrl);
       const imageFiles = [];
+      const subFolders = [];
+
       for (const ch of children) {
         const isShortcut = ch.mimeType === 'application/vnd.google-apps.shortcut' && ch.shortcutDetails;
         const targetId = isShortcut ? ch.shortcutDetails.targetId : ch.id;
         const effectiveMime = isShortcut ? (ch.shortcutDetails.targetMimeType || '') : (ch.mimeType || '');
         if (effectiveMime.startsWith('image/')) {
           imageFiles.push({ ...ch, id: targetId, mimeType: effectiveMime });
+        } else if (effectiveMime === 'application/vnd.google-apps.folder') {
+          subFolders.push(targetId);
         }
       }
+
       imageFiles.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { numeric: true, sensitivity: 'base' }));
+
+      if (imageFiles.length === 0 && subFolders.length > 0) {
+        for (const subId of subFolders) {
+          const nestedImages = await fetchAllImagesInsideDriveFolder(subId, depth + 1);
+          imageFiles.push(...nestedImages);
+        }
+      }
       return imageFiles;
     }
 
@@ -3337,6 +3350,7 @@
         let importedCount = 0;
 
         if (section === 'artistas') {
+          if (!Array.isArray(artist.images)) artist.images = [];
           const autoArtistTags = extractArtistNameTags(artist.name);
           const targetDriveFolder = alsoMoveInDrive ? await ensureTargetFolderForContext('artistas', artist, null) : null;
 
@@ -3375,6 +3389,7 @@
           }
 
         } else if (section === 'historia') {
+          if (!Array.isArray(artist.items)) artist.items = [];
           const targetDriveFolder = alsoMoveInDrive ? await ensureTargetFolderForContext('historia', artist, null) : null;
 
           for (let i = 0; i < selectedItems.length; i++) {
@@ -3404,6 +3419,7 @@
           }
 
         } else if (section === 'comics') {
+          if (!Array.isArray(artist.comics)) artist.comics = [];
           const comicMode = document.getElementById('d2a-comic-select').value;
           const customComicTitle = document.getElementById('d2a-new-comic-title').value.trim();
 
@@ -3516,12 +3532,27 @@
           }
         }
 
+        if (importedCount === 0) {
+          showToast('⚠️ No se encontraron archivos compatibles dentro de la selección');
+          return;
+        }
+
         await persistLibrary(`Pasados ${importedCount} elemento(s) desde Drive a ${artist.name} (${section})`);
         closeModal('drive-to-app-modal');
         driveBrowserState.selectedIds.clear();
         await indexAndUnifyAllDriveTags();
+
+        // Navegar directamente a la sección y artista destino para ver los elementos al instante
+        state.section = section;
+        state.artistId = artist.id;
+        state.comicId = null;
+        state.page = 1;
+        state.activeTags = [];
+        unifiedTagResults.tags = [];
+        driveBrowserState.isGlobalTagSearch = false;
+
         renderAll();
-        showToast(`✅ ${importedCount} elemento(s) pasados a "${artist.name}" respetando todos sus tags`);
+        showToast(`✅ ${importedCount} elemento(s) ya visibles en "${artist.name}"`);
       } catch (e) {
         console.error('Error pasando de Drive a Mi App:', e);
         showToast('⚠️ Error al pasar los elementos a la app');
