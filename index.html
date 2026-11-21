@@ -140,7 +140,7 @@
           ☰
         </button>
 
-        <!-- BUSCADOR -->
+        <!-- BUSCADOR GENERAL -->
         <div class="relative flex-1">
           <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
           <input
@@ -192,7 +192,7 @@
           <button onclick="selectAllArtistImages(false)" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">Ninguna</button>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="openBulkTagModal()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow">🏷️ Etiquetar seleccionadas</button>
+          <button onclick="openBulkTagModal()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow">🏷️ Etiquetar / Quitar tags</button>
           <button onclick="deleteSelectedArtistImages()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs shadow">🗑️ Borrar</button>
           <button onclick="toggleBulkSelectMode(false)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs">Salir</button>
         </div>
@@ -207,13 +207,26 @@
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <button onclick="openDriveMoveModal()" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow">📁 Mover a carpeta</button>
-          <button onclick="openDriveBrowserTagModal()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow">🏷️ Poner Tags</button>
+          <button onclick="openDriveBrowserTagModal()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow">🏷️ Poner / Quitar Tags</button>
           <button onclick="deleteSelectedDriveBrowserItems()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs shadow">🗑️ Enviar a papelera</button>
         </div>
       </div>
 
-      <!-- NUBE UNIFICADA DE TAGS (APP + DRIVE) -->
-      <div id="tag-cloud-wrapper" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5"></div>
+      <!-- BUSCADOR RÁPIDO DE TAGS + NUBE UNIFICADA DE TAGS (APP + DRIVE) -->
+      <div id="tag-bar-container" class="flex items-center gap-2">
+        <div class="relative shrink-0 w-36 sm:w-44">
+          <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-indigo-400 text-xs font-bold">#</span>
+          <input
+            id="tag-quick-search-input"
+            type="text"
+            oninput="handleTagQuickSearch(this.value)"
+            placeholder="Buscar tag..."
+            class="w-full pl-6 pr-6 py-1 rounded-full bg-slate-900 border border-slate-700/90 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          />
+          <button id="clear-tag-quick-search-btn" onclick="clearTagQuickSearch()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-[10px]">✕</button>
+        </div>
+        <div id="tag-cloud-wrapper" class="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5"></div>
+      </div>
     </header>
 
     <!-- MIGAS DE PAN + BOTONES DE ACCIÓN CONTEXTUALES -->
@@ -440,24 +453,29 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 5: EDITAR TAGS INDIVIDUAL                                       -->
+  <!-- MODAL 5: EDITAR TAGS INDIVIDUAL (CHIPS ENCENDIDOS PARA QUITAR AL TOQUE)-->
   <!-- ===================================================================== -->
   <div id="edit-tags-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h2 id="edit-tags-modal-title" class="text-lg font-bold text-white">Editar Tags</h2>
+        <h2 id="edit-tags-modal-title" class="text-lg font-bold text-white">Editar Tags y Título</h2>
         <button onclick="closeModal('edit-tags-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
       </div>
 
       <div class="space-y-3">
-        <div id="edit-item-title-group" class="hidden">
+        <div id="edit-item-title-group">
           <label class="block text-xs font-semibold text-slate-400 mb-1">Título</label>
           <input id="edit-item-title-input" type="text" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags (separados por coma)</label>
-          <input id="edit-tags-input" type="text" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <label class="block text-xs font-semibold text-indigo-300 mb-1.5">Tags actuales (toca cualquiera encendido para apagarlo y quitarlo):</label>
+          <div id="edit-active-tags-chips" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-950 border border-slate-800 min-h-[44px]"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir nuevos tags (separados por coma)</label>
+          <input id="edit-tags-input" type="text" placeholder="ej: nuevo_tag, color" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
         </div>
       </div>
 
@@ -469,31 +487,31 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 6: ETIQUETADO MASIVO DE IMÁGENES SELECCIONADAS                  -->
+  <!-- MODAL 6: ETIQUETADO MASIVO (TODOS LOS TAGS ENCENDIDOS PARA QUITAR)    -->
   <!-- ===================================================================== -->
   <div id="bulk-tag-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h2 class="text-lg font-bold text-white">🏷️ Etiquetar <span id="bulk-modal-count">0</span> imágenes</h2>
+        <h2 class="text-lg font-bold text-white">🏷️ Tags de <span id="bulk-modal-count">0</span> imágenes</h2>
         <button onclick="closeModal('bulk-tag-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
       </div>
 
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir estos tags (separados por coma)</label>
-          <input id="bulk-add-tags-input" type="text" placeholder="ej: retratos, color, favorito" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
-          <div id="bulk-top-tags-chips" class="flex flex-wrap gap-1.5 mt-2"></div>
+          <label class="block text-xs font-semibold text-indigo-300 mb-1.5">Tags encendidos en la selección (toca un tag para apagarlo y borrarlo de todas):</label>
+          <div id="bulk-active-tags-chips" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-950 border border-slate-800 max-h-36 overflow-y-auto min-h-[44px]"></div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-rose-300 mb-1">− Quitar estos tags (opcional, separados por coma)</label>
-          <input id="bulk-remove-tags-input" type="text" placeholder="ej: boceto" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir nuevos tags a todas (separados por coma)</label>
+          <input id="bulk-add-tags-input" type="text" placeholder="ej: retratos, color, favorito" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <div id="bulk-top-tags-chips" class="flex flex-wrap gap-1.5 mt-2"></div>
         </div>
       </div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
         <button onclick="closeModal('bulk-tag-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
-        <button onclick="applyBulkTags()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm">Aplicar a todas</button>
+        <button onclick="applyBulkTags()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm">Guardar Cambios</button>
       </div>
     </div>
   </div>
@@ -530,26 +548,26 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 8: ETIQUETAR ARCHIVOS EN EL EXPLORADOR DE DRIVE                 -->
+  <!-- MODAL 8: ETIQUETAR EN DRIVE (TODOS LOS TAGS ENCENDIDOS PARA QUITAR)   -->
   <!-- ===================================================================== -->
   <div id="drive-browser-tag-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h2 class="text-lg font-bold text-white">🏷️ Etiquetar en Drive (<span id="drive-tag-modal-count">0</span>)</h2>
+        <h2 class="text-lg font-bold text-white">🏷️ Tags en Drive (<span id="drive-tag-modal-count">0</span>)</h2>
         <button onclick="closeModal('drive-browser-tag-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
       </div>
 
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir tags (separados por coma)</label>
+          <label class="block text-xs font-semibold text-indigo-300 mb-1.5">Tags encendidos en los archivos elegidos (toca cualquiera para quitarlo de todos lados):</label>
+          <div id="drive-browser-active-tags-chips" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-950 border border-slate-800 max-h-36 overflow-y-auto min-h-[44px]"></div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir nuevos tags (separados por coma)</label>
           <input id="drive-browser-add-tags" type="text" placeholder="ej: boceto, personaje, color" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
           <div id="drive-browser-top-tags" class="flex flex-wrap gap-1.5 mt-2"></div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-rose-300 mb-1">− Quitar tags (opcional)</label>
-          <input id="drive-browser-remove-tags" type="text" placeholder="ej: pendiente" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
-        </div>
-        <p class="text-[11px] text-slate-400">Se guardan tanto en los metadatos nativos de Google Drive como en tu catálogo si el archivo ya está vinculado.</p>
+        <p class="text-[11px] text-slate-400">Al quitar un tag encendido, se elimina tanto de Google Drive como de tus colecciones y cómics.</p>
       </div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
@@ -670,6 +688,7 @@
       artistId: null,
       comicId: null,
       search: '',
+      tagQuickSearch: '',
       activeTags: [],
       sortBy: 'date-desc',
       page: 1,
@@ -712,6 +731,8 @@
     let editingArtistContext = null;
     let uploadContext = null;
     let editingTagsContext = null;
+    let bulkTagChipsState = { activeTags: [], removedTags: new Set() };
+    let driveTagChipsState = { activeTags: [], removedTags: new Set() };
     let pickedFileSystemEntries = [];
 
     let lightboxState = {
@@ -1220,7 +1241,6 @@
       }
     }
 
-    // Descarga TODAS las páginas de resultados de Google Drive sin límite de 300
     async function driveFetchAllPages(baseUrl, maxItems = 15000) {
       const allFiles = [];
       let pageToken = '';
@@ -1371,7 +1391,13 @@
       if (!driveConfig.accessToken || !driveFileId) return;
       const cleanTags = normalizeTags(tags);
       const tokenList = cleanTags.map(t => `[#${t}]`).join(' ');
-      driveConfig.driveTagsIndex.set(driveFileId, cleanTags);
+
+      if (cleanTags.length > 0) {
+        driveConfig.driveTagsIndex.set(driveFileId, cleanTags);
+      } else {
+        driveConfig.driveTagsIndex.delete(driveFileId);
+        driveConfig.driveAllTaggedFiles = driveConfig.driveAllTaggedFiles.filter(f => f.id !== driveFileId);
+      }
 
       try {
         await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?supportsAllDrives=true`, {
@@ -1379,7 +1405,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             description: cleanTags.length ? `Tags: ${cleanTags.map(t => '#' + t).join(' ')} | ${tokenList}` : '',
-            appProperties: { tags: cleanTags.join(',') }
+            appProperties: { tags: cleanTags.length ? cleanTags.join(',') : null }
           })
         });
       } catch (e) {
@@ -1387,7 +1413,40 @@
       }
     }
 
-    // Indexa TODOS los archivos de Drive que ya tengan tags (description / appProperties) y los unifica con la App
+    // Quita un conjunto de tags de TODOS los lugares de la app (artista, cómic, páginas, imágenes, historias) para un driveId o elemento dado
+    function purgeRemovedTagsGloballyForDriveId(driveId, removedSet) {
+      if (!driveId || !removedSet || removedSet.size === 0) return;
+
+      for (const a of libraryData.artistas) {
+        for (const img of (a.images || [])) {
+          if (img.driveId === driveId) {
+            img.tags = normalizeTags((img.tags || []).filter(t => !removedSet.has(t)));
+          }
+        }
+      }
+      for (const a of libraryData.comics) {
+        for (const c of (a.comics || [])) {
+          let touchedComic = false;
+          for (const p of (c.pages || [])) {
+            if (p.driveId === driveId) {
+              p.tags = normalizeTags((p.tags || []).filter(t => !removedSet.has(t)));
+              touchedComic = true;
+            }
+          }
+          if (touchedComic) {
+            c.tags = normalizeTags((c.tags || []).filter(t => !removedSet.has(t)));
+          }
+        }
+      }
+      for (const a of libraryData.historia) {
+        for (const st of (a.items || [])) {
+          if (st.driveId === driveId) {
+            st.tags = normalizeTags((st.tags || []).filter(t => !removedSet.has(t)));
+          }
+        }
+      }
+    }
+
     async function indexAndUnifyAllDriveTags() {
       if (!driveConfig.accessToken) return;
       try {
@@ -1738,7 +1797,7 @@
     }
 
     // =========================================================================
-    // ESCÁNER DE ARCHIVOS SUBIDOS DIRECTAMENTE A GOOGLE DRIVE (SIN LÍMITE)
+    // ESCÁNER DE ARCHIVOS SUBIDOS DIRECTAMENTE A GOOGLE DRIVE
     // =========================================================================
     function getAllKnownDriveIds() {
       const ids = new Set();
@@ -2038,7 +2097,6 @@
       return normalizeTags([...rawDriveTags, ...fromIndex, ...fromCatalog]);
     }
 
-    // Ejecuta una búsqueda profunda en toda la biblioteca (Comics, Artistas, Historia) y todo Google Drive para múltiples tags
     async function runDeepUnifiedTagSearch(tagsList) {
       const cleanTags = normalizeTags(tagsList);
       if (!cleanTags.length) {
@@ -2063,7 +2121,7 @@
 
       const seenDriveIdsInCatalog = new Set();
 
-      // 1. Buscar profundamente en COMICS (solo mostrar tarjeta/portada del cómic, sin inundar con páginas sueltas)
+      // 1. COMICS (solo tarjeta/portada del cómic)
       for (const artist of (libraryData.comics || [])) {
         const artistTags = normalizeTags(artist.tags);
         for (const comic of (artist.comics || [])) {
@@ -2086,7 +2144,7 @@
         }
       }
 
-      // 2. Buscar profundamente en ARTISTAS (artistas y cada ilustración de su galería)
+      // 2. ARTISTAS
       for (const artist of (libraryData.artistas || [])) {
         const artistTags = normalizeTags(artist.tags);
         if (matchesAllSelectedTags(artistTags)) {
@@ -2107,7 +2165,7 @@
         }
       }
 
-      // 3. Buscar profundamente en HISTORIA (autores y cada archivo/texto)
+      // 3. HISTORIA
       for (const artist of (libraryData.historia || [])) {
         const artistTags = normalizeTags(artist.tags);
         if (matchesAllSelectedTags(artistTags)) {
@@ -2128,7 +2186,7 @@
         }
       }
 
-      // 4. Buscar profundamente en GOOGLE DRIVE (índice en memoria + consulta API en vivo)
+      // 4. GOOGLE DRIVE
       const driveFoundMap = new Map();
       for (const f of (driveConfig.driveAllTaggedFiles || [])) {
         if (matchesAllSelectedTags(extractDriveFileTags(f))) {
@@ -2206,79 +2264,6 @@
         renderAll();
         hydrateDriveFolderCovers();
       }
-    }
-
-    async function searchDriveBrowserByTagGlobal(tag) {
-      if (!driveConfig.accessToken) return;
-      const cleanTag = normalizeTags([tag])[0];
-      if (!cleanTag) return;
-
-      driveBrowserState.isGlobalTagSearch = true;
-      driveBrowserState.loading = true;
-      driveBrowserState.selectedIds.clear();
-      renderAll();
-
-      try {
-        const escaped = cleanTag.replace(/'/g, "\\'");
-        const q = encodeURIComponent(`trashed=false and (description contains '${escaped}' or appProperties has { key='tags' and value='${escaped}' })`);
-        const baseUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
-        const apiFiles = await driveFetchAllPages(baseUrl);
-        const foundMap = new Map();
-
-        for (const f of (driveConfig.driveAllTaggedFiles || [])) {
-          if (extractDriveFileTags(f).includes(cleanTag)) {
-            foundMap.set(f.id, f);
-          }
-        }
-
-        for (const f of apiFiles) {
-          if (extractDriveFileTags(f).includes(cleanTag)) {
-            foundMap.set(f.id, f);
-          }
-        }
-
-        const catalogMap = getCatalogTagsByDriveIdMap();
-        const missingDriveIds = [];
-        for (const [dId, dTags] of catalogMap.entries()) {
-          if (dTags.includes(cleanTag) && !foundMap.has(dId)) {
-            missingDriveIds.push(dId);
-          }
-        }
-
-        for (const dId of missingDriveIds) {
-          try {
-            const fRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${dId}?supportsAllDrives=true&fields=id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails`);
-            if (fRes.ok) {
-              const fObj = await fRes.json();
-              if (fObj && fObj.id && !fObj.trashed) {
-                foundMap.set(fObj.id, fObj);
-                updateDriveFileTagsMetadata(fObj.id, catalogMap.get(dId) || []);
-              }
-            }
-          } catch (e) {}
-        }
-
-        driveBrowserState.globalTagResults = Array.from(foundMap.values());
-        for (const f of driveBrowserState.globalTagResults) {
-          if (f.id && f.size) driveConfig.driveSizeCache.set(f.id, Number(f.size));
-        }
-      } catch (e) {
-        console.error('Error buscando tag en Drive:', e);
-        showToast('⚠️ Error buscando ese tag en Drive');
-        driveBrowserState.globalTagResults = [];
-      } finally {
-        driveBrowserState.loading = false;
-        state.page = 1;
-        renderAll();
-      }
-    }
-
-    function exitDriveGlobalTagSearch() {
-      driveBrowserState.isGlobalTagSearch = false;
-      state.activeTags = [];
-      unifiedTagResults.tags = [];
-      const currentFolder = driveBrowserState.path[driveBrowserState.path.length - 1];
-      loadDriveBrowserFolder(currentFolder ? currentFolder.id : 'root');
     }
 
     async function findRandomImageInNearestFolder(folderId, depth = 0) {
@@ -2374,7 +2359,7 @@
       if (selectAll) {
         const sourceList = state.activeTags.length > 0
           ? unifiedTagResults.drive
-          : (driveBrowserState.isGlobalTagSearch ? driveBrowserState.globalTagResults : driveBrowserState.items);
+          : driveBrowserState.items;
         sourceList.forEach(f => driveBrowserState.selectedIds.add(f.id));
       }
       renderAll();
@@ -2658,12 +2643,60 @@
       }
     }
 
+    // =========================================================================
+    // MODAL 8: ETIQUETAR / QUITAR TAGS EN DRIVE (CON CHIPS ENCENDIDOS)
+    // =========================================================================
+    function renderDriveBrowserActiveTagChips() {
+      const container = document.getElementById('drive-browser-active-tags-chips');
+      if (!driveTagChipsState.activeTags.length) {
+        container.innerHTML = '<span class="text-xs text-slate-500">Ningún tag asignado aún a estos archivos.</span>';
+        return;
+      }
+      container.innerHTML = driveTagChipsState.activeTags.map(tag => {
+        const isRemoved = driveTagChipsState.removedTags.has(tag);
+        return `
+          <button type="button" onclick="toggleDriveBrowserActiveTagChip('${escapeHtml(tag)}')"
+            class="px-2.5 py-1 rounded-full text-xs font-bold transition flex items-center gap-1 ${
+              isRemoved
+                ? 'bg-rose-950/80 border border-rose-500/60 text-rose-300 line-through opacity-75'
+                : 'bg-indigo-600 text-white shadow'
+            }">
+            <span>${isRemoved ? '✕' : '✓'}</span>
+            <span>#${escapeHtml(tag)}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function toggleDriveBrowserActiveTagChip(tag) {
+      if (driveTagChipsState.removedTags.has(tag)) {
+        driveTagChipsState.removedTags.delete(tag);
+      } else {
+        driveTagChipsState.removedTags.add(tag);
+      }
+      renderDriveBrowserActiveTagChips();
+    }
+
     function openDriveBrowserTagModal() {
       const count = driveBrowserState.selectedIds.size;
       if (!count) return;
       document.getElementById('drive-tag-modal-count').textContent = count;
       document.getElementById('drive-browser-add-tags').value = '';
-      document.getElementById('drive-browser-remove-tags').value = '';
+
+      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
+      const unionSet = new Set();
+      for (const id of driveBrowserState.selectedIds) {
+        const item = sourceList.find(f => f.id === id);
+        if (item) {
+          extractDriveFileTags(item).forEach(t => unionSet.add(t));
+        }
+      }
+
+      driveTagChipsState = {
+        activeTags: Array.from(unionSet).sort(),
+        removedTags: new Set()
+      };
+      renderDriveBrowserActiveTagChips();
 
       const topTags = getAllTagCounts().slice(0, 12);
       document.getElementById('drive-browser-top-tags').innerHTML = topTags.map(([tag]) => `
@@ -2677,7 +2710,7 @@
 
     async function applyDriveBrowserTags() {
       const addTags = normalizeTags(document.getElementById('drive-browser-add-tags').value);
-      const removeSet = new Set(normalizeTags(document.getElementById('drive-browser-remove-tags').value));
+      const removeSet = driveTagChipsState.removedTags;
       const ids = Array.from(driveBrowserState.selectedIds);
       if (!ids.length) return;
 
@@ -2688,50 +2721,62 @@
       const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
 
       try {
-        let catalogUpdated = false;
         for (const id of ids) {
           const item = sourceList.find(f => f.id === id);
-          if (!item) continue;
-          const currentTags = extractDriveFileTags(item);
+          const currentTags = item ? extractDriveFileTags(item) : (driveConfig.driveTagsIndex.get(id) || []);
           const merged = normalizeTags([
             ...currentTags.filter(t => !removeSet.has(t)),
             ...addTags
           ]);
           await updateDriveFileTagsMetadata(id, merged);
 
+          if (removeSet.size > 0) {
+            purgeRemovedTagsGloballyForDriveId(id, removeSet);
+          }
+
           const existingIdx = driveConfig.driveAllTaggedFiles.findIndex(x => x.id === id);
-          if (merged.length > 0) {
-            if (existingIdx >= 0) driveConfig.driveAllTaggedFiles[existingIdx] = { ...item, description: `Tags: ${merged.map(t => '#' + t).join(' ')}` };
-            else driveConfig.driveAllTaggedFiles.push(item);
+          if (merged.length > 0 && item) {
+            const updatedObj = {
+              ...item,
+              description: `Tags: ${merged.map(t => '#' + t).join(' ')} | ${merged.map(t => '[#' + t + ']').join(' ')}`,
+              appProperties: { tags: merged.join(',') }
+            };
+            if (existingIdx >= 0) driveConfig.driveAllTaggedFiles[existingIdx] = updatedObj;
+            else driveConfig.driveAllTaggedFiles.push(updatedObj);
           } else if (existingIdx >= 0) {
             driveConfig.driveAllTaggedFiles.splice(existingIdx, 1);
           }
 
+          // Actualizar también los registros vinculados en la app
           for (const a of libraryData.artistas) {
             for (const img of (a.images || [])) {
-              if (img.driveId === id) { img.tags = [...merged]; catalogUpdated = true; }
+              if (img.driveId === id) {
+                img.tags = normalizeTags([...(img.tags || []).filter(t => !removeSet.has(t)), ...addTags]);
+              }
             }
           }
           for (const a of libraryData.comics) {
             for (const c of (a.comics || [])) {
               for (const p of (c.pages || [])) {
-                if (p.driveId === id) { p.tags = [...merged]; catalogUpdated = true; }
+                if (p.driveId === id) {
+                  p.tags = normalizeTags([...(p.tags || []).filter(t => !removeSet.has(t)), ...addTags]);
+                }
               }
             }
           }
           for (const a of libraryData.historia) {
             for (const st of (a.items || [])) {
-              if (st.driveId === id) { st.tags = [...merged]; catalogUpdated = true; }
+              if (st.driveId === id) {
+                st.tags = normalizeTags([...(st.tags || []).filter(t => !removeSet.has(t)), ...addTags]);
+              }
             }
           }
         }
 
-        if (catalogUpdated) {
-          await persistLibrary(`Tags actualizados en ${ids.length} archivo(s) desde Explorador Drive`);
-        }
-
+        await persistLibrary(`Tags actualizados en ${ids.length} archivo(s) de Drive`);
         closeModal('drive-browser-tag-modal');
-        showToast(`🏷️ Tags guardados en ${ids.length} archivo(s) de Drive`);
+        showToast(`🏷️ Tags actualizados en Drive y en toda la app`);
+
         if (state.activeTags.length) {
           await runDeepUnifiedTagSearch(state.activeTags);
         } else {
@@ -3241,37 +3286,77 @@
     }
 
     // =========================================================================
-    // EDICIÓN DE TAGS INDIVIDUAL Y EN BLOQUE
+    // EDICIÓN DE TAGS INDIVIDUAL Y EN BLOQUE (CHIPS ENCENDIDOS PARA QUITAR)
     // =========================================================================
-    function openEditTagsModal(context) {
-      editingTagsContext = context;
-      const titleEl = document.getElementById('edit-tags-modal-title');
-      const titleGroup = document.getElementById('edit-item-title-group');
-      const itemTitleInput = document.getElementById('edit-item-title-input');
-      const tagsInput = document.getElementById('edit-tags-input');
+    function renderEditActiveTagChips() {
+      const container = document.getElementById('edit-active-tags-chips');
+      if (!editingTagsContext || !editingTagsContext.activeTags.length) {
+        container.innerHTML = '<span class="text-xs text-slate-500">Sin tags asignados.</span>';
+        return;
+      }
+      container.innerHTML = editingTagsContext.activeTags.map(tag => {
+        const isRemoved = editingTagsContext.removedTags.has(tag);
+        return `
+          <button type="button" onclick="toggleEditActiveTagChip('${escapeHtml(tag)}')"
+            class="px-2.5 py-1 rounded-full text-xs font-bold transition flex items-center gap-1 ${
+              isRemoved
+                ? 'bg-rose-950/80 border border-rose-500/60 text-rose-300 line-through opacity-75'
+                : 'bg-indigo-600 text-white shadow'
+            }">
+            <span>${isRemoved ? '✕' : '✓'}</span>
+            <span>#${escapeHtml(tag)}</span>
+          </button>
+        `;
+      }).join('');
+    }
 
-      titleEl.textContent = 'Editar Tags y Título';
-      titleGroup.classList.remove('hidden');
-      itemTitleInput.value = context.currentTitle || '';
-      tagsInput.value = (context.currentTags || []).join(', ');
+    function toggleEditActiveTagChip(tag) {
+      if (!editingTagsContext) return;
+      if (editingTagsContext.removedTags.has(tag)) {
+        editingTagsContext.removedTags.delete(tag);
+      } else {
+        editingTagsContext.removedTags.add(tag);
+      }
+      renderEditActiveTagChips();
+    }
+
+    function openEditTagsModal(context) {
+      const initialTags = normalizeTags(context.currentTags || []);
+      editingTagsContext = {
+        ...context,
+        activeTags: initialTags,
+        removedTags: new Set()
+      };
+      document.getElementById('edit-tags-modal-title').textContent = 'Editar Tags y Título';
+      document.getElementById('edit-item-title-input').value = context.currentTitle || '';
+      document.getElementById('edit-tags-input').value = '';
+      renderEditActiveTagChips();
       openModal('edit-tags-modal');
     }
 
     async function saveEditedTags() {
       if (!editingTagsContext) return;
-      const { type, artistId, comicId, itemId } = editingTagsContext;
+      const { type, artistId, comicId, itemId, activeTags, removedTags } = editingTagsContext;
       const newTitle = document.getElementById('edit-item-title-input').value.trim();
-      const newTags = normalizeTags(document.getElementById('edit-tags-input').value);
+      const addedTags = normalizeTags(document.getElementById('edit-tags-input').value);
+      const finalTags = normalizeTags([
+        ...activeTags.filter(t => !removedTags.has(t)),
+        ...addedTags
+      ]);
 
       if (type === 'comic') {
         const artist = libraryData.comics.find(a => a.id === artistId);
         const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
         if (comic) {
           if (newTitle) comic.title = newTitle;
-          comic.tags = newTags;
+          comic.tags = finalTags;
           for (const p of (comic.pages || [])) {
-            p.tags = normalizeTags([...(p.tags || []), ...newTags]);
-            if (p.driveId) await updateDriveFileTagsMetadata(p.driveId, p.tags);
+            const pFiltered = (p.tags || []).filter(t => !removedTags.has(t));
+            p.tags = normalizeTags([...pFiltered, ...addedTags]);
+            if (p.driveId) {
+              await updateDriveFileTagsMetadata(p.driveId, p.tags);
+              if (removedTags.size > 0) purgeRemovedTagsGloballyForDriveId(p.driveId, removedTags);
+            }
           }
         }
       } else if (type === 'comic-page') {
@@ -3280,29 +3365,47 @@
         const page = comic ? comic.pages.find(p => p.id === itemId) : null;
         if (page) {
           if (newTitle) page.title = newTitle;
-          page.tags = newTags;
-          if (page.driveId) await updateDriveFileTagsMetadata(page.driveId, newTags);
+          page.tags = finalTags;
+          if (removedTags.size > 0 && comic) {
+            comic.tags = normalizeTags((comic.tags || []).filter(t => !removedTags.has(t)));
+          }
+          if (page.driveId) {
+            await updateDriveFileTagsMetadata(page.driveId, finalTags);
+            if (removedTags.size > 0) purgeRemovedTagsGloballyForDriveId(page.driveId, removedTags);
+          }
         }
       } else if (type === 'artist-image') {
         const artist = libraryData.artistas.find(a => a.id === artistId);
         const img = artist ? artist.images.find(i => i.id === itemId) : null;
         if (img) {
           if (newTitle) img.title = newTitle;
-          img.tags = newTags;
-          if (img.driveId) await updateDriveFileTagsMetadata(img.driveId, newTags);
+          img.tags = finalTags;
+          if (removedTags.size > 0 && artist) {
+            artist.tags = normalizeTags((artist.tags || []).filter(t => !removedTags.has(t)));
+          }
+          if (img.driveId) {
+            await updateDriveFileTagsMetadata(img.driveId, finalTags);
+            if (removedTags.size > 0) purgeRemovedTagsGloballyForDriveId(img.driveId, removedTags);
+          }
         }
       } else if (type === 'story-item') {
         const artist = libraryData.historia.find(a => a.id === artistId);
         const st = artist ? artist.items.find(i => i.id === itemId) : null;
         if (st) {
           if (newTitle) st.title = newTitle;
-          st.tags = newTags;
-          if (st.driveId) await updateDriveFileTagsMetadata(st.driveId, newTags);
+          st.tags = finalTags;
+          if (removedTags.size > 0 && artist) {
+            artist.tags = normalizeTags((artist.tags || []).filter(t => !removedTags.has(t)));
+          }
+          if (st.driveId) {
+            await updateDriveFileTagsMetadata(st.driveId, finalTags);
+            if (removedTags.size > 0) purgeRemovedTagsGloballyForDriveId(st.driveId, removedTags);
+          }
         }
       }
 
       closeModal('edit-tags-modal');
-      await persistLibrary('Actualizados tags/título');
+      await persistLibrary('Actualizados tags/título en app y Drive');
       if (state.activeTags.length) {
         await runDeepUnifiedTagSearch(state.activeTags);
       } else {
@@ -3339,12 +3442,58 @@
       renderAll();
     }
 
+    function renderBulkActiveTagChips() {
+      const container = document.getElementById('bulk-active-tags-chips');
+      if (!bulkTagChipsState.activeTags.length) {
+        container.innerHTML = '<span class="text-xs text-slate-500">Ningún tag asignado en estas imágenes.</span>';
+        return;
+      }
+      container.innerHTML = bulkTagChipsState.activeTags.map(tag => {
+        const isRemoved = bulkTagChipsState.removedTags.has(tag);
+        return `
+          <button type="button" onclick="toggleBulkActiveTagChip('${escapeHtml(tag)}')"
+            class="px-2.5 py-1 rounded-full text-xs font-bold transition flex items-center gap-1 ${
+              isRemoved
+                ? 'bg-rose-950/80 border border-rose-500/60 text-rose-300 line-through opacity-75'
+                : 'bg-indigo-600 text-white shadow'
+            }">
+            <span>${isRemoved ? '✕' : '✓'}</span>
+            <span>#${escapeHtml(tag)}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function toggleBulkActiveTagChip(tag) {
+      if (bulkTagChipsState.removedTags.has(tag)) {
+        bulkTagChipsState.removedTags.delete(tag);
+      } else {
+        bulkTagChipsState.removedTags.add(tag);
+      }
+      renderBulkActiveTagChips();
+    }
+
     function openBulkTagModal() {
       const count = state.selectedImageIds.size;
       if (!count) return;
       document.getElementById('bulk-modal-count').textContent = count;
       document.getElementById('bulk-add-tags-input').value = '';
-      document.getElementById('bulk-remove-tags-input').value = '';
+
+      const artist = libraryData.artistas.find(a => a.id === state.artistId);
+      const unionSet = new Set();
+      if (artist) {
+        for (const img of (artist.images || [])) {
+          if (state.selectedImageIds.has(img.id)) {
+            normalizeTags(img.tags || []).forEach(t => unionSet.add(t));
+          }
+        }
+      }
+
+      bulkTagChipsState = {
+        activeTags: Array.from(unionSet).sort(),
+        removedTags: new Set()
+      };
+      renderBulkActiveTagChips();
 
       const topTags = getAllTagCounts().slice(0, 12);
       document.getElementById('bulk-top-tags-chips').innerHTML = topTags.map(([tag]) => `
@@ -3368,8 +3517,12 @@
       if (!artist) return;
 
       const addTags = normalizeTags(document.getElementById('bulk-add-tags-input').value);
-      const removeTagsSet = new Set(normalizeTags(document.getElementById('bulk-remove-tags-input').value));
+      const removeTagsSet = bulkTagChipsState.removedTags;
       let modified = 0;
+
+      if (removeTagsSet.size > 0) {
+        artist.tags = normalizeTags((artist.tags || []).filter(t => !removeTagsSet.has(t)));
+      }
 
       for (const img of artist.images) {
         if (state.selectedImageIds.has(img.id)) {
@@ -3377,15 +3530,18 @@
           img.tags = normalizeTags([...kept, ...addTags]);
           if (img.driveId) {
             await updateDriveFileTagsMetadata(img.driveId, img.tags);
+            if (removeTagsSet.size > 0) {
+              purgeRemovedTagsGloballyForDriveId(img.driveId, removeTagsSet);
+            }
           }
           modified++;
         }
       }
 
       closeModal('bulk-tag-modal');
-      await persistLibrary(`Etiquetadas en bloque ${modified} imagen(es) de ${artist.name}`);
+      await persistLibrary(`Etiquetadas/actualizadas en bloque ${modified} imagen(es) de ${artist.name}`);
       renderAll();
-      showToast(`🏷️ Tags aplicados en app y Drive a ${modified} imagen(es)`);
+      showToast(`🏷️ Tags actualizados en app y Drive en ${modified} imagen(es)`);
     }
 
     async function deleteSelectedArtistImages() {
@@ -3557,6 +3713,19 @@
     function clearSearch() {
       document.getElementById('search-input').value = '';
       handleSearch('');
+    }
+
+    function handleTagQuickSearch(val) {
+      state.tagQuickSearch = String(val || '').trim().replace(/^#+/, '').toLowerCase();
+      const clearBtn = document.getElementById('clear-tag-quick-search-btn');
+      if (clearBtn) clearBtn.classList.toggle('hidden', !state.tagQuickSearch);
+      renderTagCloud();
+    }
+
+    function clearTagQuickSearch() {
+      const input = document.getElementById('tag-quick-search-input');
+      if (input) input.value = '';
+      handleTagQuickSearch('');
     }
 
     function toggleTagFilter(tag) {
@@ -3841,7 +4010,6 @@
       return copy;
     }
 
-    // Combina todos los tags de la App (Historia, Comics, Artistas) y todos los de Google Drive sin duplicar
     function getAllTagCounts() {
       const counts = new Map();
       const seenDriveIds = new Set();
@@ -3936,14 +4104,14 @@
     function renderTagCloud() {
       const wrapper = document.getElementById('tag-cloud-wrapper');
       const allTags = getAllTagCounts();
-      if (!allTags.length && !state.activeTags.length) {
-        wrapper.innerHTML = '';
-        return;
-      }
+      const q = state.tagQuickSearch;
+      const filteredTags = q
+        ? allTags.filter(([tag]) => tag.includes(q))
+        : allTags;
 
       const activeSet = new Set(state.activeTags);
-      const limit = state.expandTags ? allTags.length : 14;
-      const shown = allTags.slice(0, limit);
+      const limit = (state.expandTags || q) ? filteredTags.length : 14;
+      const shown = filteredTags.slice(0, limit);
 
       let html = '';
       if (state.activeTags.length > 0) {
@@ -3961,6 +4129,12 @@
         }
       }
 
+      if (!shown.length && q) {
+        html += `<span class="text-xs text-slate-500 px-2">Ningún tag coincide con "#${escapeHtml(q)}"</span>`;
+        wrapper.innerHTML = html;
+        return;
+      }
+
       for (const [tag, count] of shown) {
         if (activeSet.has(tag)) continue;
         html += `
@@ -3970,10 +4144,10 @@
         `;
       }
 
-      if (allTags.length > 14) {
+      if (!q && filteredTags.length > 14) {
         html += `
           <button onclick="state.expandTags = !state.expandTags; renderTagCloud();" class="shrink-0 px-2.5 py-1 rounded-full bg-slate-800 text-indigo-300 text-xs font-semibold">
-            ${state.expandTags ? 'Menos ▲' : `+${allTags.length - 14} más ▼`}
+            ${state.expandTags ? 'Menos ▲' : `+${filteredTags.length - 14} más ▼`}
           </button>
         `;
       }
@@ -4016,7 +4190,6 @@
       paginationTop.innerHTML = '';
       pagination.innerHTML = '';
 
-      // VISTA DE BÚSQUEDA PROFUNDA UNIFICADA POR TAGS (AGRUPADA POR SECCIONES, MÁX. 20 POR BLOQUE)
       if (state.activeTags.length > 0 && unifiedTagResults.tags.length > 0) {
         renderUnifiedTagSearchResultsView(breadcrumb, actions, grid);
         hydrateDriveImages();
@@ -4508,6 +4681,9 @@
                 <div class="relative flex-1 bg-slate-800/80 overflow-hidden">
                   ${renderCoverMediaHtml(image, '🖼️')}
                   <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+                  <div class="absolute top-2 right-2" onclick="event.stopPropagation()">
+                    <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, itemId: image.id, currentTitle: image.title, currentTags: image.tags || [] })})' class="w-7 h-7 rounded-lg bg-black/65 text-xs flex items-center justify-center">🏷️</button>
+                  </div>
                   ${sizeLabel ? `<span class="absolute bottom-11 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] font-semibold text-indigo-200">${sizeLabel}</span>` : ''}
                   <div class="absolute bottom-2 left-2.5 right-2.5">
                     <div class="text-xs font-semibold text-white truncate">${escapeHtml(image.title)}</div>
@@ -4548,7 +4724,12 @@
             const sizeLabel = formatFileSize(getItemEffectiveSize(story));
             return `
               <div onclick='openStoryViewerById("${artist.id}", "${story.id}")' class="card-hover relative aspect-[3/4] rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/60 p-4 flex flex-col justify-between cursor-pointer">
-                <span class="text-3xl">${getMimeIcon(story.mimeType)}</span>
+                <div class="flex items-start justify-between">
+                  <span class="text-3xl">${getMimeIcon(story.mimeType)}</span>
+                  <div onclick="event.stopPropagation()">
+                    <button onclick='openEditTagsModal(${JSON.stringify({ type: 'story-item', artistId: artist.id, itemId: story.id, currentTitle: story.title, currentTags: story.tags || [] })})' class="w-7 h-7 rounded-lg bg-slate-800 text-xs flex items-center justify-center">🏷️</button>
+                  </div>
+                </div>
                 <div>
                   <div class="text-[10px] text-amber-300 font-bold truncate">${escapeHtml(artist.name)}</div>
                   <div class="text-sm font-bold text-white line-clamp-2">${escapeHtml(story.title)}</div>
@@ -4594,6 +4775,10 @@
                 <button onclick="event.stopPropagation(); toggleDriveBrowserItemSelection('${f.id}')" class="absolute top-2 left-2 w-7 h-7 rounded-lg ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/60 text-slate-200'} text-xs font-bold flex items-center justify-center border border-white/20">
                   ${isSelected ? '✓' : '☐'}
                 </button>
+
+                <div class="absolute top-2 right-2" onclick="event.stopPropagation()">
+                  <button onclick="driveBrowserState.selectedIds.clear(); driveBrowserState.selectedIds.add('${f.id}'); openDriveBrowserTagModal();" title="Etiquetar o quitar tags" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">🏷️</button>
+                </div>
 
                 ${sizeLabel ? `<span class="absolute bottom-12 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] font-semibold text-indigo-200">${sizeLabel}</span>` : ''}
 
@@ -4713,7 +4898,7 @@
 
               <div class="absolute top-2 right-2 flex items-center gap-1" onclick="event.stopPropagation()">
                 ${!isFolder ? `
-                  <button onclick="driveBrowserState.selectedIds.clear(); driveBrowserState.selectedIds.add('${f.id}'); openDriveBrowserTagModal();" title="Etiquetar" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
+                  <button onclick="driveBrowserState.selectedIds.clear(); driveBrowserState.selectedIds.add('${f.id}'); openDriveBrowserTagModal();" title="Etiquetar o quitar tags" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                     🏷️
                   </button>
                 ` : ''}
@@ -4739,10 +4924,11 @@
 
     function renderTagsDirectoryView(breadcrumb, actions, grid) {
       breadcrumb.innerHTML = `<span class="font-bold text-white">🏷️ Directorio Unificado de Tags (App + Google Drive)</span>`;
-      const allTags = getAllTagCounts().filter(([tag]) => !state.search || tag.includes(state.search.replace(/^#+/, '')));
+      const q = (state.tagQuickSearch || state.search.replace(/^#+/, '')).toLowerCase();
+      const allTags = getAllTagCounts().filter(([tag]) => !q || tag.includes(q));
 
       if (!allTags.length) {
-        grid.innerHTML = `<div class="col-span-full py-12 text-center text-sm text-slate-400">No hay tags registrados aún.</div>`;
+        grid.innerHTML = `<div class="col-span-full py-12 text-center text-sm text-slate-400">No hay tags que coincidan.</div>`;
         return;
       }
 
