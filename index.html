@@ -206,6 +206,7 @@
           <button onclick="selectAllDriveBrowserItems(false)" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">Ninguno</button>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="openDriveImportToAppModal()" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow">📥 Pasar a Mi App</button>
           <button onclick="openDriveMoveModal()" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow">📁 Mover a carpeta</button>
           <button onclick="openDriveBrowserTagModal()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow">🏷️ Poner / Quitar Tags</button>
           <button onclick="deleteSelectedDriveBrowserItems()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs shadow">🗑️ Enviar a papelera</button>
@@ -588,6 +589,73 @@
   </div>
 
   <!-- ===================================================================== -->
+  <!-- MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (RESPETA TAGS)   -->
+  <!-- ===================================================================== -->
+  <div id="drive-to-app-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-lg font-bold text-white">📥 Pasar a Mi App (<span id="drive-to-app-count">0</span>)</h2>
+          <p class="text-xs text-slate-400">Conserva automáticamente todos los tags que ya tienen en Google Drive.</p>
+        </div>
+        <button onclick="closeModal('drive-to-app-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
+      </div>
+
+      <div id="drive-to-app-summary" class="p-3 rounded-xl bg-indigo-950/50 border border-indigo-500/30 text-xs text-indigo-200"></div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">1. ¿A qué sección de la app lo quieres pasar?</label>
+          <select id="d2a-section-select" onchange="onDriveToAppSectionChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white">
+            <option value="artistas">🎨 Artistas (Galería de imágenes)</option>
+            <option value="comics">💬 Comics (Carpeta como cómic o páginas)</option>
+            <option value="historia">📚 Historia (PDF, texto, video, audio)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">2. Elige el Artista destino</label>
+          <select id="d2a-artist-select" onchange="onDriveToAppArtistChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white"></select>
+        </div>
+
+        <div id="d2a-new-artist-group" class="hidden">
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">Nombre del nuevo Artista (separa seudónimos con coma)</label>
+          <input id="d2a-new-artist-input" type="text" placeholder="Ej: Kaelen Studio, KaelArt" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+        </div>
+
+        <div id="d2a-comic-group" class="hidden space-y-2.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">3. Cómic destino</label>
+            <select id="d2a-comic-select" onchange="onDriveToAppComicChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white"></select>
+          </div>
+          <div id="d2a-new-comic-title-group" class="hidden">
+            <label class="block text-xs font-semibold text-emerald-300 mb-1">Título del Cómic (si seleccionaste carpeta, usa su nombre por defecto)</label>
+            <input id="d2a-new-comic-title" type="text" placeholder="Ej: Horizonte Carmesí" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags extra opcionales (se suman a los que ya vienen de Drive)</label>
+          <input id="d2a-extra-tags" type="text" oninput="handleTagInputSpellingCheck('d2a-extra-tags', 'd2a-spell-box')" placeholder="Opcional: male, anthro, tf..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+          <div id="d2a-spell-box" class="hidden mt-1.5"></div>
+        </div>
+
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+          <input id="d2a-also-move-drive-folder" type="checkbox" checked class="w-4 h-4 accent-indigo-500" />
+          <span>📁 Organizar también estos archivos dentro de la carpeta del artista en Google Drive</span>
+        </label>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeModal('drive-to-app-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
+        <button id="d2a-confirm-btn" onclick="executeDriveImportToApp()" class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg">
+          ✅ Pasar a Mi App
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
   <!-- VISOR TÁCTIL DE IMÁGENES / CÓMICS (IZQUIERDA AVANZA, DERECHA RETROCEDE)-->
   <!-- ===================================================================== -->
   <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black hidden flex-col">
@@ -809,7 +877,6 @@
     const QUICK_TAG_ROW_2 = Object.keys(QUICK_TAG_TAXONOMY).sort((a, b) => a.localeCompare(b));
 
     const ENGLISH_TAG_CORRECTIONS = {
-      // Fila 1
       'femele': 'female', 'famale': 'female', 'femal': 'female', 'fem': 'female', 'mujer': 'female', 'hembra': 'female',
       'mela': 'male', 'mal': 'male', 'hombre': 'male', 'macho': 'male',
       'mtf': 'mtf', 'm2f': 'mtf', 'ftm': 'ftm', 'f2m': 'ftm', 'tgtf': 'tftg',
@@ -817,7 +884,6 @@
       'ferral': 'feral', 'ferel': 'feral',
       'antro': 'anthro', 'antho': 'anthro', 'anthr': 'anthro', 'antrho': 'anthro', 'furry': 'anthro',
       'inanimte': 'inanimate', 'inanimat': 'inanimate', 'inanimado': 'inanimate', 'object': 'inanimate',
-      // Fila 2 familias
       'canines': 'canine', 'canino': 'canine', 'caninos': 'canine',
       'felines': 'feline', 'felino': 'feline', 'felinos': 'feline',
       'equines': 'equine', 'equino': 'equine', 'equinos': 'equine',
@@ -834,7 +900,6 @@
       'pokemons': 'pokemon', 'pokémon': 'pokemon',
       'digimons': 'digimon',
       'other mammals': 'other mamals', 'othermammals': 'other mamals', 'mammals': 'other mamals', 'mamiferos': 'other mamals',
-      // Especies comunes y errores frecuentes en inglés
       'wolfe': 'wolf', 'wolve': 'wolf', 'lobo': 'wolf', 'werewolve': 'werewolf', 'hombre lobo': 'werewolf',
       'helhound': 'hellhound', 'hell hound': 'hellhound',
       'cerbero': 'cerberus', 'cerberuz': 'cerberus',
@@ -3083,6 +3148,386 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'Mover aquí';
+      }
+    }
+
+    // =========================================================================
+    // MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (RESPETANDO TAGS)
+    // =========================================================================
+    function getSelectedDriveBrowserObjects() {
+      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
+      return Array.from(driveBrowserState.selectedIds)
+        .map(id => sourceList.find(f => f.id === id))
+        .filter(Boolean);
+    }
+
+    function openDriveImportToAppModal() {
+      const selectedItems = getSelectedDriveBrowserObjects();
+      if (!selectedItems.length) return;
+
+      document.getElementById('drive-to-app-count').textContent = selectedItems.length;
+      document.getElementById('d2a-extra-tags').value = '';
+      document.getElementById('d2a-spell-box').classList.add('hidden');
+
+      const folders = selectedItems.filter(f =>
+        f.mimeType === 'application/vnd.google-apps.folder' ||
+        (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails?.targetMimeType === 'application/vnd.google-apps.folder')
+      );
+      const pdfOrDocs = selectedItems.filter(f =>
+        (f.mimeType || '').includes('pdf') ||
+        (f.mimeType || '').startsWith('text/') ||
+        (f.mimeType || '').startsWith('video/') ||
+        (f.mimeType || '').startsWith('audio/')
+      );
+
+      const sectionSel = document.getElementById('d2a-section-select');
+      if (folders.length > 0) {
+        sectionSel.value = 'comics';
+      } else if (pdfOrDocs.length > 0 && pdfOrDocs.length === selectedItems.length) {
+        sectionSel.value = 'historia';
+      } else {
+        sectionSel.value = 'artistas';
+      }
+
+      const detectedTagsSet = new Set();
+      selectedItems.forEach(item => extractDriveFileTags(item).forEach(t => detectedTagsSet.add(t)));
+      const tagsPreview = detectedTagsSet.size
+        ? `Tags detectados en Drive que se respetarán: ${Array.from(detectedTagsSet).slice(0, 8).map(t => '#' + escapeHtml(t)).join(', ')}${detectedTagsSet.size > 8 ? '...' : ''}`
+        : 'Si los archivos ya tienen tags en Drive, se importarán intactos.';
+
+      document.getElementById('drive-to-app-summary').innerHTML = `
+        <div>Seleccionados: <strong>${selectedItems.length}</strong> elemento(s) (${folders.length} carpeta(s), ${selectedItems.length - folders.length} archivo(s)).</div>
+        <div class="text-[11px] text-emerald-300 mt-1">${tagsPreview}</div>
+      `;
+
+      onDriveToAppSectionChange(folders[0]?.name || '');
+      openModal('drive-to-app-modal');
+    }
+
+    function onDriveToAppSectionChange(suggestedComicTitle = '') {
+      const section = document.getElementById('d2a-section-select').value;
+      const artistSel = document.getElementById('d2a-artist-select');
+      const comicGroup = document.getElementById('d2a-comic-group');
+
+      const artists = libraryData[section] || [];
+      artistSel.innerHTML =
+        `<option value="__new__">+ Crear nuevo artista...</option>` +
+        artists.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
+
+      if (artists.length > 0) {
+        artistSel.value = artists[0].id;
+      }
+
+      onDriveToAppArtistChange();
+
+      if (section === 'comics') {
+        comicGroup.classList.remove('hidden');
+        if (suggestedComicTitle) {
+          document.getElementById('d2a-new-comic-title').value = suggestedComicTitle;
+        }
+      } else {
+        comicGroup.classList.add('hidden');
+      }
+    }
+
+    function onDriveToAppArtistChange() {
+      const section = document.getElementById('d2a-section-select').value;
+      const artistId = document.getElementById('d2a-artist-select').value;
+      const newArtistGroup = document.getElementById('d2a-new-artist-group');
+
+      if (artistId === '__new__') {
+        newArtistGroup.classList.remove('hidden');
+      } else {
+        newArtistGroup.classList.add('hidden');
+      }
+
+      if (section === 'comics') {
+        const comicSel = document.getElementById('d2a-comic-select');
+        const artist = libraryData.comics.find(a => a.id === artistId);
+        const comics = artist ? (artist.comics || []) : [];
+        comicSel.innerHTML =
+          `<option value="__folder_as_comic__">📁 Crear Cómic nuevo (o 1 cómic por cada carpeta)</option>` +
+          comics.map(c => `<option value="${c.id}">➕ Añadir páginas a: ${escapeHtml(c.title)}</option>`).join('');
+        onDriveToAppComicChange();
+      }
+    }
+
+    function onDriveToAppComicChange() {
+      const comicVal = document.getElementById('d2a-comic-select').value;
+      const titleGroup = document.getElementById('d2a-new-comic-title-group');
+      if (comicVal === '__folder_as_comic__') {
+        titleGroup.classList.remove('hidden');
+      } else {
+        titleGroup.classList.add('hidden');
+      }
+    }
+
+    async function fetchAllImagesInsideDriveFolder(folderId) {
+      const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+      const baseUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=name&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
+      const children = await driveFetchAllPages(baseUrl);
+      const imageFiles = [];
+      for (const ch of children) {
+        const isShortcut = ch.mimeType === 'application/vnd.google-apps.shortcut' && ch.shortcutDetails;
+        const targetId = isShortcut ? ch.shortcutDetails.targetId : ch.id;
+        const effectiveMime = isShortcut ? (ch.shortcutDetails.targetMimeType || '') : (ch.mimeType || '');
+        if (effectiveMime.startsWith('image/')) {
+          imageFiles.push({ ...ch, id: targetId, mimeType: effectiveMime });
+        }
+      }
+      imageFiles.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { numeric: true, sensitivity: 'base' }));
+      return imageFiles;
+    }
+
+    async function moveDriveFileIntoFolderIfNeeded(fileObj, targetFolderId) {
+      if (!driveConfig.accessToken || !fileObj || !targetFolderId) return;
+      const currentParents = fileObj.parents || [];
+      if (currentParents.includes(targetFolderId)) return;
+      const removeParam = currentParents.length ? `&removeParents=${encodeURIComponent(currentParents.join(','))}` : '';
+      const url = `https://www.googleapis.com/drive/v3/files/${fileObj.id}?addParents=${encodeURIComponent(targetFolderId)}${removeParam}&supportsAllDrives=true&fields=id,parents`;
+      try {
+        await driveApiFetch(url, { method: 'PATCH' });
+      } catch (e) {
+        console.warn('No se pudo reubicar archivo en Drive:', fileObj.name, e);
+      }
+    }
+
+    async function executeDriveImportToApp() {
+      const selectedItems = getSelectedDriveBrowserObjects();
+      if (!selectedItems.length) return;
+
+      const section = document.getElementById('d2a-section-select').value;
+      const artistId = document.getElementById('d2a-artist-select').value;
+      const newArtistName = document.getElementById('d2a-new-artist-input').value.trim();
+      const extraTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('d2a-extra-tags').value));
+      const alsoMoveInDrive = document.getElementById('d2a-also-move-drive-folder').checked;
+
+      if (artistId === '__new__' && !newArtistName) {
+        showToast('Escribe el nombre del nuevo artista');
+        return;
+      }
+
+      const btn = document.getElementById('d2a-confirm-btn');
+      btn.disabled = true;
+      btn.textContent = 'Pasando a la app...';
+
+      try {
+        let artist = null;
+        if (artistId === '__new__') {
+          artist = {
+            id: generateId('art'),
+            name: newArtistName,
+            tags: [...extraTags],
+            avatarUrl: '',
+            avatarDriveId: '',
+            createdAt: Date.now(),
+            ...(section === 'historia' ? { items: [] } : section === 'comics' ? { comics: [] } : { images: [] })
+          };
+          libraryData[section].unshift(artist);
+        } else {
+          artist = (libraryData[section] || []).find(a => a.id === artistId);
+        }
+
+        if (!artist) {
+          showToast('No se encontró el artista seleccionado');
+          return;
+        }
+
+        const now = Date.now();
+        let importedCount = 0;
+
+        if (section === 'artistas') {
+          const autoArtistTags = extractArtistNameTags(artist.name);
+          const targetDriveFolder = alsoMoveInDrive ? await ensureTargetFolderForContext('artistas', artist, null) : null;
+
+          const filesToImport = [];
+          for (const item of selectedItems) {
+            const isShortcut = item.mimeType === 'application/vnd.google-apps.shortcut' && item.shortcutDetails;
+            const targetId = isShortcut ? item.shortcutDetails.targetId : item.id;
+            const effectiveMime = isShortcut ? (item.shortcutDetails.targetMimeType || '') : (item.mimeType || '');
+
+            if (effectiveMime === 'application/vnd.google-apps.folder') {
+              const folderImgs = await fetchAllImagesInsideDriveFolder(targetId);
+              filesToImport.push(...folderImgs);
+            } else if (effectiveMime.startsWith('image/')) {
+              filesToImport.push({ ...item, id: targetId, mimeType: effectiveMime });
+            }
+          }
+
+          for (let i = 0; i < filesToImport.length; i++) {
+            const f = filesToImport[i];
+            const driveTags = extractDriveFileTags(f);
+            const finalTags = normalizeTags([...autoArtistTags, ...driveTags, ...extraTags]);
+
+            artist.images.unshift({
+              id: generateId('img'),
+              title: (f.name || 'Imagen').replace(/\.[^/.]+$/, ''),
+              driveId: f.id,
+              url: '',
+              size: Number(f.size) || 0,
+              tags: finalTags,
+              createdAt: now + i
+            });
+
+            await updateDriveFileTagsMetadata(f.id, finalTags);
+            if (targetDriveFolder) await moveDriveFileIntoFolderIfNeeded(f, targetDriveFolder);
+            importedCount++;
+          }
+
+        } else if (section === 'historia') {
+          const targetDriveFolder = alsoMoveInDrive ? await ensureTargetFolderForContext('historia', artist, null) : null;
+
+          for (let i = 0; i < selectedItems.length; i++) {
+            const f = selectedItems[i];
+            const isShortcut = f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails;
+            const targetId = isShortcut ? f.shortcutDetails.targetId : f.id;
+            const effectiveMime = isShortcut ? (f.shortcutDetails.targetMimeType || '') : (f.mimeType || '');
+            if (effectiveMime === 'application/vnd.google-apps.folder') continue;
+
+            const driveTags = extractDriveFileTags(f);
+            const finalTags = normalizeTags([...driveTags, ...extraTags]);
+
+            artist.items.unshift({
+              id: generateId('story'),
+              title: (f.name || 'Documento').replace(/\.[^/.]+$/, ''),
+              mimeType: effectiveMime || 'application/octet-stream',
+              driveId: targetId,
+              url: '',
+              size: Number(f.size) || 0,
+              tags: finalTags,
+              createdAt: now + i
+            });
+
+            await updateDriveFileTagsMetadata(targetId, finalTags);
+            if (targetDriveFolder) await moveDriveFileIntoFolderIfNeeded({ ...f, id: targetId }, targetDriveFolder);
+            importedCount++;
+          }
+
+        } else if (section === 'comics') {
+          const comicMode = document.getElementById('d2a-comic-select').value;
+          const customComicTitle = document.getElementById('d2a-new-comic-title').value.trim();
+
+          const folderItems = selectedItems.filter(f =>
+            f.mimeType === 'application/vnd.google-apps.folder' ||
+            (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails?.targetMimeType === 'application/vnd.google-apps.folder')
+          );
+          const looseImageItems = selectedItems.filter(f => {
+            const eff = (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails)
+              ? (f.shortcutDetails.targetMimeType || '')
+              : (f.mimeType || '');
+            return eff.startsWith('image/');
+          });
+
+          for (let fIdx = 0; fIdx < folderItems.length; fIdx++) {
+            const folder = folderItems[fIdx];
+            const targetFolderId = (folder.mimeType === 'application/vnd.google-apps.shortcut' && folder.shortcutDetails)
+              ? folder.shortcutDetails.targetId
+              : folder.id;
+
+            const folderPages = await fetchAllImagesInsideDriveFolder(targetFolderId);
+            if (!folderPages.length) continue;
+
+            const folderOwnTags = extractDriveFileTags(folder);
+            const allPagesTagsSet = new Set([...folderOwnTags, ...extraTags]);
+            folderPages.forEach(p => extractDriveFileTags(p).forEach(t => allPagesTagsSet.add(t)));
+
+            const comicTitle = (folderItems.length === 1 && customComicTitle) ? customComicTitle : folder.name;
+            const newComic = {
+              id: generateId('comic'),
+              title: comicTitle,
+              driveFolderId: targetFolderId,
+              tags: normalizeTags(Array.from(allPagesTagsSet)),
+              coverUrl: '',
+              coverDriveId: folderPages[0].id,
+              createdAt: now + fIdx,
+              pages: []
+            };
+
+            if (alsoMoveInDrive) {
+              const artistDriveFolder = await ensureTargetFolderForContext('comics', artist, null);
+              if (artistDriveFolder) {
+                await moveDriveFileIntoFolderIfNeeded({ ...folder, id: targetFolderId }, artistDriveFolder);
+              }
+            }
+
+            for (let pIdx = 0; pIdx < folderPages.length; pIdx++) {
+              const pg = folderPages[pIdx];
+              const pgTags = normalizeTags([...folderOwnTags, ...extractDriveFileTags(pg), ...extraTags]);
+              newComic.pages.push({
+                id: generateId('page'),
+                title: (pg.name || `Página ${pIdx + 1}`).replace(/\.[^/.]+$/, ''),
+                driveId: pg.id,
+                url: '',
+                size: Number(pg.size) || 0,
+                tags: pgTags,
+                createdAt: now + pIdx
+              });
+              await updateDriveFileTagsMetadata(pg.id, pgTags);
+              importedCount++;
+            }
+
+            artist.comics.unshift(newComic);
+          }
+
+          if (looseImageItems.length > 0) {
+            looseImageItems.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { numeric: true, sensitivity: 'base' }));
+            let targetComic = null;
+
+            if (comicMode !== '__folder_as_comic__') {
+              targetComic = (artist.comics || []).find(c => c.id === comicMode);
+            }
+
+            if (!targetComic) {
+              const combinedLooseTags = new Set(extraTags);
+              looseImageItems.forEach(img => extractDriveFileTags(img).forEach(t => combinedLooseTags.add(t)));
+              targetComic = {
+                id: generateId('comic'),
+                title: customComicTitle || 'Cómic Importado de Drive',
+                tags: normalizeTags(Array.from(combinedLooseTags)),
+                coverUrl: '',
+                coverDriveId: looseImageItems[0].id,
+                createdAt: now,
+                pages: []
+              };
+              artist.comics.unshift(targetComic);
+            }
+
+            const targetComicDriveFolder = alsoMoveInDrive ? await ensureTargetFolderForContext('comics', artist, targetComic) : null;
+
+            for (let i = 0; i < looseImageItems.length; i++) {
+              const img = looseImageItems[i];
+              const targetId = (img.mimeType === 'application/vnd.google-apps.shortcut' && img.shortcutDetails)
+                ? img.shortcutDetails.targetId
+                : img.id;
+              const pgTags = normalizeTags([...(targetComic.tags || []), ...extractDriveFileTags(img), ...extraTags]);
+              targetComic.pages.push({
+                id: generateId('page'),
+                title: (img.name || `Página ${i + 1}`).replace(/\.[^/.]+$/, ''),
+                driveId: targetId,
+                url: '',
+                size: Number(img.size) || 0,
+                tags: pgTags,
+                createdAt: now + i
+              });
+              await updateDriveFileTagsMetadata(targetId, pgTags);
+              if (targetComicDriveFolder) await moveDriveFileIntoFolderIfNeeded({ ...img, id: targetId }, targetComicDriveFolder);
+              importedCount++;
+            }
+          }
+        }
+
+        await persistLibrary(`Pasados ${importedCount} elemento(s) desde Drive a ${artist.name} (${section})`);
+        closeModal('drive-to-app-modal');
+        driveBrowserState.selectedIds.clear();
+        await indexAndUnifyAllDriveTags();
+        renderAll();
+        showToast(`✅ ${importedCount} elemento(s) pasados a "${artist.name}" respetando todos sus tags`);
+      } catch (e) {
+        console.error('Error pasando de Drive a Mi App:', e);
+        showToast('⚠️ Error al pasar los elementos a la app');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✅ Pasar a Mi App';
       }
     }
 
