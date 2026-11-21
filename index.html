@@ -659,8 +659,8 @@
       activityLogFileId: null,
       driveBlobCache: new Map(),
       driveSizeCache: new Map(),
-      driveTagsIndex: new Map(), // driveId -> string[] (tags unificados desde Drive + App)
-      driveAllTaggedFiles: [],   // lista completa de archivos etiquetados en Drive
+      driveTagsIndex: new Map(),
+      driveAllTaggedFiles: [],
       imageHashCache: new Map(),
       untrackedFiles: []
     };
@@ -670,7 +670,7 @@
       artistId: null,
       comicId: null,
       search: '',
-      activeTag: null,
+      activeTags: [],
       sortBy: 'date-desc',
       page: 1,
       compactGrid: false,
@@ -679,14 +679,15 @@
       selectedImageIds: new Set()
     };
 
-    // Resultados de la búsqueda profunda unificada por Tag (Comics, Artistas, Historia, Drive)
+    // Resultados de la búsqueda profunda unificada por Tags (Comics, Artistas, Historia, Drive)
     let unifiedTagResults = {
-      tag: null,
+      tags: [],
       loading: false,
       comics: [],
       artistas: [],
       historia: [],
-      drive: []
+      drive: [],
+      expandedSections: { comics: false, artistas: false, historia: false, drive: false }
     };
 
     // Estado del Explorador Directo de Google Drive
@@ -1411,7 +1412,6 @@
 
         driveConfig.driveAllTaggedFiles = taggedList;
 
-        // Unificar bidireccionalmente con los elementos ya vinculados en la app
         let catalogChanged = false;
         const mergeIntoCatalogItem = (item) => {
           if (!item || !item.driveId) return;
@@ -2038,50 +2038,49 @@
       return normalizeTags([...rawDriveTags, ...fromIndex, ...fromCatalog]);
     }
 
-    // Ejecuta una búsqueda profunda en toda la biblioteca (Comics, Artistas, Historia) y todo Google Drive
-    async function runDeepUnifiedTagSearch(tag) {
-      const cleanTag = normalizeTags([tag])[0];
-      if (!cleanTag) {
-        unifiedTagResults.tag = null;
+    // Ejecuta una búsqueda profunda en toda la biblioteca (Comics, Artistas, Historia) y todo Google Drive para múltiples tags
+    async function runDeepUnifiedTagSearch(tagsList) {
+      const cleanTags = normalizeTags(tagsList);
+      if (!cleanTags.length) {
+        unifiedTagResults.tags = [];
         return;
       }
 
+      const matchesAllSelectedTags = (itemTags) => {
+        const norm = normalizeTags(itemTags);
+        return cleanTags.every(req => norm.includes(req));
+      };
+
       unifiedTagResults = {
-        tag: cleanTag,
+        tags: cleanTags,
         loading: true,
         comics: [],
         artistas: [],
         historia: [],
-        drive: []
+        drive: [],
+        expandedSections: { comics: false, artistas: false, historia: false, drive: false }
       };
 
       const seenDriveIdsInCatalog = new Set();
 
-      // 1. Buscar profundamente en COMICS (artistas, cómics y cada página)
+      // 1. Buscar profundamente en COMICS (solo mostrar tarjeta/portada del cómic, sin inundar con páginas sueltas)
       for (const artist of (libraryData.comics || [])) {
-        const artistHasTag = normalizeTags(artist.tags).includes(cleanTag);
+        const artistTags = normalizeTags(artist.tags);
         for (const comic of (artist.comics || [])) {
-          const comicHasTag = artistHasTag || normalizeTags(comic.tags).includes(cleanTag);
-          const matchingPages = (comic.pages || []).filter(p =>
-            comicHasTag || normalizeTags(p.tags).includes(cleanTag)
+          const combinedComicTags = normalizeTags([...artistTags, ...(comic.tags || [])]);
+          const anyPageMatches = (comic.pages || []).some(p =>
+            matchesAllSelectedTags([...combinedComicTags, ...(p.tags || [])])
           );
 
-          if (comicHasTag || matchingPages.length > 0) {
+          if (matchesAllSelectedTags(combinedComicTags) || anyPageMatches) {
+            if (comic.coverDriveId) seenDriveIdsInCatalog.add(comic.coverDriveId);
+            for (const p of (comic.pages || [])) {
+              if (p.driveId) seenDriveIdsInCatalog.add(p.driveId);
+            }
             unifiedTagResults.comics.push({
               kind: 'comic',
               artist,
-              comic,
-              matchingPagesCount: matchingPages.length
-            });
-          }
-
-          for (const p of matchingPages) {
-            if (p.driveId) seenDriveIdsInCatalog.add(p.driveId);
-            unifiedTagResults.comics.push({
-              kind: 'page',
-              artist,
-              comic,
-              page: p
+              comic
             });
           }
         }
@@ -2089,15 +2088,15 @@
 
       // 2. Buscar profundamente en ARTISTAS (artistas y cada ilustración de su galería)
       for (const artist of (libraryData.artistas || [])) {
-        const artistHasTag = normalizeTags(artist.tags).includes(cleanTag);
-        if (artistHasTag) {
+        const artistTags = normalizeTags(artist.tags);
+        if (matchesAllSelectedTags(artistTags)) {
           unifiedTagResults.artistas.push({
             kind: 'artist',
             artist
           });
         }
         for (const img of (artist.images || [])) {
-          if (artistHasTag || normalizeTags(img.tags).includes(cleanTag)) {
+          if (matchesAllSelectedTags([...artistTags, ...(img.tags || [])])) {
             if (img.driveId) seenDriveIdsInCatalog.add(img.driveId);
             unifiedTagResults.artistas.push({
               kind: 'image',
@@ -2110,15 +2109,15 @@
 
       // 3. Buscar profundamente en HISTORIA (autores y cada archivo/texto)
       for (const artist of (libraryData.historia || [])) {
-        const artistHasTag = normalizeTags(artist.tags).includes(cleanTag);
-        if (artistHasTag) {
+        const artistTags = normalizeTags(artist.tags);
+        if (matchesAllSelectedTags(artistTags)) {
           unifiedTagResults.historia.push({
             kind: 'artist',
             artist
           });
         }
         for (const st of (artist.items || [])) {
-          if (artistHasTag || normalizeTags(st.tags).includes(cleanTag)) {
+          if (matchesAllSelectedTags([...artistTags, ...(st.tags || [])])) {
             if (st.driveId) seenDriveIdsInCatalog.add(st.driveId);
             unifiedTagResults.historia.push({
               kind: 'story',
@@ -2132,7 +2131,7 @@
       // 4. Buscar profundamente en GOOGLE DRIVE (índice en memoria + consulta API en vivo)
       const driveFoundMap = new Map();
       for (const f of (driveConfig.driveAllTaggedFiles || [])) {
-        if (extractDriveFileTags(f).includes(cleanTag)) {
+        if (matchesAllSelectedTags(extractDriveFileTags(f))) {
           driveFoundMap.set(f.id, f);
         }
       }
@@ -2141,18 +2140,19 @@
 
       if (driveConfig.accessToken) {
         try {
-          const escaped = cleanTag.replace(/'/g, "\\'");
-          const q = encodeURIComponent(`trashed=false and (description contains '${escaped}' or appProperties has { key='tags' and value='${escaped}' })`);
+          const primaryTag = cleanTags[0].replace(/'/g, "\\'");
+          const q = encodeURIComponent(`trashed=false and (description contains '${primaryTag}' or appProperties has { key='tags' and value='${primaryTag}' })`);
           const baseUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
           const liveFiles = await driveFetchAllPages(baseUrl);
           for (const f of liveFiles) {
-            if (extractDriveFileTags(f).includes(cleanTag)) {
+            const fTags = extractDriveFileTags(f);
+            if (matchesAllSelectedTags(fTags)) {
               driveFoundMap.set(f.id, f);
-              driveConfig.driveTagsIndex.set(f.id, extractDriveFileTags(f));
+              driveConfig.driveTagsIndex.set(f.id, fTags);
             }
           }
         } catch (e) {
-          console.warn('Error en consulta en vivo de Drive para tag:', cleanTag, e);
+          console.warn('Error en consulta en vivo de Drive para tags:', cleanTags, e);
         }
       }
 
@@ -2165,8 +2165,8 @@
     }
 
     function clearUnifiedTagSearch() {
-      state.activeTag = null;
-      unifiedTagResults.tag = null;
+      state.activeTags = [];
+      unifiedTagResults.tags = [];
       driveBrowserState.isGlobalTagSearch = false;
       renderAll();
     }
@@ -2275,8 +2275,8 @@
 
     function exitDriveGlobalTagSearch() {
       driveBrowserState.isGlobalTagSearch = false;
-      state.activeTag = null;
-      unifiedTagResults.tag = null;
+      state.activeTags = [];
+      unifiedTagResults.tags = [];
       const currentFolder = driveBrowserState.path[driveBrowserState.path.length - 1];
       loadDriveBrowserFolder(currentFolder ? currentFolder.id : 'root');
     }
@@ -2336,8 +2336,8 @@
 
     function openDriveBrowserFolder(folderId, folderName) {
       driveBrowserState.isGlobalTagSearch = false;
-      state.activeTag = null;
-      unifiedTagResults.tag = null;
+      state.activeTags = [];
+      unifiedTagResults.tags = [];
       const existingIdx = driveBrowserState.path.findIndex(p => p.id === folderId);
       if (existingIdx >= 0) {
         driveBrowserState.path = driveBrowserState.path.slice(0, existingIdx + 1);
@@ -2353,8 +2353,8 @@
         return;
       }
       driveBrowserState.isGlobalTagSearch = false;
-      state.activeTag = null;
-      unifiedTagResults.tag = null;
+      state.activeTags = [];
+      unifiedTagResults.tags = [];
       driveBrowserState.path = [
         { id: 'root', name: 'Mi Unidad' },
         { id: driveConfig.rootFolderId, name: ROOT_FOLDER_NAME }
@@ -2372,7 +2372,9 @@
     function selectAllDriveBrowserItems(selectAll) {
       driveBrowserState.selectedIds.clear();
       if (selectAll) {
-        const sourceList = driveBrowserState.isGlobalTagSearch ? driveBrowserState.globalTagResults : driveBrowserState.items;
+        const sourceList = state.activeTags.length > 0
+          ? unifiedTagResults.drive
+          : (driveBrowserState.isGlobalTagSearch ? driveBrowserState.globalTagResults : driveBrowserState.items);
         sourceList.forEach(f => driveBrowserState.selectedIds.add(f.id));
       }
       renderAll();
@@ -2456,8 +2458,8 @@
         driveBrowserState.folderCoverCache.clear();
         showToast(`🗑️ ${ids.length} elemento(s) enviados a la papelera`);
 
-        if (driveBrowserState.isGlobalTagSearch && state.activeTag) {
-          await searchDriveBrowserByTagGlobal(state.activeTag);
+        if (state.activeTags.length > 0) {
+          await runDeepUnifiedTagSearch(state.activeTags);
           return;
         }
 
@@ -2482,6 +2484,10 @@
     async function deleteSingleDriveBrowserItem(fileId, fileName, isFolder) {
       if (isFolder) {
         await deleteDriveFolderIfEmpty(fileId, fileName, true);
+        if (state.activeTags.length > 0) {
+          await runDeepUnifiedTagSearch(state.activeTags);
+          return;
+        }
         const currentFolder = driveBrowserState.path[driveBrowserState.path.length - 1];
         await loadDriveBrowserFolder(currentFolder.id);
         return;
@@ -2503,8 +2509,8 @@
       driveBrowserState.folderCoverCache.clear();
       showToast(`🗑️ "${fileName}" enviado a la papelera`);
 
-      if (driveBrowserState.isGlobalTagSearch && state.activeTag) {
-        await searchDriveBrowserByTagGlobal(state.activeTag);
+      if (state.activeTags.length > 0) {
+        await runDeepUnifiedTagSearch(state.activeTags);
         return;
       }
 
@@ -2564,7 +2570,7 @@
         driveBrowserState.moveFolders = folders;
 
         if (!folders.length) {
-          listEl.innerHTML = '<div class="text-xs text-slate-500 py-6 text-center">Sin subcarpetas dentro. Pulsa "Mover aquí" para mover a esta carpeta.</div>';
+          listEl.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center">No hay más subcarpetas aquí. Pulsa "Mover aquí" o crea una nueva.</div>';
           return;
         }
 
@@ -2612,7 +2618,7 @@
       btn.textContent = 'Moviendo...';
 
       const sourceItemsMap = new Map(
-        (driveBrowserState.isGlobalTagSearch ? driveBrowserState.globalTagResults : driveBrowserState.items)
+        (state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items)
           .map(f => [f.id, f])
       );
 
@@ -2628,8 +2634,8 @@
         driveBrowserState.folderCoverCache.clear();
         showToast(`📁 ${ids.length} elemento(s) movidos a "${targetFolder.name}"`);
 
-        if (driveBrowserState.isGlobalTagSearch && state.activeTag) {
-          await searchDriveBrowserByTagGlobal(state.activeTag);
+        if (state.activeTags.length > 0) {
+          await runDeepUnifiedTagSearch(state.activeTags);
           return;
         }
 
@@ -2679,7 +2685,7 @@
       btn.disabled = true;
       btn.textContent = 'Guardando...';
 
-      const sourceList = driveBrowserState.isGlobalTagSearch ? driveBrowserState.globalTagResults : driveBrowserState.items;
+      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
 
       try {
         let catalogUpdated = false;
@@ -2726,8 +2732,8 @@
 
         closeModal('drive-browser-tag-modal');
         showToast(`🏷️ Tags guardados en ${ids.length} archivo(s) de Drive`);
-        if (driveBrowserState.isGlobalTagSearch && state.activeTag) {
-          await searchDriveBrowserByTagGlobal(state.activeTag);
+        if (state.activeTags.length) {
+          await runDeepUnifiedTagSearch(state.activeTags);
         } else {
           await loadDriveBrowserFolder(driveBrowserState.path[driveBrowserState.path.length - 1].id);
         }
@@ -2740,7 +2746,7 @@
     }
 
     function openDriveBrowserFilePreview(fileId, explicitSourceList = null) {
-      const sourceList = explicitSourceList || (driveBrowserState.isGlobalTagSearch ? driveBrowserState.globalTagResults : driveBrowserState.items);
+      const sourceList = explicitSourceList || (state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items);
       const file = sourceList.find(f => f.id === fileId);
       if (!file) return;
 
@@ -3297,8 +3303,8 @@
 
       closeModal('edit-tags-modal');
       await persistLibrary('Actualizados tags/título');
-      if (state.activeTag) {
-        await runDeepUnifiedTagSearch(state.activeTag);
+      if (state.activeTags.length) {
+        await runDeepUnifiedTagSearch(state.activeTags);
       } else {
         renderAll();
       }
@@ -3492,8 +3498,8 @@
 
       driveBrowserState.folderCoverCache.clear();
       await persistLibrary('Eliminado elemento de la biblioteca y de Drive');
-      if (state.activeTag) {
-        await runDeepUnifiedTagSearch(state.activeTag);
+      if (state.activeTags.length) {
+        await runDeepUnifiedTagSearch(state.activeTags);
       } else {
         renderAll();
       }
@@ -3507,8 +3513,8 @@
       state.page = 1;
       state.bulkSelectMode = false;
       state.selectedImageIds.clear();
-      state.activeTag = null;
-      unifiedTagResults.tag = null;
+      state.activeTags = [];
+      unifiedTagResults.tags = [];
       driveBrowserState.isGlobalTagSearch = false;
       toggleSidebar(false);
       renderAll();
@@ -3526,8 +3532,8 @@
       state.page = 1;
       state.bulkSelectMode = false;
       state.selectedImageIds.clear();
-      state.activeTag = null;
-      unifiedTagResults.tag = null;
+      state.activeTags = [];
+      unifiedTagResults.tags = [];
       renderAll();
     }
 
@@ -3536,8 +3542,8 @@
       state.artistId = artistId;
       state.comicId = comicId;
       state.page = 1;
-      state.activeTag = null;
-      unifiedTagResults.tag = null;
+      state.activeTags = [];
+      unifiedTagResults.tags = [];
       renderAll();
     }
 
@@ -3556,16 +3562,20 @@
     function toggleTagFilter(tag) {
       const clean = normalizeTags([tag])[0];
       if (!clean) return;
-      const nextTag = state.activeTag === clean ? null : clean;
-      state.activeTag = nextTag;
+      const idx = state.activeTags.indexOf(clean);
+      if (idx >= 0) {
+        state.activeTags.splice(idx, 1);
+      } else {
+        state.activeTags.push(clean);
+      }
       state.page = 1;
 
-      if (!nextTag) {
+      if (!state.activeTags.length) {
         clearUnifiedTagSearch();
         return;
       }
 
-      runDeepUnifiedTagSearch(nextTag);
+      runDeepUnifiedTagSearch(state.activeTags);
     }
 
     function handleSort(val) {
@@ -3649,7 +3659,7 @@
 
     function getCurrentContextImageItemsForSimilarity() {
       if (state.section === 'drive-browser') {
-        const rawSource = driveBrowserState.isGlobalTagSearch ? driveBrowserState.globalTagResults : driveBrowserState.items;
+        const rawSource = driveBrowserState.items;
         return rawSource.filter(f => {
           const m = (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails)
             ? (f.shortcutDetails.targetMimeType || '')
@@ -3790,9 +3800,9 @@
     }
 
     function matchesSearchAndTag(nameOrTitle, tags = [], extraText = '') {
-      if (state.activeTag) {
+      if (state.activeTags.length > 0) {
         const normalized = normalizeTags(tags);
-        if (!normalized.includes(state.activeTag)) return false;
+        if (!state.activeTags.every(t => normalized.includes(t))) return false;
       }
       if (!state.search) return true;
       const q = state.search.replace(/^#+/, '');
@@ -3867,7 +3877,6 @@
         }
       }
 
-      // Añadir también los tags de archivos de Google Drive que aún no estén en el catálogo local
       for (const [dId, dTags] of driveConfig.driveTagsIndex.entries()) {
         if (!seenDriveIds.has(dId)) {
           seenDriveIds.add(dId);
@@ -3927,25 +3936,33 @@
     function renderTagCloud() {
       const wrapper = document.getElementById('tag-cloud-wrapper');
       const allTags = getAllTagCounts();
-      if (!allTags.length && !state.activeTag) {
+      if (!allTags.length && !state.activeTags.length) {
         wrapper.innerHTML = '';
         return;
       }
 
+      const activeSet = new Set(state.activeTags);
       const limit = state.expandTags ? allTags.length : 14;
       const shown = allTags.slice(0, limit);
 
       let html = '';
-      if (state.activeTag) {
+      if (state.activeTags.length > 0) {
         html += `
-          <button onclick="clearUnifiedTagSearch()" class="shrink-0 px-2.5 py-1 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center gap-1 shadow">
-            #${escapeHtml(state.activeTag)} <span>✕</span>
+          <button onclick="clearUnifiedTagSearch()" title="Quitar todos los filtros" class="shrink-0 px-2.5 py-1 rounded-full bg-rose-600/85 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1 shadow">
+            Limpiar (${state.activeTags.length}) ✕
           </button>
         `;
+        for (const activeT of state.activeTags) {
+          html += `
+            <button onclick="toggleTagFilter('${escapeHtml(activeT)}')" class="shrink-0 px-2.5 py-1 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center gap-1 shadow">
+              #${escapeHtml(activeT)} <span>✕</span>
+            </button>
+          `;
+        }
       }
 
       for (const [tag, count] of shown) {
-        if (tag === state.activeTag) continue;
+        if (activeSet.has(tag)) continue;
         html += `
           <button onclick="toggleTagFilter('${escapeHtml(tag)}')" class="shrink-0 px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300">
             #${escapeHtml(tag)} <span class="text-slate-500 text-[10px]">${count}</span>
@@ -3969,7 +3986,7 @@
       renderTagCloud();
 
       const bulkBar = document.getElementById('bulk-select-bar');
-      if (state.section === 'artistas' && state.artistId && !state.activeTag && (state.bulkSelectMode || state.selectedImageIds.size > 0)) {
+      if (state.section === 'artistas' && state.artistId && !state.activeTags.length && (state.bulkSelectMode || state.selectedImageIds.size > 0)) {
         bulkBar.classList.remove('hidden');
         bulkBar.classList.add('flex');
         document.getElementById('bulk-selected-count').textContent = state.selectedImageIds.size;
@@ -3979,7 +3996,7 @@
       }
 
       const driveBulkBar = document.getElementById('drive-bulk-bar');
-      if ((state.section === 'drive-browser' || state.activeTag) && driveBrowserState.selectedIds.size > 0) {
+      if ((state.section === 'drive-browser' || state.activeTags.length > 0) && driveBrowserState.selectedIds.size > 0) {
         driveBulkBar.classList.remove('hidden');
         driveBulkBar.classList.add('flex');
         document.getElementById('drive-selected-count').textContent = driveBrowserState.selectedIds.size;
@@ -3999,8 +4016,8 @@
       paginationTop.innerHTML = '';
       pagination.innerHTML = '';
 
-      // VISTA DE BÚSQUEDA PROFUNDA UNIFICADA POR TAG (AGRUPADA POR SECCIONES)
-      if (state.activeTag && unifiedTagResults.tag) {
+      // VISTA DE BÚSQUEDA PROFUNDA UNIFICADA POR TAGS (AGRUPADA POR SECCIONES, MÁX. 20 POR BLOQUE)
+      if (state.activeTags.length > 0 && unifiedTagResults.tags.length > 0) {
         renderUnifiedTagSearchResultsView(breadcrumb, actions, grid);
         hydrateDriveImages();
         return;
@@ -4382,10 +4399,16 @@
     }
 
     // =========================================================================
-    // VISTA AGRUPADA POR SECCIONES: COMICS, ARTISTAS, HISTORIA Y GOOGLE DRIVE
+    // VISTA AGRUPADA POR SECCIONES: COMICS (SOLO PORTADA), ARTISTAS, HISTORIA Y DRIVE (MÁX. 20 C/U)
     // =========================================================================
+    function toggleUnifiedSectionExpand(sectionKey) {
+      unifiedTagResults.expandedSections[sectionKey] = !unifiedTagResults.expandedSections[sectionKey];
+      renderAll();
+    }
+
     function renderUnifiedTagSearchResultsView(breadcrumb, actions, grid) {
-      const tag = unifiedTagResults.tag;
+      const MAX_PER_BLOCK = 20;
+      const tags = unifiedTagResults.tags;
       const comicsRes = unifiedTagResults.comics || [];
       const artistasRes = unifiedTagResults.artistas || [];
       const historiaRes = unifiedTagResults.historia || [];
@@ -4394,86 +4417,73 @@
       const totalCount = comicsRes.length + artistasRes.length + historiaRes.length + driveRes.length;
 
       breadcrumb.innerHTML = `
-        <span class="font-bold text-white">🏷️ Búsqueda profunda:</span>
-        <span class="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-bold">#${escapeHtml(tag)}</span>
-        <span class="text-xs text-slate-400">(${totalCount} coincidencia(s) en App y Drive)</span>
+        <span class="font-bold text-white">🏷️ Filtro activo:</span>
+        ${tags.map(t => `<span class="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-bold">#${escapeHtml(t)}</span>`).join('')}
+        <span class="text-xs text-slate-400">(${totalCount} coincidencia(s))</span>
       `;
 
       actions.innerHTML = `
         <button onclick="clearUnifiedTagSearch()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-indigo-300">
-          ✕ Cerrar filtro de tag
+          ✕ Cerrar filtro de tags
         </button>
       `;
 
       if (unifiedTagResults.loading && totalCount === 0) {
-        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-indigo-300">Buscando #${escapeHtml(tag)} en Comics, Artistas, Historia y Google Drive...</div>`;
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-indigo-300">Buscando ${tags.map(t => '#' + escapeHtml(t)).join(' + ')} en Comics, Artistas, Historia y Google Drive...</div>`;
         return;
       }
 
       if (totalCount === 0) {
-        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">No se encontraron elementos con el tag #${escapeHtml(tag)} en ninguna sección ni en Google Drive.</div>`;
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">No se encontraron elementos con ${tags.map(t => '#' + escapeHtml(t)).join(' + ')} en ninguna sección ni en Google Drive.</div>`;
         return;
       }
 
       let sectionsHtml = '';
 
-      // 1. SECCIÓN COMICS
+      // 1. SECCIÓN COMICS (SOLO PORTADA / CARPETA DEL CÓMIC, MÁXIMO 20)
       if (comicsRes.length > 0) {
+        const isExpanded = unifiedTagResults.expandedSections.comics;
+        const visibleComics = isExpanded ? comicsRes : comicsRes.slice(0, MAX_PER_BLOCK);
         sectionsHtml += `
-          <div class="col-span-full pt-1 pb-1 border-b border-slate-800 flex items-center justify-between">
-            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">💬 Comics <span class="px-2 py-0.5 rounded-full bg-indigo-600/30 text-indigo-200 text-xs">${comicsRes.length}</span></h2>
+          <div class="col-span-full pt-1 pb-1 border-b border-slate-800 flex items-center justify-between gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">💬 Comics <span class="px-2 py-0.5 rounded-full bg-indigo-600/30 text-indigo-200 text-xs">${visibleComics.length} de ${comicsRes.length}</span></h2>
+            ${comicsRes.length > MAX_PER_BLOCK ? `<button onclick="toggleUnifiedSectionExpand('comics')" class="text-xs font-semibold text-indigo-300 hover:underline">${isExpanded ? 'Mostrar top 20 ▲' : `Ver todos (${comicsRes.length}) ▼`}</button>` : ''}
           </div>
         `;
-        sectionsHtml += comicsRes.map(entry => {
-          if (entry.kind === 'comic') {
-            const { artist, comic } = entry;
-            const firstPage = (comic.pages || [])[0] || {};
-            const cover = { driveId: comic.coverDriveId || firstPage.driveId || '', url: comic.coverUrl || firstPage.url || '' };
-            return `
-              <div onclick="openComic('${artist.id}', '${comic.id}')" class="card-hover relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-indigo-500/60 cursor-pointer flex flex-col">
-                <div class="relative flex-1 bg-slate-800/80 overflow-hidden">
-                  ${renderCoverMediaHtml(cover, '💬')}
-                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent"></div>
-                  <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-indigo-600/90 text-[10px] font-bold text-white">Cómic</span>
-                  <div class="absolute bottom-2.5 left-3 right-3">
-                    <div class="font-bold text-sm text-white truncate">${escapeHtml(comic.title)}</div>
-                    <div class="text-[11px] text-slate-300 truncate">${escapeHtml(artist.name)} • ${(comic.pages || []).length} págs</div>
-                    <div class="flex flex-wrap gap-1 mt-1">
-                      ${(comic.tags || []).slice(0, 3).map(t => `<span class="px-1.5 py-0.5 rounded bg-indigo-500/25 text-indigo-200 text-[9px]">#${escapeHtml(t)}</span>`).join('')}
-                    </div>
+        sectionsHtml += visibleComics.map(entry => {
+          const { artist, comic } = entry;
+          const firstPage = (comic.pages || [])[0] || {};
+          const cover = { driveId: comic.coverDriveId || firstPage.driveId || '', url: comic.coverUrl || firstPage.url || '' };
+          return `
+            <div onclick="openComic('${artist.id}', '${comic.id}')" class="card-hover relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-indigo-500/60 cursor-pointer flex flex-col">
+              <div class="relative flex-1 bg-slate-800/80 overflow-hidden">
+                ${renderCoverMediaHtml(cover, '💬')}
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent"></div>
+                <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-indigo-600/90 text-[10px] font-bold text-white">Cómic</span>
+                <div class="absolute bottom-2.5 left-3 right-3">
+                  <div class="font-bold text-sm text-white truncate">${escapeHtml(comic.title)}</div>
+                  <div class="text-[11px] text-slate-300 truncate">${escapeHtml(artist.name)} • ${(comic.pages || []).length} págs</div>
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    ${(comic.tags || []).slice(0, 3).map(t => `<span class="px-1.5 py-0.5 rounded bg-indigo-500/25 text-indigo-200 text-[9px]">#${escapeHtml(t)}</span>`).join('')}
                   </div>
                 </div>
               </div>
-            `;
-          } else {
-            const { artist, comic, page } = entry;
-            const sizeLabel = formatFileSize(getItemEffectiveSize(page));
-            return `
-              <div onclick='openLightbox([${JSON.stringify(page).replace(/'/g, '&#39;')}], 0)' class="card-hover relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-indigo-500/60 cursor-pointer flex flex-col">
-                <div class="relative flex-1 bg-slate-800/80 overflow-hidden">
-                  ${renderCoverMediaHtml(page, '📄')}
-                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
-                  <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 text-[10px] font-bold text-indigo-300">Página</span>
-                  ${sizeLabel ? `<span class="absolute bottom-11 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] font-semibold text-indigo-200">${sizeLabel}</span>` : ''}
-                  <div class="absolute bottom-2 left-2.5 right-2.5">
-                    <div class="text-xs font-semibold text-white truncate">${escapeHtml(page.title)}</div>
-                    <div class="text-[10px] text-slate-400 truncate">${escapeHtml(comic.title)} • ${escapeHtml(artist.name)}</div>
-                  </div>
-                </div>
-              </div>
-            `;
-          }
+            </div>
+          `;
         }).join('');
       }
 
-      // 2. SECCIÓN ARTISTAS
+      // 2. SECCIÓN ARTISTAS (MÁXIMO 20)
       if (artistasRes.length > 0) {
+        const isExpanded = unifiedTagResults.expandedSections.artistas;
+        const visibleArtistas = isExpanded ? artistasRes : artistasRes.slice(0, MAX_PER_BLOCK);
         sectionsHtml += `
-          <div class="col-span-full pt-4 pb-1 border-b border-slate-800 flex items-center justify-between">
-            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">🎨 Artistas <span class="px-2 py-0.5 rounded-full bg-purple-600/30 text-purple-200 text-xs">${artistasRes.length}</span></h2>
+          <div class="col-span-full pt-4 pb-1 border-b border-slate-800 flex items-center justify-between gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">🎨 Artistas <span class="px-2 py-0.5 rounded-full bg-purple-600/30 text-purple-200 text-xs">${visibleArtistas.length} de ${artistasRes.length}</span></h2>
+            ${artistasRes.length > MAX_PER_BLOCK ? `<button onclick="toggleUnifiedSectionExpand('artistas')" class="text-xs font-semibold text-purple-300 hover:underline">${isExpanded ? 'Mostrar top 20 ▲' : `Ver todos (${artistasRes.length}) ▼`}</button>` : ''}
           </div>
         `;
-        sectionsHtml += artistasRes.map(entry => {
+        sectionsHtml += visibleArtistas.map(entry => {
           if (entry.kind === 'artist') {
             const { artist } = entry;
             const cover = getArtistPreviewCover('artistas', artist);
@@ -4510,14 +4520,17 @@
         }).join('');
       }
 
-      // 3. SECCIÓN HISTORIA
+      // 3. SECCIÓN HISTORIA (MÁXIMO 20)
       if (historiaRes.length > 0) {
+        const isExpanded = unifiedTagResults.expandedSections.historia;
+        const visibleHistoria = isExpanded ? historiaRes : historiaRes.slice(0, MAX_PER_BLOCK);
         sectionsHtml += `
-          <div class="col-span-full pt-4 pb-1 border-b border-slate-800 flex items-center justify-between">
-            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">📚 Historia <span class="px-2 py-0.5 rounded-full bg-amber-600/30 text-amber-200 text-xs">${historiaRes.length}</span></h2>
+          <div class="col-span-full pt-4 pb-1 border-b border-slate-800 flex items-center justify-between gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">📚 Historia <span class="px-2 py-0.5 rounded-full bg-amber-600/30 text-amber-200 text-xs">${visibleHistoria.length} de ${historiaRes.length}</span></h2>
+            ${historiaRes.length > MAX_PER_BLOCK ? `<button onclick="toggleUnifiedSectionExpand('historia')" class="text-xs font-semibold text-amber-300 hover:underline">${isExpanded ? 'Mostrar top 20 ▲' : `Ver todos (${historiaRes.length}) ▼`}</button>` : ''}
           </div>
         `;
-        sectionsHtml += historiaRes.map(entry => {
+        sectionsHtml += visibleHistoria.map(entry => {
           if (entry.kind === 'artist') {
             const { artist } = entry;
             return `
@@ -4547,15 +4560,20 @@
         }).join('');
       }
 
-      // 4. SECCIÓN GOOGLE DRIVE
+      // 4. SECCIÓN GOOGLE DRIVE (MÁXIMO 20)
       if (driveRes.length > 0 || unifiedTagResults.loading) {
+        const isExpanded = unifiedTagResults.expandedSections.drive;
+        const visibleDrive = isExpanded ? driveRes : driveRes.slice(0, MAX_PER_BLOCK);
         sectionsHtml += `
-          <div class="col-span-full pt-4 pb-1 border-b border-slate-800 flex items-center justify-between">
-            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">📂 Google Drive <span class="px-2 py-0.5 rounded-full bg-emerald-600/30 text-emerald-200 text-xs">${driveRes.length}</span></h2>
-            ${unifiedTagResults.loading ? '<span class="text-xs text-indigo-300">Buscando más en Drive...</span>' : ''}
+          <div class="col-span-full pt-4 pb-1 border-b border-slate-800 flex items-center justify-between gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">📂 Google Drive <span class="px-2 py-0.5 rounded-full bg-emerald-600/30 text-emerald-200 text-xs">${visibleDrive.length} de ${driveRes.length}</span></h2>
+            <div class="flex items-center gap-3">
+              ${unifiedTagResults.loading ? '<span class="text-xs text-indigo-300">Buscando más...</span>' : ''}
+              ${driveRes.length > MAX_PER_BLOCK ? `<button onclick="toggleUnifiedSectionExpand('drive')" class="text-xs font-semibold text-emerald-300 hover:underline">${isExpanded ? 'Mostrar top 20 ▲' : `Ver todos (${driveRes.length}) ▼`}</button>` : ''}
+            </div>
           </div>
         `;
-        sectionsHtml += driveRes.map(f => {
+        sectionsHtml += visibleDrive.map(f => {
           const isShortcut = f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails;
           const targetId = isShortcut ? f.shortcutDetails.targetId : f.id;
           const effectiveMime = isShortcut ? (f.shortcutDetails.targetMimeType || '') : (f.mimeType || '');
