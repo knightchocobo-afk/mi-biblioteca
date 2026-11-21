@@ -353,8 +353,9 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         <input id="import-new-artist-name" type="text" placeholder="O escribe nombre de artista nuevo..." class="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
-        <input id="import-tags-input" type="text" placeholder="Tags para todos (ej: sketch, nuevo)" class="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+        <input id="import-tags-input" type="text" oninput="handleTagInputSpellingCheck('import-tags-input', 'import-tags-spell-box')" placeholder="Tags para todos (ej: anthro, feline, male)" class="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
       </div>
+      <div id="import-tags-spell-box" class="hidden"></div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
         <button onclick="closeModal('drive-scanner-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium">Cancelar</button>
@@ -384,7 +385,8 @@
 
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">Tags del Artista (separados por coma)</label>
-          <input id="artist-tags-input" type="text" placeholder="fantasia, sci-fi, acuarela" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <input id="artist-tags-input" type="text" oninput="handleTagInputSpellingCheck('artist-tags-input', 'artist-tags-spell-box')" placeholder="anthro, canine, male" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <div id="artist-tags-spell-box" class="hidden mt-1.5"></div>
         </div>
 
         <div>
@@ -404,7 +406,7 @@
   <!-- MODAL 4: SUBIDA MÚLTIPLE (CÓMIC, PÁGINAS, IMÁGENES O HISTORIAS)       -->
   <!-- ===================================================================== -->
   <div id="upload-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl my-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h2 id="upload-modal-title" class="text-lg font-bold text-white">Subir Archivos</h2>
         <button onclick="closeModal('upload-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
@@ -437,8 +439,10 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags (separados por coma)</label>
-          <input id="upload-tags-input" type="text" placeholder="accion, color, capitulo1" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags (escribe o selecciona de las filas rápidas)</label>
+          <input id="upload-tags-input" type="text" oninput="onQuickTagManualInputChange('upload-tags-input', 'upload-quick-tag-picker', 'upload-tags-spell-box')" placeholder="male, tf, anthro, canine, wolf..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <div id="upload-tags-spell-box" class="hidden mt-1.5"></div>
+          <div id="upload-quick-tag-picker" class="mt-2"></div>
           <p id="upload-tags-hint" class="text-[11px] text-indigo-300/90 mt-1 hidden"></p>
         </div>
 
@@ -453,10 +457,10 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 5: EDITAR TAGS INDIVIDUAL (CHIPS ENCENDIDOS PARA QUITAR AL TOQUE)-->
+  <!-- MODAL 5: EDITAR TAGS INDIVIDUAL (CHIPS ENCENDIDOS + FILAS RÁPIDAS)    -->
   <!-- ===================================================================== -->
   <div id="edit-tags-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl my-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h2 id="edit-tags-modal-title" class="text-lg font-bold text-white">Editar Tags y Título</h2>
         <button onclick="closeModal('edit-tags-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
@@ -474,8 +478,10 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir nuevos tags (separados por coma)</label>
-          <input id="edit-tags-input" type="text" placeholder="ej: nuevo_tag, color" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir nuevos tags (escribe o toca en las filas rápidas):</label>
+          <input id="edit-tags-input" type="text" oninput="onQuickTagManualInputChange('edit-tags-input', 'edit-quick-tag-picker', 'edit-tags-spell-box')" placeholder="ej: male, anthro, feline, snowleopard" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <div id="edit-tags-spell-box" class="hidden mt-1.5"></div>
+          <div id="edit-quick-tag-picker" class="mt-2"></div>
         </div>
       </div>
 
@@ -487,10 +493,10 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 6: ETIQUETADO MASIVO (TODOS LOS TAGS ENCENDIDOS PARA QUITAR)    -->
+  <!-- MODAL 6: ETIQUETADO MASIVO (CHIPS ENCENDIDOS + FILAS RÁPIDAS)         -->
   <!-- ===================================================================== -->
   <div id="bulk-tag-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl my-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h2 class="text-lg font-bold text-white">🏷️ Tags de <span id="bulk-modal-count">0</span> imágenes</h2>
         <button onclick="closeModal('bulk-tag-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
@@ -499,12 +505,14 @@
       <div class="space-y-3">
         <div>
           <label class="block text-xs font-semibold text-indigo-300 mb-1.5">Tags encendidos en la selección (toca un tag para apagarlo y borrarlo de todas):</label>
-          <div id="bulk-active-tags-chips" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-950 border border-slate-800 max-h-36 overflow-y-auto min-h-[44px]"></div>
+          <div id="bulk-active-tags-chips" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-950 border border-slate-800 max-h-32 overflow-y-auto min-h-[44px]"></div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir nuevos tags a todas (separados por coma)</label>
-          <input id="bulk-add-tags-input" type="text" placeholder="ej: retratos, color, favorito" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir nuevos tags a todas (escribe o toca en las filas rápidas):</label>
+          <input id="bulk-add-tags-input" type="text" oninput="onQuickTagManualInputChange('bulk-add-tags-input', 'bulk-quick-tag-picker', 'bulk-tags-spell-box')" placeholder="ej: male, tf, canine, hellhound" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <div id="bulk-tags-spell-box" class="hidden mt-1.5"></div>
+          <div id="bulk-quick-tag-picker" class="mt-2"></div>
           <div id="bulk-top-tags-chips" class="flex flex-wrap gap-1.5 mt-2"></div>
         </div>
       </div>
@@ -548,10 +556,10 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 8: ETIQUETAR EN DRIVE (TODOS LOS TAGS ENCENDIDOS PARA QUITAR)   -->
+  <!-- MODAL 8: ETIQUETAR EN DRIVE (CHIPS ENCENDIDOS + FILAS RÁPIDAS)        -->
   <!-- ===================================================================== -->
   <div id="drive-browser-tag-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl my-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h2 class="text-lg font-bold text-white">🏷️ Tags en Drive (<span id="drive-tag-modal-count">0</span>)</h2>
         <button onclick="closeModal('drive-browser-tag-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
@@ -560,11 +568,13 @@
       <div class="space-y-3">
         <div>
           <label class="block text-xs font-semibold text-indigo-300 mb-1.5">Tags encendidos en los archivos elegidos (toca cualquiera para quitarlo de todos lados):</label>
-          <div id="drive-browser-active-tags-chips" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-950 border border-slate-800 max-h-36 overflow-y-auto min-h-[44px]"></div>
+          <div id="drive-browser-active-tags-chips" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-950 border border-slate-800 max-h-32 overflow-y-auto min-h-[44px]"></div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir nuevos tags (separados por coma)</label>
-          <input id="drive-browser-add-tags" type="text" placeholder="ej: boceto, personaje, color" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">+ Añadir nuevos tags (escribe o toca en las filas rápidas):</label>
+          <input id="drive-browser-add-tags" type="text" oninput="onQuickTagManualInputChange('drive-browser-add-tags', 'drive-quick-tag-picker', 'drive-tags-spell-box')" placeholder="ej: anthro, equine, horse" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <div id="drive-tags-spell-box" class="hidden mt-1.5"></div>
+          <div id="drive-quick-tag-picker" class="mt-2"></div>
           <div id="drive-browser-top-tags" class="flex flex-wrap gap-1.5 mt-2"></div>
         </div>
         <p class="text-[11px] text-slate-400">Al quitar un tag encendido, se elimina tanto de Google Drive como de tus colecciones y cómics.</p>
@@ -654,6 +664,442 @@
 
   <script>
     // =========================================================================
+    // TAXONOMÍA DE TAGS POR FILAS + CORRECTOR ORTOGRÁFICO EN INGLÉS
+    // =========================================================================
+    const QUICK_TAG_ROW_1 = [
+      'anthro', 'ctf', 'female', 'feral', 'ftm', 'inanimate', 'male', 'mtf', 'no tf', 'tf', 'tftg'
+    ];
+
+    const QUICK_TAG_TAXONOMY = {
+      amphibians: [
+        'axolotl', 'bullfrog', 'caecilian', 'frog', 'gecko', 'newt', 'poison dart frog', 'salamander', 'toad', 'tree frog'
+      ],
+      birds: [
+        'albatross', 'barn owl', 'blue jay', 'canary', 'cassowary', 'chicken', 'cockatiel', 'cockatoo', 'condor',
+        'cormorant', 'crane', 'crow', 'dove', 'duck', 'eagle', 'emu', 'falcon', 'flamingo', 'goose', 'griffin',
+        'harpy', 'hawk', 'heron', 'hummingbird', 'ibis', 'kingfisher', 'kiwi', 'macaw', 'magpie', 'ostrich',
+        'owl', 'parakeet', 'parrot', 'peacock', 'pelican', 'penguin', 'peregrine falcon', 'pheasant', 'phoenix',
+        'pigeon', 'puffin', 'quail', 'raven', 'roadrunner', 'robin', 'rooster', 'seagull', 'secretary bird',
+        'shoebill', 'sparrow', 'stork', 'swallow', 'swan', 'toucan', 'turkey', 'vulture', 'woodpecker'
+      ],
+      canine: [
+        'afghan hound', 'akita', 'arctic fox', 'australian shepherd', 'basenji', 'basset hound', 'beagle',
+        'bernese mountain dog', 'bloodhound', 'border collie', 'borzoi', 'boxer', 'bulldog', 'cerberus',
+        'chihuahua', 'chow chow', 'cocker spaniel', 'corgi', 'coyote', 'dachshund', 'dalmatian', 'dhole',
+        'dingo', 'dire wolf', 'doberman', 'dog', 'fennec fox', 'fox', 'french bulldog', 'german shepherd',
+        'golden retriever', 'gray wolf', 'great dane', 'greyhound', 'hellhound', 'husky', 'jackal', 'kitsune',
+        'labrador', 'malamute', 'maned wolf', 'mastiff', 'newfoundland', 'pitbull', 'pomeranian', 'poodle',
+        'pug', 'red fox', 'rottweiler', 'saint bernard', 'samoyed', 'shiba inu', 'silver fox', 'spitz',
+        'terrier', 'timber wolf', 'werewolf', 'whippet', 'wolf'
+      ],
+      cervine: [
+        'antelope', 'axis deer', 'bighorn sheep', 'bison', 'blackbuck', 'buffalo', 'caribou', 'chamois',
+        'deer', 'dik-dik', 'doe', 'eland', 'elk', 'fallow deer', 'gazelle', 'gemsbok', 'giraffe', 'gnu',
+        'goat', 'ibex', 'impala', 'kudu', 'moose', 'mountain goat', 'mule deer', 'muntjac', 'muskox',
+        'nyala', 'okapi', 'oryx', 'pronghorn', 'ram', 'red deer', 'reindeer', 'roe deer', 'saiga',
+        'sambar', 'serow', 'sheep', 'sika deer', 'springbok', 'stag', 'takin', 'waterbuck', 'white-tailed deer', 'wildebeest'
+      ],
+      digimon: [
+        'agumon', 'angewomon', 'beelzemon', 'blackwargreymon', 'coronamon', 'dorugamon', 'flamedramon',
+        'gabumon', 'garurumon', 'gatomon', 'greymon', 'guilmon', 'impmon', 'leomon', 'lilithmon',
+        'lopmon', 'lucemon', 'metalgarurumon', 'metalgreymon', 'omnimon', 'patamon', 'renamon',
+        'seraphimon', 'terriermon', 'veemon', 'wargreymon', 'weregarurumon'
+      ],
+      dinosaur: [
+        'allosaurus', 'ankylosaurus', 'archaeopteryx', 'baryonyx', 'brachiosaurus', 'brontosaurus',
+        'carnotaurus', 'ceratosaurus', 'compsognathus', 'deinonychus', 'dilophosaurus', 'diplodocus',
+        'gallimimus', 'giganotosaurus', 'iguanodon', 'mosasaurus', 'oviraptor', 'pachycephalosaurus',
+        'parasaurolophus', 'plesiosaur', 'pteranodon', 'pterodactyl', 'quetzalcoatlus', 'raptor',
+        'spinosaurus', 'stegosaurus', 'therizinosaurus', 'triceratops', 'tyrannosaurus', 'utahraptor', 'velociraptor'
+      ],
+      equine: [
+        'alicorn', 'appaloosa', 'arabian horse', 'bronco', 'burro', 'centaur', 'clydesdale', 'colt',
+        'donkey', 'draft horse', 'falabella', 'filly', 'foal', 'friesian', 'gypsy vanner', 'horse',
+        'kelpie', 'mare', 'mule', 'mustang', 'onager', 'palomino', 'pegasus', 'percheron', 'pinto',
+        'pony', 'quarter horse', 'shetland pony', 'shire horse', 'stallion', 'thoroughbred', 'unicorn', 'zebra'
+      ],
+      feline: [
+        'abyssinian', 'african wildcat', 'asian golden cat', 'bengal', 'black panther', 'bobcat',
+        'british shorthair', 'calico', 'caracal', 'cat', 'cheetah', 'clouded leopard', 'cougar',
+        'egyptian mau', 'eurasian lynx', 'fishing cat', 'hellcat', 'iberian lynx', 'jaguar',
+        'jaguarundi', 'jungle cat', 'leopard', 'lion', 'lioness', 'lynx', 'maine coon', 'manul',
+        'margay', 'mountain lion', 'munchkin', 'nekomata', 'ocelot', 'pallas cat', 'panther',
+        'persian cat', 'puma', 'ragdoll', 'russian blue', 'sabretooth', 'sand cat', 'savannah cat',
+        'scottish fold', 'serval', 'siamese', 'siberian tiger', 'smilodon', 'snowleopard', 'sphynx',
+        'tabby', 'tiger', 'tigress', 'white tiger'
+      ],
+      insects: [
+        'ant', 'bee', 'beetle', 'bumblebee', 'butterfly', 'caterpillar', 'centipede', 'cicada',
+        'cockroach', 'cricket', 'dragonfly', 'firefly', 'flea', 'fly', 'grasshopper', 'hornet',
+        'ladybug', 'locust', 'mantis', 'millipede', 'mosquito', 'moth', 'praying mantis', 'rhinoceros beetle',
+        'scarab', 'scorpion', 'silkworm', 'spider', 'stag beetle', 'tarantula', 'termite', 'wasp'
+      ],
+      mustelids: [
+        'american badger', 'american marten', 'american mink', 'badger', 'beech marten', 'black-footed ferret',
+        'ermine', 'european badger', 'european mink', 'ferret', 'fisher', 'giant otter', 'grison',
+        'honey badger', 'least weasel', 'long-tailed weasel', 'marten', 'mink', 'otter', 'pine marten',
+        'polecat', 'river otter', 'sable', 'sea otter', 'skunk', 'stoat', 'tayra', 'weasel', 'wolverine', 'zorilla'
+      ],
+      myth: [
+        'alicorn', 'anubis', 'basilisk', 'behemoth', 'centaur', 'cerberus', 'chimera', 'cockatrice',
+        'cyclops', 'demon', 'drake', 'dragon', 'eastern dragon', 'elemental', 'elf', 'fairy',
+        'faun', 'fenrir', 'gargoyle', 'genie', 'ghoul', 'golem', 'gorgon', 'griffin', 'harpy',
+        'hellcat', 'hellhound', 'hippogriff', 'hydra', 'imp', 'jackalope', 'kelpie', 'kirin',
+        'kitsune', 'kobold', 'kraken', 'lamia', 'leviathan', 'lizardfolk', 'manticore', 'medusa',
+        'mermaid', 'merman', 'minotaur', 'naga', 'nekomata', 'ogre', 'oni', 'orc', 'pegasus',
+        'peryton', 'phoenix', 'pixie', 'satyr', 'sea serpent', 'selkie', 'siren', 'sphinx',
+        'succubus', 'tanuki', 'tengu', 'thunderbird', 'tiefling', 'troll', 'unicorn', 'vampire',
+        'wendigo', 'werebeast', 'werecat', 'werewolf', 'western dragon', 'wyrm', 'wyvern', 'yokai'
+      ],
+      'other mamals': [
+        'aardvark', 'alpaca', 'anteater', 'ape', 'armadillo', 'baboon', 'bandicoot', 'bat', 'bilby',
+        'boar', 'bonobo', 'bushbaby', 'camel', 'capuchin', 'chimpanzee', 'coati', 'colugo', 'cow',
+        'coypu', 'cuscus', 'dromedary', 'echidna', 'elephant', 'flying fox', 'flying squirrel', 'fossa',
+        'fruit bat', 'galago', 'gibbon', 'gorilla', 'hedgehog', 'hippo', 'hippopotamus', 'hog',
+        'hyena', 'hyrax', 'kangaroo', 'kinkajou', 'koala', 'lemur', 'llama', 'loris', 'macaque',
+        'mammoth', 'mandrill', 'marmoset', 'meerkat', 'mole', 'mongoose', 'monkey', 'numbat',
+        'opossum', 'orangutan', 'orycteropus', 'pangolin', 'peccary', 'pig', 'platypus', 'possum',
+        'quokka', 'quoll', 'raccoon', 'red panda', 'rhino', 'rhinoceros', 'ringtail', 'sloth',
+        'sugar glider', 'tapir', 'tarsier', 'tasmanian devil', 'tenrec', 'thylacine', 'vampire bat',
+        'vicuna', 'wallaby', 'warthog', 'wild boar', 'wombat', 'yak'
+      ],
+      pokemon: [
+        'absol', 'arcanine', 'blaziken', 'braixen', 'buizel', 'charizard', 'cinderace', 'delphox',
+        'dragonite', 'eevee', 'espeon', 'flareon', 'floatzel', 'flygon', 'furret', 'gardevoir',
+        'gengar', 'glaceon', 'goodra', 'greninja', 'growlithe', 'incineroar', 'inteleon', 'jolteon',
+        'leafeon', 'litten', 'lopunny', 'lucario', 'lugia', 'luxray', 'lycanroc', 'meowscarada',
+        'mew', 'mewtwo', 'mightyena', 'nickit', 'ninetales', 'noivern', 'pikachu', 'poochyena',
+        'raichu', 'reshiram', 'riolu', 'rockruff', 'salazzle', 'scorbunny', 'serperior', 'snivy',
+        'sylveon', 'thievul', 'typhlosion', 'umbreon', 'vaporeon', 'vulpix', 'weavile', 'zekrom',
+        'zeraora', 'zoroark', 'zorua'
+      ],
+      reptils: [
+        'adder', 'agama', 'alligator', 'anaconda', 'anole', 'basilisk lizard', 'bearded dragon',
+        'black mamba', 'blue-tongued skink', 'boa', 'caiman', 'chameleon', 'cobra', 'komodo dragon',
+        'copperhead', 'corn snake', 'crocodile', 'frilled lizard', 'garter snake', 'gecko', 'gharial',
+        'gila monster', 'green iguana', 'horned lizard', 'iguana', 'king cobra', 'lizard', 'monitor lizard',
+        'nile crocodile', 'python', 'rattlesnake', 'sea turtle', 'skink', 'snake', 'snapping turtle',
+        'tegu', 'terrapin', 'thorny devil', 'tortoise', 'tuatara', 'turtle', 'viper', 'water monitor'
+      ],
+      rodents: [
+        'agouti', 'beaver', 'bunny', 'capybara', 'chinchilla', 'chipmunk', 'cottontail', 'degu',
+        'dormouse', 'field mouse', 'gerbil', 'gopher', 'groundhog', 'guinea pig', 'hamster', 'hare',
+        'jackrabbit', 'jerboa', 'lemming', 'lop rabbit', 'marmot', 'mouse', 'muskrat', 'nutria',
+        'pika', 'porcupine', 'prairie dog', 'rabbit', 'rat', 'red squirrel', 'squirrel', 'vole', 'woodchuck'
+      ],
+      ursine: [
+        'andean bear', 'asiatic black bear', 'bear', 'black bear', 'brown bear', 'cave bear',
+        'cinnamon bear', 'grizzly', 'grizzly bear', 'kermode bear', 'kodiak bear', 'moon bear',
+        'panda', 'polar bear', 'short-faced bear', 'sloth bear', 'spectacled bear', 'sun bear', 'teddy bear'
+      ],
+      water: [
+        'anglerfish', 'axolotl', 'barracuda', 'beluga', 'blue whale', 'bottlenose dolphin', 'bull shark',
+        'carp', 'catfish', 'clownfish', 'cod', 'coelacanth', 'crab', 'cuttlefish', 'dolphin',
+        'dugong', 'eel', 'electric eel', 'elephant seal', 'fin whale', 'fish', 'fur seal', 'goldfish',
+        'great white shark', 'hammerhead shark', 'harbor seal', 'humpback whale', 'jellyfish',
+        'killer whale', 'koi', 'krill', 'leopard seal', 'lionfish', 'lobster', 'mako shark', 'manatee',
+        'manta ray', 'marlin', 'moray eel', 'narwhal', 'nautilus', 'octopus', 'orca', 'otter',
+        'piranha', 'platypus', 'porpoise', 'pufferfish', 'ray', 'salmon', 'sawfish', 'sea lion',
+        'sea otter', 'sea serpent', 'sea turtle', 'seahorse', 'seal', 'shark', 'shrimp', 'sperm whale',
+        'squid', 'starfish', 'stingray', 'sturgeon', 'swordfish', 'tiger shark', 'trout', 'tuna',
+        'walrus', 'whale', 'whale shark'
+      ]
+    };
+
+    const QUICK_TAG_ROW_2 = Object.keys(QUICK_TAG_TAXONOMY).sort((a, b) => a.localeCompare(b));
+
+    const ENGLISH_TAG_CORRECTIONS = {
+      // Fila 1
+      'femele': 'female', 'famale': 'female', 'femal': 'female', 'fem': 'female', 'mujer': 'female', 'hembra': 'female',
+      'mela': 'male', 'mal': 'male', 'hombre': 'male', 'macho': 'male',
+      'mtf': 'mtf', 'm2f': 'mtf', 'ftm': 'ftm', 'f2m': 'ftm', 'tgtf': 'tftg',
+      'notf': 'no tf', 'no-tf': 'no tf', 'non tf': 'no tf', 'nontf': 'no tf',
+      'ferral': 'feral', 'ferel': 'feral',
+      'antro': 'anthro', 'antho': 'anthro', 'anthr': 'anthro', 'antrho': 'anthro', 'furry': 'anthro',
+      'inanimte': 'inanimate', 'inanimat': 'inanimate', 'inanimado': 'inanimate', 'object': 'inanimate',
+      // Fila 2 familias
+      'canines': 'canine', 'canino': 'canine', 'caninos': 'canine',
+      'felines': 'feline', 'felino': 'feline', 'felinos': 'feline',
+      'equines': 'equine', 'equino': 'equine', 'equinos': 'equine',
+      'cervines': 'cervine', 'cervido': 'cervine', 'cervidos': 'cervine',
+      'ursines': 'ursine', 'ursino': 'ursine', 'osos': 'ursine',
+      'bird': 'birds', 'ave': 'birds', 'aves': 'birds', 'pajaro': 'birds', 'pajaros': 'birds', 'avian': 'birds',
+      'agua': 'water', 'aquatic': 'water', 'acuatico': 'water', 'marine': 'water', 'marino': 'water',
+      'rodent': 'rodents', 'roedor': 'rodents', 'roedores': 'rodents',
+      'reptil': 'reptils', 'reptile': 'reptils', 'reptiles': 'reptils',
+      'dinosaurs': 'dinosaur', 'dino': 'dinosaur', 'dinosaurio': 'dinosaur', 'dinosaurios': 'dinosaur',
+      'mythical': 'myth', 'mythic': 'myth', 'mitologico': 'myth', 'fantasy': 'myth',
+      'mustelid': 'mustelids', 'mustelido': 'mustelids', 'mustelidos': 'mustelids',
+      'insect': 'insects', 'insecto': 'insects', 'insectos': 'insects', 'bug': 'insects', 'bugs': 'insects',
+      'pokemons': 'pokemon', 'pokémon': 'pokemon',
+      'digimons': 'digimon',
+      'other mammals': 'other mamals', 'othermammals': 'other mamals', 'mammals': 'other mamals', 'mamiferos': 'other mamals',
+      // Especies comunes y errores frecuentes en inglés
+      'wolfe': 'wolf', 'wolve': 'wolf', 'lobo': 'wolf', 'werewolve': 'werewolf', 'hombre lobo': 'werewolf',
+      'helhound': 'hellhound', 'hell hound': 'hellhound',
+      'cerbero': 'cerberus', 'cerberuz': 'cerberus',
+      'helcat': 'hellcat', 'hell cat': 'hellcat',
+      'snow leopard': 'snowleopard', 'snow-leopard': 'snowleopard', 'leopardo de las nieves': 'snowleopard',
+      'lepard': 'leopard', 'leopardo': 'leopard',
+      'cheeta': 'cheetah', 'guepardo': 'cheetah',
+      'panter': 'panther', 'pantera': 'panther',
+      'tigger': 'tiger', 'tigre': 'tiger',
+      'lions': 'lion', 'leon': 'lion', 'leona': 'lioness',
+      'zorro': 'fox', 'foxes': 'fox', 'fenec': 'fennec fox',
+      'perro': 'dog', 'dogs': 'dog', 'gato': 'cat', 'cats': 'cat',
+      'caballo': 'horse', 'horses': 'horse', 'yegua': 'mare', 'semental': 'stallion',
+      'unicornio': 'unicorn', 'pegaso': 'pegasus', 'centauro': 'centaur',
+      'ciervo': 'deer', 'venado': 'deer', 'alce': 'moose', 'reno': 'reindeer', 'cabra': 'goat', 'oveja': 'sheep',
+      'oso': 'bear', 'bears': 'bear', 'oso polar': 'polar bear', 'osopolar': 'polar bear',
+      'aguila': 'eagle', 'buho': 'owl', 'lechuza': 'barn owl', 'cuervo': 'raven', 'halcon': 'falcon',
+      'pinguino': 'penguin', 'pato': 'duck', 'cisne': 'swan', 'fenix': 'phoenix',
+      'tiburon': 'shark', 'sharks': 'shark', 'ballena': 'whale', 'whales': 'whale',
+      'delfin': 'dolphin', 'dolphins': 'dolphin', 'foca': 'seal', 'seals': 'seal',
+      'pez': 'fish', 'fishes': 'fish', 'pulpo': 'octopus', 'calamar': 'squid', 'nutria': 'otter', 'morsa': 'walrus',
+      'raton': 'mouse', 'mice': 'mouse', 'rata': 'rat', 'rats': 'rat', 'ardilla': 'squirrel',
+      'conejo': 'rabbit', 'rabbits': 'rabbit', 'castor': 'beaver', 'capibara': 'capybara',
+      'serpiente': 'snake', 'snakes': 'snake', 'lagarto': 'lizard', 'cocodrilo': 'crocodile',
+      'caiman': 'alligator', 'tortuga': 'turtle', 'camaleon': 'chameleon', 'dragon de komodo': 'komodo dragon',
+      'dragon': 'dragon', 'dragons': 'dragon', 'grifo': 'griffin', 'minotauro': 'minotaur',
+      'huron': 'ferret', 'tejon': 'badger', 'comadreja': 'weasel', 'zorrillo': 'skunk', 'mofeta': 'skunk',
+      'abeja': 'bee', 'mariposa': 'butterfly', 'polilla': 'moth', 'arana': 'spider', 'escorpion': 'scorpion', 'hormiga': 'ant',
+      'mapache': 'raccoon', 'racoon': 'raccoon', 'hiena': 'hyena', 'canguro': 'kangaroo',
+      'elefante': 'elephant', 'rinoceronte': 'rhinoceros', 'hipopotamo': 'hippopotamus', 'murcielago': 'bat', 'mono': 'monkey'
+    };
+
+    const ALL_KNOWN_ENGLISH_TAGS = (() => {
+      const set = new Set([...QUICK_TAG_ROW_1, ...QUICK_TAG_ROW_2]);
+      Object.values(QUICK_TAG_TAXONOMY).forEach(list => list.forEach(item => set.add(item)));
+      return Array.from(set).sort((a, b) => a.localeCompare(b));
+    })();
+
+    const quickTagPickerState = {
+      'upload-quick-tag-picker': { activeFamily: null },
+      'edit-quick-tag-picker': { activeFamily: null },
+      'bulk-quick-tag-picker': { activeFamily: null },
+      'drive-quick-tag-picker': { activeFamily: null }
+    };
+
+    function levenshteinDistance(a, b) {
+      const m = a.length, n = b.length;
+      if (!m) return n;
+      if (!n) return m;
+      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + cost
+          );
+        }
+      }
+      return dp[m][n];
+    }
+
+    function findEnglishTagSuggestion(rawToken) {
+      const clean = String(rawToken || '').trim().replace(/^#+/, '').toLowerCase();
+      if (!clean || clean.length < 2) return null;
+      if (ALL_KNOWN_ENGLISH_TAGS.includes(clean)) return null;
+      if (ENGLISH_TAG_CORRECTIONS[clean]) {
+        return ENGLISH_TAG_CORRECTIONS[clean];
+      }
+      let bestMatch = null;
+      let bestDist = Infinity;
+      const maxAllowed = clean.length <= 4 ? 1 : 2;
+      for (const candidate of ALL_KNOWN_ENGLISH_TAGS) {
+        if (Math.abs(candidate.length - clean.length) > maxAllowed) continue;
+        const d = levenshteinDistance(clean, candidate);
+        if (d > 0 && d <= maxAllowed && d < bestDist) {
+          bestDist = d;
+          bestMatch = candidate;
+        }
+      }
+      return bestMatch;
+    }
+
+    function autoCorrectKnownEnglishTypos(tagsArray) {
+      return normalizeTags(tagsArray.map(t => ENGLISH_TAG_CORRECTIONS[t] || t));
+    }
+
+    function handleTagInputSpellingCheck(inputId, spellBoxId) {
+      const input = document.getElementById(inputId);
+      const box = document.getElementById(spellBoxId);
+      if (!input || !box) return;
+
+      const rawParts = input.value.split(',');
+      const suggestions = [];
+
+      rawParts.forEach((part, idx) => {
+        const clean = part.trim().replace(/^#+/, '').toLowerCase();
+        if (!clean) return;
+        const suggestion = findEnglishTagSuggestion(clean);
+        if (suggestion && suggestion !== clean) {
+          suggestions.push({ idx, wrong: clean, right: suggestion });
+        }
+      });
+
+      if (!suggestions.length) {
+        box.classList.add('hidden');
+        box.innerHTML = '';
+        return;
+      }
+
+      box.classList.remove('hidden');
+      box.innerHTML = `
+        <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-amber-950/70 border border-amber-500/50 text-[11px] text-amber-200">
+          <span class="font-semibold">✨ Corrección inglés:</span>
+          ${suggestions.map(s => `
+            <button type="button" onclick="applyEnglishTagCorrection('${inputId}', '${spellBoxId}', '${escapeHtml(s.wrong)}', '${escapeHtml(s.right)}')"
+              class="px-2 py-0.5 rounded-full bg-amber-500/25 hover:bg-amber-500/45 border border-amber-400/50 text-amber-100 font-bold">
+              "${escapeHtml(s.wrong)}" → #${escapeHtml(s.right)}
+            </button>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function applyEnglishTagCorrection(inputId, spellBoxId, wrongTag, rightTag, pickerId = null) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const parts = input.value.split(',').map(p => {
+        const c = p.trim().replace(/^#+/, '').toLowerCase();
+        return c === wrongTag ? rightTag : p.trim();
+      });
+      input.value = normalizeTags(parts).join(', ');
+      handleTagInputSpellingCheck(inputId, spellBoxId);
+      if (pickerId) renderQuickTagPicker(pickerId, inputId, spellBoxId);
+    }
+
+    function onQuickTagManualInputChange(inputId, pickerId, spellBoxId) {
+      handleTagInputSpellingCheck(inputId, spellBoxId);
+      renderQuickTagPicker(pickerId, inputId, spellBoxId);
+    }
+
+    function toggleQuickTagInInput(inputId, pickerId, spellBoxId, tag) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const clean = normalizeTags([tag])[0];
+      let current = normalizeTags(input.value);
+      if (current.includes(clean)) {
+        current = current.filter(t => t !== clean);
+      } else {
+        current.push(clean);
+      }
+      input.value = current.join(', ');
+      handleTagInputSpellingCheck(inputId, spellBoxId);
+      renderQuickTagPicker(pickerId, inputId, spellBoxId);
+    }
+
+    function selectQuickTagFamily(pickerId, inputId, spellBoxId, familyKey) {
+      const st = quickTagPickerState[pickerId] || { activeFamily: null };
+      st.activeFamily = st.activeFamily === familyKey ? null : familyKey;
+      quickTagPickerState[pickerId] = st;
+
+      if (st.activeFamily) {
+        const input = document.getElementById(inputId);
+        if (input) {
+          const current = normalizeTags(input.value);
+          if (!current.includes(familyKey)) {
+            current.push(familyKey);
+            input.value = current.join(', ');
+          }
+        }
+      }
+      renderQuickTagPicker(pickerId, inputId, spellBoxId);
+    }
+
+    function renderQuickTagPicker(pickerId, inputId, spellBoxId) {
+      const container = document.getElementById(pickerId);
+      const input = document.getElementById(inputId);
+      if (!container || !input) return;
+
+      const selectedSet = new Set(normalizeTags(input.value));
+      const st = quickTagPickerState[pickerId] || { activeFamily: null };
+      const activeFamily = st.activeFamily;
+      const subSpeciesList = activeFamily ? (QUICK_TAG_TAXONOMY[activeFamily] || []) : [];
+
+      const renderRow1Btn = (tag) => {
+        const active = selectedSet.has(tag);
+        return `
+          <button type="button" onclick="toggleQuickTagInInput('${inputId}', '${pickerId}', '${spellBoxId}', '${escapeHtml(tag)}')"
+            class="px-2 py-1 rounded-lg text-[11px] font-bold transition ${
+              active
+                ? 'bg-indigo-600 text-white shadow ring-1 ring-indigo-300'
+                : 'bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300'
+            }">
+            ${active ? '✓ ' : ''}${escapeHtml(tag)}
+          </button>
+        `;
+      };
+
+      const renderRow2Btn = (fam) => {
+        const isOpen = activeFamily === fam;
+        const isTagged = selectedSet.has(fam);
+        return `
+          <button type="button" onclick="selectQuickTagFamily('${pickerId}', '${inputId}', '${spellBoxId}', '${escapeHtml(fam)}')"
+            class="px-2 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1 ${
+              isOpen
+                ? 'bg-emerald-600 text-white shadow ring-1 ring-emerald-300'
+                : isTagged
+                  ? 'bg-emerald-950/90 border border-emerald-500/70 text-emerald-200'
+                  : 'bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300'
+            }">
+            <span>${escapeHtml(fam)}</span>
+            <span class="text-[9px] opacity-80">${isOpen ? '▲' : '▼'}</span>
+          </button>
+        `;
+      };
+
+      const renderRow3Btn = (sp) => {
+        const active = selectedSet.has(sp);
+        return `
+          <button type="button" onclick="toggleQuickTagInInput('${inputId}', '${pickerId}', '${spellBoxId}', '${escapeHtml(sp)}')"
+            class="px-2 py-0.5 rounded-md text-[11px] font-medium transition ${
+              active
+                ? 'bg-purple-600 text-white font-bold shadow'
+                : 'bg-slate-950 hover:bg-slate-800 border border-slate-700/70 text-slate-300'
+            }">
+            ${active ? '✓ ' : ''}${escapeHtml(sp)}
+          </button>
+        `;
+      };
+
+      container.innerHTML = `
+        <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 mb-1">1. Tipo / Género / TF</div>
+            <div class="flex flex-wrap gap-1">
+              ${QUICK_TAG_ROW_1.map(renderRow1Btn).join('')}
+            </div>
+          </div>
+
+          <div class="pt-1.5 border-t border-slate-800/80">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-1">2. Familia / Especie (toca para desplegar subespecies A–Z)</div>
+            <div class="flex flex-wrap gap-1">
+              ${QUICK_TAG_ROW_2.map(renderRow2Btn).join('')}
+            </div>
+          </div>
+
+          ${activeFamily ? `
+            <div class="pt-1.5 border-t border-emerald-500/30 bg-slate-900/70 p-2 rounded-lg">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-purple-300">3. Subespecies de ${escapeHtml(activeFamily)} (${subSpeciesList.length})</span>
+                <button type="button" onclick="selectQuickTagFamily('${pickerId}', '${inputId}', '${spellBoxId}', '${escapeHtml(activeFamily)}')" class="text-[10px] text-slate-400 hover:text-white">Cerrar ✕</button>
+              </div>
+              <div class="flex flex-wrap gap-1 max-h-36 overflow-y-auto pr-0.5">
+                ${subSpeciesList.map(renderRow3Btn).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // =========================================================================
     // ESTADO GLOBAL Y CONFIGURACIÓN
     // =========================================================================
     const STORAGE_KEY = 'mi_boveda_multimedia_v2';
@@ -698,7 +1144,6 @@
       selectedImageIds: new Set()
     };
 
-    // Resultados de la búsqueda profunda unificada por Tags (Comics, Artistas, Historia, Drive)
     let unifiedTagResults = {
       tags: [],
       loading: false,
@@ -709,7 +1154,6 @@
       expandedSections: { comics: false, artistas: false, historia: false, drive: false }
     };
 
-    // Estado del Explorador Directo de Google Drive
     let driveBrowserState = {
       path: [{ id: 'root', name: 'Mi Unidad' }],
       items: [],
@@ -952,7 +1396,7 @@
           {
             id: 'art_com_1',
             name: 'Kaelen Studio',
-            tags: ['sci-fi', 'color'],
+            tags: ['anthro', 'canine'],
             avatarUrl: '',
             avatarDriveId: '',
             createdAt: now - 200000,
@@ -960,7 +1404,7 @@
               {
                 id: 'comic_1',
                 title: 'Horizonte Carmesí',
-                tags: ['sci-fi', 'accion'],
+                tags: ['anthro', 'wolf'],
                 coverUrl: '',
                 coverDriveId: '',
                 createdAt: now - 150000,
@@ -973,7 +1417,7 @@
           {
             id: 'art_gal_1',
             name: 'Sora Takahashi',
-            tags: ['ilustracion', 'retratos'],
+            tags: ['anthro', 'feline'],
             avatarUrl: '',
             avatarDriveId: '',
             createdAt: now - 100000,
@@ -1339,7 +1783,7 @@
     }
 
     async function uploadFileToDrive(file, parentFolderId, tags = []) {
-      const cleanTags = normalizeTags(tags);
+      const cleanTags = autoCorrectKnownEnglishTypos(normalizeTags(tags));
       const tokenList = cleanTags.map(t => `[#${t}]`).join(' ');
       const metadata = {
         name: file.name,
@@ -1389,7 +1833,7 @@
 
     async function updateDriveFileTagsMetadata(driveFileId, tags = []) {
       if (!driveConfig.accessToken || !driveFileId) return;
-      const cleanTags = normalizeTags(tags);
+      const cleanTags = autoCorrectKnownEnglishTypos(normalizeTags(tags));
       const tokenList = cleanTags.map(t => `[#${t}]`).join(' ');
 
       if (cleanTags.length > 0) {
@@ -1413,7 +1857,6 @@
       }
     }
 
-    // Quita un conjunto de tags de TODOS los lugares de la app (artista, cómic, páginas, imágenes, historias) para un driveId o elemento dado
     function purgeRemovedTagsGloballyForDriveId(driveId, removedSet) {
       if (!driveId || !removedSet || removedSet.size === 0) return;
 
@@ -1965,7 +2408,7 @@
       const section = document.getElementById('import-target-section').value;
       const selectedArtistId = document.getElementById('import-target-artist').value;
       const newArtistName = document.getElementById('import-new-artist-name').value.trim();
-      const extraTags = normalizeTags(document.getElementById('import-tags-input').value);
+      const extraTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('import-tags-input').value));
 
       let artist = null;
       if (selectedArtistId === '__new__' || newArtistName) {
@@ -2644,7 +3087,7 @@
     }
 
     // =========================================================================
-    // MODAL 8: ETIQUETAR / QUITAR TAGS EN DRIVE (CON CHIPS ENCENDIDOS)
+    // MODAL 8: ETIQUETAR / QUITAR TAGS EN DRIVE (CON CHIPS ENCENDIDOS + FILAS RÁPIDAS)
     // =========================================================================
     function renderDriveBrowserActiveTagChips() {
       const container = document.getElementById('drive-browser-active-tags-chips');
@@ -2682,6 +3125,9 @@
       if (!count) return;
       document.getElementById('drive-tag-modal-count').textContent = count;
       document.getElementById('drive-browser-add-tags').value = '';
+      document.getElementById('drive-tags-spell-box').classList.add('hidden');
+      quickTagPickerState['drive-quick-tag-picker'] = { activeFamily: null };
+      renderQuickTagPicker('drive-quick-tag-picker', 'drive-browser-add-tags', 'drive-tags-spell-box');
 
       const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
       const unionSet = new Set();
@@ -2698,9 +3144,9 @@
       };
       renderDriveBrowserActiveTagChips();
 
-      const topTags = getAllTagCounts().slice(0, 12);
+      const topTags = getAllTagCounts().slice(0, 10);
       document.getElementById('drive-browser-top-tags').innerHTML = topTags.map(([tag]) => `
-        <button type="button" onclick="appendTagToInput('drive-browser-add-tags', '${escapeHtml(tag)}')" class="px-2 py-0.5 rounded-full bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 text-[11px] text-slate-300">
+        <button type="button" onclick="toggleQuickTagInInput('drive-browser-add-tags', 'drive-quick-tag-picker', 'drive-tags-spell-box', '${escapeHtml(tag)}')" class="px-2 py-0.5 rounded-full bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 text-[11px] text-slate-300">
           +#${escapeHtml(tag)}
         </button>
       `).join('');
@@ -2709,7 +3155,7 @@
     }
 
     async function applyDriveBrowserTags() {
-      const addTags = normalizeTags(document.getElementById('drive-browser-add-tags').value);
+      const addTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('drive-browser-add-tags').value));
       const removeSet = driveTagChipsState.removedTags;
       const ids = Array.from(driveBrowserState.selectedIds);
       if (!ids.length) return;
@@ -2747,7 +3193,6 @@
             driveConfig.driveAllTaggedFiles.splice(existingIdx, 1);
           }
 
-          // Actualizar también los registros vinculados en la app
           for (const a of libraryData.artistas) {
             for (const img of (a.images || [])) {
               if (img.driveId === id) {
@@ -2894,6 +3339,7 @@
       const nameInput = document.getElementById('artist-name-input');
       const tagsInput = document.getElementById('artist-tags-input');
       document.getElementById('artist-avatar-file').value = '';
+      document.getElementById('artist-tags-spell-box').classList.add('hidden');
 
       if (artistId) {
         const artist = (libraryData[section] || []).find(a => a.id === artistId);
@@ -2917,7 +3363,7 @@
         return;
       }
 
-      const tags = normalizeTags(document.getElementById('artist-tags-input').value);
+      const tags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('artist-tags-input').value));
       const avatarFile = document.getElementById('artist-avatar-file').files[0];
 
       let targetArtist = null;
@@ -3040,6 +3486,9 @@
       document.getElementById('upload-cover-file').value = '';
       filesInput.value = '';
       tagsInput.value = '';
+      document.getElementById('upload-tags-spell-box').classList.add('hidden');
+      quickTagPickerState['upload-quick-tag-picker'] = { activeFamily: null };
+      renderQuickTagPicker('upload-quick-tag-picker', 'upload-tags-input', 'upload-tags-spell-box');
       statusBox.classList.add('hidden');
       tagsHint.classList.add('hidden');
 
@@ -3096,7 +3545,7 @@
         return;
       }
 
-      const rawTags = normalizeTags(document.getElementById('upload-tags-input').value);
+      const rawTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('upload-tags-input').value));
       const statusBox = document.getElementById('upload-progress-box');
       const submitBtn = document.getElementById('upload-submit-btn');
 
@@ -3286,7 +3735,7 @@
     }
 
     // =========================================================================
-    // EDICIÓN DE TAGS INDIVIDUAL Y EN BLOQUE (CHIPS ENCENDIDOS PARA QUITAR)
+    // EDICIÓN DE TAGS INDIVIDUAL Y EN BLOQUE (CHIPS ENCENDIDOS + FILAS RÁPIDAS)
     // =========================================================================
     function renderEditActiveTagChips() {
       const container = document.getElementById('edit-active-tags-chips');
@@ -3330,6 +3779,9 @@
       document.getElementById('edit-tags-modal-title').textContent = 'Editar Tags y Título';
       document.getElementById('edit-item-title-input').value = context.currentTitle || '';
       document.getElementById('edit-tags-input').value = '';
+      document.getElementById('edit-tags-spell-box').classList.add('hidden');
+      quickTagPickerState['edit-quick-tag-picker'] = { activeFamily: null };
+      renderQuickTagPicker('edit-quick-tag-picker', 'edit-tags-input', 'edit-tags-spell-box');
       renderEditActiveTagChips();
       openModal('edit-tags-modal');
     }
@@ -3338,7 +3790,7 @@
       if (!editingTagsContext) return;
       const { type, artistId, comicId, itemId, activeTags, removedTags } = editingTagsContext;
       const newTitle = document.getElementById('edit-item-title-input').value.trim();
-      const addedTags = normalizeTags(document.getElementById('edit-tags-input').value);
+      const addedTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('edit-tags-input').value));
       const finalTags = normalizeTags([
         ...activeTags.filter(t => !removedTags.has(t)),
         ...addedTags
@@ -3478,6 +3930,9 @@
       if (!count) return;
       document.getElementById('bulk-modal-count').textContent = count;
       document.getElementById('bulk-add-tags-input').value = '';
+      document.getElementById('bulk-tags-spell-box').classList.add('hidden');
+      quickTagPickerState['bulk-quick-tag-picker'] = { activeFamily: null };
+      renderQuickTagPicker('bulk-quick-tag-picker', 'bulk-add-tags-input', 'bulk-tags-spell-box');
 
       const artist = libraryData.artistas.find(a => a.id === state.artistId);
       const unionSet = new Set();
@@ -3495,9 +3950,9 @@
       };
       renderBulkActiveTagChips();
 
-      const topTags = getAllTagCounts().slice(0, 12);
+      const topTags = getAllTagCounts().slice(0, 10);
       document.getElementById('bulk-top-tags-chips').innerHTML = topTags.map(([tag]) => `
-        <button type="button" onclick="appendTagToInput('bulk-add-tags-input', '${escapeHtml(tag)}')" class="px-2 py-0.5 rounded-full bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 text-[11px] text-slate-300">
+        <button type="button" onclick="toggleQuickTagInInput('bulk-add-tags-input', 'bulk-quick-tag-picker', 'bulk-tags-spell-box', '${escapeHtml(tag)}')" class="px-2 py-0.5 rounded-full bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 text-[11px] text-slate-300">
           +#${escapeHtml(tag)}
         </button>
       `).join('');
@@ -3516,7 +3971,7 @@
       const artist = libraryData.artistas.find(a => a.id === state.artistId);
       if (!artist) return;
 
-      const addTags = normalizeTags(document.getElementById('bulk-add-tags-input').value);
+      const addTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('bulk-add-tags-input').value));
       const removeTagsSet = bulkTagChipsState.removedTags;
       let modified = 0;
 
@@ -4613,7 +5068,6 @@
 
       let sectionsHtml = '';
 
-      // 1. SECCIÓN COMICS (SOLO PORTADA / CARPETA DEL CÓMIC, MÁXIMO 20)
       if (comicsRes.length > 0) {
         const isExpanded = unifiedTagResults.expandedSections.comics;
         const visibleComics = isExpanded ? comicsRes : comicsRes.slice(0, MAX_PER_BLOCK);
@@ -4646,7 +5100,6 @@
         }).join('');
       }
 
-      // 2. SECCIÓN ARTISTAS (MÁXIMO 20)
       if (artistasRes.length > 0) {
         const isExpanded = unifiedTagResults.expandedSections.artistas;
         const visibleArtistas = isExpanded ? artistasRes : artistasRes.slice(0, MAX_PER_BLOCK);
@@ -4696,7 +5149,6 @@
         }).join('');
       }
 
-      // 3. SECCIÓN HISTORIA (MÁXIMO 20)
       if (historiaRes.length > 0) {
         const isExpanded = unifiedTagResults.expandedSections.historia;
         const visibleHistoria = isExpanded ? historiaRes : historiaRes.slice(0, MAX_PER_BLOCK);
@@ -4741,7 +5193,6 @@
         }).join('');
       }
 
-      // 4. SECCIÓN GOOGLE DRIVE (MÁXIMO 20)
       if (driveRes.length > 0 || unifiedTagResults.loading) {
         const isExpanded = unifiedTagResults.expandedSections.drive;
         const visibleDrive = isExpanded ? driveRes : driveRes.slice(0, MAX_PER_BLOCK);
