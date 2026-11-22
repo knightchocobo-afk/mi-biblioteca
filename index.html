@@ -86,6 +86,11 @@
         <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-900/60 text-indigo-200 border border-indigo-500/30">Live</span>
       </button>
 
+      <button onclick="selectSection('duplicates')" id="nav-duplicates" class="nav-btn w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium transition">
+        <span class="flex items-center gap-3"><span class="text-xl">👯</span> Detector Duplicados</span>
+        <span id="count-duplicates-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-rose-900/60 text-rose-200 border border-rose-500/30">Visual</span>
+      </button>
+
       <div class="pt-4 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Google Drive &amp; Resguardos</div>
 
       <button onclick="openDriveModal()" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left font-medium bg-slate-800/70 hover:bg-slate-800 border border-slate-700/70 transition">
@@ -381,7 +386,7 @@
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">Nombre(s) o Seudónimos (separa varios con coma)</label>
           <input id="artist-name-input" type="text" placeholder="Ej: Kaelen Studio, KaelArt" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
-          <p class="text-[11px] text-slate-400 mt-1">En <strong>Artistas</strong>, cada nombre separado por coma se añadirá como tag automático a sus imágenes.</p>
+          <p class="text-[11px] text-slate-400 mt-1">El nombre del artista (y sus seudónimos) se añadirá como tag automático en sus imágenes, cómics o historias.</p>
         </div>
 
         <div>
@@ -589,14 +594,14 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (RESPETA TAGS)   -->
+  <!-- MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (CON FILAS TAGS) -->
   <!-- ===================================================================== -->
   <div id="drive-to-app-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl my-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
           <h2 class="text-lg font-bold text-white">📥 Pasar a Mi App (<span id="drive-to-app-count">0</span>)</h2>
-          <p class="text-xs text-slate-400">Conserva automáticamente todos los tags que ya tienen en Google Drive.</p>
+          <p class="text-xs text-slate-400">Conserva los tags de Drive y añade automáticamente el nombre del artista.</p>
         </div>
         <button onclick="closeModal('drive-to-app-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
       </div>
@@ -635,9 +640,10 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags extra opcionales (se suman a los que ya vienen de Drive)</label>
-          <input id="d2a-extra-tags" type="text" oninput="handleTagInputSpellingCheck('d2a-extra-tags', 'd2a-spell-box')" placeholder="Opcional: male, anthro, tf..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags extra (escribe o toca en las filas rápidas — se suman al nombre del artista y tags de Drive)</label>
+          <input id="d2a-extra-tags" type="text" oninput="onQuickTagManualInputChange('d2a-extra-tags', 'd2a-quick-tag-picker', 'd2a-spell-box')" placeholder="Opcional: male, anthro, tf, canine, wolf..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
           <div id="d2a-spell-box" class="hidden mt-1.5"></div>
+          <div id="d2a-quick-tag-picker" class="mt-2"></div>
         </div>
 
         <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer pt-1">
@@ -650,6 +656,32 @@
         <button onclick="closeModal('drive-to-app-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
         <button id="d2a-confirm-btn" onclick="executeDriveImportToApp()" class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg">
           ✅ Pasar a Mi App
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 10: SELECTOR DE CARPETA PARA DETECTOR DE DUPLICADOS             -->
+  <!-- ===================================================================== -->
+  <div id="dup-folder-picker-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 class="text-lg font-bold text-white">📂 Elegir carpeta de Drive a analizar</h2>
+        <button onclick="closeModal('dup-folder-picker-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
+      </div>
+
+      <div class="flex items-center justify-between text-xs text-slate-300 bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
+        <span class="truncate">Carpeta: <strong id="dup-picker-current-name" class="text-indigo-300">Mi Unidad</strong></span>
+        <button type="button" onclick="navigateDupPickerUp()" id="dup-picker-up-btn" class="hidden px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">↑ Subir</button>
+      </div>
+
+      <div id="dup-picker-folders-list" class="max-h-60 overflow-y-auto space-y-1.5 border border-slate-800 rounded-xl p-2 bg-slate-950/60"></div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeModal('dup-folder-picker-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
+        <button onclick="confirmDupFolderSelection()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm">
+          👯 Analizar esta carpeta
         </button>
       </div>
     </div>
@@ -942,7 +974,8 @@
       'upload-quick-tag-picker': { activeFamily: null },
       'edit-quick-tag-picker': { activeFamily: null },
       'bulk-quick-tag-picker': { activeFamily: null },
-      'drive-quick-tag-picker': { activeFamily: null }
+      'drive-quick-tag-picker': { activeFamily: null },
+      'd2a-quick-tag-picker': { activeFamily: null }
     };
 
     function levenshteinDistance(a, b) {
@@ -1231,6 +1264,18 @@
       moveFolders: []
     };
 
+    let duplicateFinderState = {
+      targetFolderId: 'root',
+      targetFolderName: 'Mi Unidad (Elige una carpeta)',
+      includeSubfolders: true,
+      sensitivity: 10,
+      scanning: false,
+      progressText: '',
+      totalScanned: 0,
+      groups: [],
+      pickerPath: [{ id: 'root', name: 'Mi Unidad' }]
+    };
+
     let libraryData = {
       historia: [],
       comics: [],
@@ -1450,7 +1495,7 @@
                 title: 'Capítulo 1: El Despertar del Cristal',
                 mimeType: 'text/plain',
                 textContent: 'En las tierras altas de Aethel, los antiguos archivos guardaban memorias de un cielo plateado...',
-                tags: ['fantasia', 'capitulo1'],
+                tags: ['crónicas de aethel', 'fantasia', 'capitulo1'],
                 size: 102,
                 createdAt: now - 250000
               }
@@ -1469,7 +1514,7 @@
               {
                 id: 'comic_1',
                 title: 'Horizonte Carmesí',
-                tags: ['anthro', 'wolf'],
+                tags: ['kaelen studio', 'anthro', 'wolf'],
                 coverUrl: '',
                 coverDriveId: '',
                 createdAt: now - 150000,
@@ -2020,17 +2065,19 @@
 
       const tasks = [];
       for (const a of libraryData.artistas) {
+        const autoArtistTags = extractArtistNameTags(a.name);
         for (const img of (a.images || [])) {
-          const tags = normalizeTags(img.tags);
+          const tags = normalizeTags([...autoArtistTags, ...(img.tags || [])]);
           if (img.driveId && tags.length > 0) {
             tasks.push({ driveId: img.driveId, tags });
           }
         }
       }
       for (const a of libraryData.comics) {
+        const autoArtistTags = extractArtistNameTags(a.name);
         for (const c of (a.comics || [])) {
           for (const p of (c.pages || [])) {
-            const tags = normalizeTags([...(c.tags || []), ...(p.tags || [])]);
+            const tags = normalizeTags([...autoArtistTags, ...(c.tags || []), ...(p.tags || [])]);
             if (p.driveId && tags.length > 0) {
               tasks.push({ driveId: p.driveId, tags });
             }
@@ -2038,8 +2085,9 @@
         }
       }
       for (const a of libraryData.historia) {
+        const autoArtistTags = extractArtistNameTags(a.name);
         for (const st of (a.items || [])) {
-          const tags = normalizeTags(st.tags);
+          const tags = normalizeTags([...autoArtistTags, ...(st.tags || [])]);
           if (st.driveId && tags.length > 0) {
             tasks.push({ driveId: st.driveId, tags });
           }
@@ -2497,9 +2545,10 @@
         return;
       }
 
+      const autoArtistTags = extractArtistNameTags(artist.name);
       const now = Date.now();
+
       if (section === 'artistas') {
-        const autoArtistTags = extractArtistNameTags(artist.name);
         for (let i = 0; i < selected.length; i++) {
           const f = selected[i];
           const nativeTags = extractDriveFileTags(f);
@@ -2522,18 +2571,20 @@
           comic = {
             id: generateId('comic'),
             title: 'Importados Drive',
-            tags: [...extraTags],
+            tags: normalizeTags([...autoArtistTags, ...extraTags]),
             coverUrl: '',
             coverDriveId: selected[0].id,
             createdAt: now,
             pages: []
           };
           artist.comics.unshift(comic);
+        } else {
+          comic.tags = normalizeTags([...(comic.tags || []), ...autoArtistTags]);
         }
         for (let i = 0; i < selected.length; i++) {
           const f = selected[i];
           const nativeTags = extractDriveFileTags(f);
-          const mergedTags = normalizeTags([...(comic.tags || []), ...nativeTags, ...extraTags]);
+          const mergedTags = normalizeTags([...autoArtistTags, ...(comic.tags || []), ...nativeTags, ...extraTags]);
           comic.pages.push({
             id: generateId('page'),
             title: f.name.replace(/\.[^/.]+$/, ''),
@@ -2549,7 +2600,7 @@
         for (let i = 0; i < selected.length; i++) {
           const f = selected[i];
           const nativeTags = extractDriveFileTags(f);
-          const mergedTags = normalizeTags([...nativeTags, ...extraTags]);
+          const mergedTags = normalizeTags([...autoArtistTags, ...nativeTags, ...extraTags]);
           artist.items.unshift({
             id: generateId('story'),
             title: f.name.replace(/\.[^/.]+$/, ''),
@@ -2569,7 +2620,7 @@
       scanDriveForUntrackedFiles(false);
       await indexAndUnifyAllDriveTags();
       renderAll();
-      showToast(`✅ ${selected.length} archivo(s) importados`);
+      showToast(`✅ ${selected.length} archivo(s) importados con tag #${autoArtistTags[0] || ''}`);
     }
 
     // =========================================================================
@@ -2631,7 +2682,7 @@
 
       // 1. COMICS (solo tarjeta/portada del cómic)
       for (const artist of (libraryData.comics || [])) {
-        const artistTags = normalizeTags(artist.tags);
+        const artistTags = normalizeTags([...(artist.tags || []), ...extractArtistNameTags(artist.name)]);
         for (const comic of (artist.comics || [])) {
           const combinedComicTags = normalizeTags([...artistTags, ...(comic.tags || [])]);
           const anyPageMatches = (comic.pages || []).some(p =>
@@ -2654,7 +2705,7 @@
 
       // 2. ARTISTAS
       for (const artist of (libraryData.artistas || [])) {
-        const artistTags = normalizeTags(artist.tags);
+        const artistTags = normalizeTags([...(artist.tags || []), ...extractArtistNameTags(artist.name)]);
         if (matchesAllSelectedTags(artistTags)) {
           unifiedTagResults.artistas.push({
             kind: 'artist',
@@ -2675,7 +2726,7 @@
 
       // 3. HISTORIA
       for (const artist of (libraryData.historia || [])) {
-        const artistTags = normalizeTags(artist.tags);
+        const artistTags = normalizeTags([...(artist.tags || []), ...extractArtistNameTags(artist.name)]);
         if (matchesAllSelectedTags(artistTags)) {
           unifiedTagResults.historia.push({
             kind: 'artist',
@@ -2735,6 +2786,457 @@
       unifiedTagResults.tags = [];
       driveBrowserState.isGlobalTagSearch = false;
       renderAll();
+    }
+
+    // =========================================================================
+    // DETECTOR DE IMÁGENES DUPLICADAS (EN COLUMNA POR GRUPO / EN FILA COPIAS)
+    // =========================================================================
+    function openDuplicateFolderPickerModal() {
+      if (!driveConfig.accessToken) {
+        openDriveModal();
+        showToast('Conecta Google Drive primero para analizar carpetas');
+        return;
+      }
+      duplicateFinderState.pickerPath = [{ id: 'root', name: 'Mi Unidad' }];
+      openModal('dup-folder-picker-modal');
+      loadDupPickerFolders('root');
+    }
+
+    async function loadDupPickerFolders(folderId) {
+      const listEl = document.getElementById('dup-picker-folders-list');
+      const nameEl = document.getElementById('dup-picker-current-name');
+      const upBtn = document.getElementById('dup-picker-up-btn');
+
+      const current = duplicateFinderState.pickerPath[duplicateFinderState.pickerPath.length - 1];
+      nameEl.textContent = current.name;
+      if (duplicateFinderState.pickerPath.length > 1) upBtn.classList.remove('hidden');
+      else upBtn.classList.add('hidden');
+
+      listEl.innerHTML = '<div class="text-xs text-indigo-300 py-4 text-center">Cargando carpetas...</div>';
+      try {
+        const q = encodeURIComponent(`'${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+        const folders = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=name&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name)`);
+
+        if (!folders.length) {
+          listEl.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center">No hay más subcarpetas aquí. Pulsa "Analizar esta carpeta".</div>';
+          return;
+        }
+
+        listEl.innerHTML = folders.map(f => `
+          <button type="button" onclick="enterDupPickerFolder('${f.id}', '${escapeHtml(f.name)}')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left text-xs text-slate-200">
+            <span class="flex items-center gap-2 truncate"><span>📁</span> <span class="truncate">${escapeHtml(f.name)}</span></span>
+            <span class="text-slate-500">→</span>
+          </button>
+        `).join('');
+      } catch (e) {
+        listEl.innerHTML = '<div class="text-xs text-rose-400 py-4 text-center">Error cargando carpetas.</div>';
+      }
+    }
+
+    function enterDupPickerFolder(folderId, folderName) {
+      duplicateFinderState.pickerPath.push({ id: folderId, name: folderName });
+      loadDupPickerFolders(folderId);
+    }
+
+    function navigateDupPickerUp() {
+      if (duplicateFinderState.pickerPath.length <= 1) return;
+      duplicateFinderState.pickerPath.pop();
+      const prev = duplicateFinderState.pickerPath[duplicateFinderState.pickerPath.length - 1];
+      loadDupPickerFolders(prev.id);
+    }
+
+    function confirmDupFolderSelection() {
+      const chosen = duplicateFinderState.pickerPath[duplicateFinderState.pickerPath.length - 1];
+      duplicateFinderState.targetFolderId = chosen.id;
+      duplicateFinderState.targetFolderName = chosen.name;
+      closeModal('dup-folder-picker-modal');
+      runDuplicateScanInFolder();
+    }
+
+    function useCurrentExplorerFolderForDuplicates() {
+      const current = driveBrowserState.path[driveBrowserState.path.length - 1];
+      if (!current) return;
+      duplicateFinderState.targetFolderId = current.id;
+      duplicateFinderState.targetFolderName = current.name;
+      selectSection('duplicates');
+      runDuplicateScanInFolder();
+    }
+
+    async function collectAllImagesForDuplicateScan(rootFolderId, includeSubfolders, maxDepth = 4) {
+      const collected = [];
+      const queue = [{ id: rootFolderId, folderPath: duplicateFinderState.targetFolderName, depth: 0 }];
+      const visitedFolders = new Set();
+
+      while (queue.length > 0) {
+        const { id, folderPath, depth } = queue.shift();
+        if (visitedFolders.has(id)) continue;
+        visitedFolders.add(id);
+
+        duplicateFinderState.progressText = `Listando imágenes en "${folderPath}"...`;
+        renderAll();
+
+        const q = encodeURIComponent(`'${id}' in parents and trashed=false`);
+        const children = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${q}&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,thumbnailLink,shortcutDetails)`);
+
+        for (const ch of children) {
+          const isShortcut = ch.mimeType === 'application/vnd.google-apps.shortcut' && ch.shortcutDetails;
+          const targetId = isShortcut ? ch.shortcutDetails.targetId : ch.id;
+          const effectiveMime = isShortcut ? (ch.shortcutDetails.targetMimeType || '') : (ch.mimeType || '');
+
+          if (effectiveMime.startsWith('image/')) {
+            collected.push({
+              id: targetId,
+              rawId: ch.id,
+              name: ch.name,
+              mimeType: effectiveMime,
+              size: Number(ch.size) || 0,
+              folderPath,
+              thumbnailLink: ch.thumbnailLink || ''
+            });
+          } else if (effectiveMime === 'application/vnd.google-apps.folder' && includeSubfolders && depth < maxDepth) {
+            queue.push({
+              id: targetId,
+              folderPath: `${folderPath} / ${ch.name}`,
+              depth: depth + 1
+            });
+          }
+        }
+      }
+
+      return collected;
+    }
+
+    // Huella perceptual de 144 bits (aHash + dHash 12x12) independiente del peso y tamaño de archivo
+    async function computeDuplicateVisualSignatureFromUrl(url) {
+      return new Promise((resolve) => {
+        if (!url) return resolve(null);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const w = 13;
+            const h = 12;
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const data = ctx.getImageData(0, 0, w, h).data;
+
+            const gray = new Float32Array(w * h);
+            let sum = 0;
+            let sumR = 0, sumG = 0, sumB = 0;
+
+            for (let i = 0; i < w * h; i++) {
+              const r = data[i * 4];
+              const g = data[i * 4 + 1];
+              const b = data[i * 4 + 2];
+              sumR += r; sumG += g; sumB += b;
+              const lum = r * 0.299 + g * 0.587 + b * 0.114;
+              gray[i] = lum;
+              sum += lum;
+            }
+            const mean = sum / (w * h);
+
+            let bits = '';
+            for (let y = 0; y < h; y++) {
+              for (let x = 0; x < h; x++) {
+                const left = gray[y * w + x];
+                const right = gray[y * w + x + 1];
+                bits += left > right ? '1' : '0';
+                bits += left > mean ? '1' : '0';
+              }
+            }
+
+            const totalPx = w * h;
+            resolve({
+              bits,
+              r: Math.round(sumR / totalPx),
+              g: Math.round(sumG / totalPx),
+              b: Math.round(sumB / totalPx),
+              aspect: img.naturalHeight ? (img.naturalWidth / img.naturalHeight) : 1
+            });
+          } catch (e) {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+    }
+
+    function getDuplicateSignatureDistance(sigA, sigB) {
+      if (!sigA || !sigB) return 9999;
+      if (Math.abs(sigA.aspect - sigB.aspect) > 0.18) return 9999;
+
+      let hamming = 0;
+      const len = Math.min(sigA.bits.length, sigB.bits.length);
+      for (let i = 0; i < len; i++) {
+        if (sigA.bits[i] !== sigB.bits[i]) hamming++;
+      }
+      const colorDiff = (Math.abs(sigA.r - sigB.r) + Math.abs(sigA.g - sigB.g) + Math.abs(sigA.b - sigB.b)) / 3;
+      return hamming + colorDiff * 0.35;
+    }
+
+    async function runDuplicateScanInFolder() {
+      if (!driveConfig.accessToken) {
+        openDriveModal();
+        showToast('Conecta Google Drive primero');
+        return;
+      }
+
+      duplicateFinderState.scanning = true;
+      duplicateFinderState.groups = [];
+      duplicateFinderState.totalScanned = 0;
+      duplicateFinderState.progressText = 'Buscando imágenes en la carpeta seleccionada...';
+      renderAll();
+
+      try {
+        const images = await collectAllImagesForDuplicateScan(
+          duplicateFinderState.targetFolderId,
+          duplicateFinderState.includeSubfolders
+        );
+        duplicateFinderState.totalScanned = images.length;
+
+        if (images.length < 2) {
+          duplicateFinderState.scanning = false;
+          duplicateFinderState.progressText = `Solo se encontró ${images.length} imagen en esta carpeta.`;
+          renderAll();
+          return;
+        }
+
+        const analyzed = [];
+        const batchSize = 8;
+
+        for (let i = 0; i < images.length; i += batchSize) {
+          duplicateFinderState.progressText = `Comparando imagen ${Math.min(i + batchSize, images.length)} de ${images.length}...`;
+          renderAll();
+
+          const batch = images.slice(i, i + batchSize);
+          await Promise.all(batch.map(async (item) => {
+            const cacheKey = `dup_sig_${item.id}`;
+            let sig = driveConfig.imageHashCache.get(cacheKey);
+            if (!sig) {
+              const url = await resolveDriveBlobUrl(item.id);
+              sig = await computeDuplicateVisualSignatureFromUrl(url);
+              if (sig) driveConfig.imageHashCache.set(cacheKey, sig);
+            }
+            if (sig) {
+              analyzed.push({ ...item, sig });
+            }
+          }));
+        }
+
+        // Ordenar por mayor peso primero para que el original quede al inicio de cada fila
+        analyzed.sort((a, b) => b.size - a.size);
+
+        const maxDist = Number(duplicateFinderState.sensitivity) || 12;
+        const visited = new Array(analyzed.length).fill(false);
+        const groups = [];
+
+        for (let i = 0; i < analyzed.length; i++) {
+          if (visited[i]) continue;
+          const group = [analyzed[i]];
+          visited[i] = true;
+
+          for (let j = i + 1; j < analyzed.length; j++) {
+            if (visited[j]) continue;
+            const dist = getDuplicateSignatureDistance(analyzed[i].sig, analyzed[j].sig);
+            if (dist <= maxDist) {
+              visited[j] = true;
+              group.push(analyzed[j]);
+            }
+          }
+
+          if (group.length >= 2) {
+            groups.push(group);
+          }
+        }
+
+        duplicateFinderState.groups = groups;
+        document.getElementById('count-duplicates-badge').textContent = groups.length > 0 ? `${groups.length} grupos` : 'Visual';
+        showToast(groups.length > 0
+          ? `👯 Se encontraron ${groups.length} grupo(s) de imágenes repetidas`
+          : '✅ No se encontraron imágenes repetidas en esta carpeta');
+      } catch (e) {
+        console.error('Error en detector de duplicados:', e);
+        showToast('⚠️ Error analizando imágenes duplicadas');
+      } finally {
+        duplicateFinderState.scanning = false;
+        duplicateFinderState.progressText = '';
+        renderAll();
+      }
+    }
+
+    async function deleteDuplicateItemFromGroup(groupIndex, driveId, fileName) {
+      const confirmed = await askYesNoConfirm({
+        title: 'Borrar copia duplicada',
+        message: `¿Enviar "${fileName}" a la papelera de Google Drive (y quitarla de tu biblioteca si estaba vinculada)?`,
+        doubleStep: true,
+        icon: '🗑️',
+        yesLabel: 'Sí, borrar copia',
+        noLabel: 'No'
+      });
+      if (!confirmed) return;
+
+      await trashDriveItemById(driveId);
+      removeDriveIdFromCatalog(driveId);
+      await persistLibrary(`Eliminada copia duplicada "${fileName}"`);
+
+      const grp = duplicateFinderState.groups[groupIndex];
+      if (grp) {
+        duplicateFinderState.groups[groupIndex] = grp.filter(item => item.id !== driveId);
+        if (duplicateFinderState.groups[groupIndex].length < 2) {
+          duplicateFinderState.groups.splice(groupIndex, 1);
+        }
+      }
+      document.getElementById('count-duplicates-badge').textContent = duplicateFinderState.groups.length > 0
+        ? `${duplicateFinderState.groups.length} grupos`
+        : 'Visual';
+      renderAll();
+      showToast(`🗑️ Copia "${fileName}" eliminada`);
+    }
+
+    function openDuplicateGroupLightbox(groupIndex, itemIndex) {
+      const grp = duplicateFinderState.groups[groupIndex];
+      if (!grp || !grp.length) return;
+      const items = grp.map(it => ({
+        id: it.id,
+        title: `${it.name} (${formatFileSize(it.size)})`,
+        driveId: it.id,
+        url: '',
+        tags: extractDriveFileTags(it)
+      }));
+      openLightbox(items, itemIndex);
+    }
+
+    function renderDuplicatesView(breadcrumb, actions, grid) {
+      breadcrumb.innerHTML = `
+        <span class="font-bold text-white">👯 Detector de Imágenes Duplicadas</span>
+        <span class="text-xs text-slate-400">(En columna cada grupo • En fila sus copias repetidas)</span>
+      `;
+
+      actions.innerHTML = `
+        <button onclick="openDuplicateFolderPickerModal()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow">
+          📂 Elegir carpeta de Drive
+        </button>
+        <button onclick="runDuplicateScanInFolder()" ${duplicateFinderState.scanning ? 'disabled' : ''} class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow">
+          🔍 Analizar ahora
+        </button>
+      `;
+
+      let html = `
+        <div class="col-span-full p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="text-xs text-slate-400">Carpeta seleccionada en Google Drive:</div>
+              <div class="text-sm sm:text-base font-bold text-indigo-300 flex items-center gap-2">
+                <span>📁 ${escapeHtml(duplicateFinderState.targetFolderName)}</span>
+                ${duplicateFinderState.totalScanned > 0 ? `<span class="text-xs text-slate-400 font-normal">(${duplicateFinderState.totalScanned} imágenes revisadas)</span>` : ''}
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-4 text-xs">
+              <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                <input type="checkbox" ${duplicateFinderState.includeSubfolders ? 'checked' : ''} onchange="duplicateFinderState.includeSubfolders = this.checked" class="w-4 h-4 accent-indigo-500" />
+                <span>Incluir subcarpetas</span>
+              </label>
+
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400">Tolerancia:</span>
+                <select onchange="duplicateFinderState.sensitivity = Number(this.value)" class="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white">
+                  <option value="6" ${duplicateFinderState.sensitivity === 6 ? 'selected' : ''}>Estricta (Idénticas)</option>
+                  <option value="10" ${duplicateFinderState.sensitivity === 10 ? 'selected' : ''}>Normal (Distinto peso / resolución)</option>
+                  <option value="18" ${duplicateFinderState.sensitivity === 18 ? 'selected' : ''}>Amplia (Recortes o ediciones leves)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          ${duplicateFinderState.scanning ? `
+            <div class="p-3 rounded-xl bg-indigo-950/70 border border-indigo-500/40 text-xs text-indigo-200 flex items-center gap-2.5">
+              <svg class="animate-spin h-4 w-4 text-indigo-400 shrink-0" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span>${escapeHtml(duplicateFinderState.progressText || 'Analizando imágenes...')}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      if (!duplicateFinderState.scanning && duplicateFinderState.groups.length === 0) {
+        html += `
+          <div class="col-span-full py-14 text-center space-y-2 bg-slate-900/40 rounded-2xl border border-slate-800/80">
+            <div class="text-4xl">👯</div>
+            <div class="text-sm font-bold text-slate-200">
+              ${duplicateFinderState.totalScanned > 0
+                ? 'No se encontraron imágenes duplicadas en esta carpeta.'
+                : 'Pulsa "Elegir carpeta de Drive" y luego "Analizar ahora" para detectar imágenes repetidas.'}
+            </div>
+            <p class="text-xs text-slate-400 max-w-md mx-auto">
+              Detecta imágenes idénticas aunque una pese 3 MB y la copia pese 600 KB o tenga otro nombre.
+            </p>
+          </div>
+        `;
+        grid.innerHTML = html;
+        return;
+      }
+
+      // EN COLUMNA CADA GRUPO DE IMÁGENES REPETIDAS Y EN FILA TODAS SUS COPIAS
+      html += `
+        <div class="col-span-full space-y-4">
+          ${duplicateFinderState.groups.map((group, gIdx) => `
+            <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
+              <div class="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-0.5 rounded-full bg-rose-600/30 border border-rose-500/40 text-rose-200 text-xs font-bold">
+                    Grupo #${gIdx + 1}
+                  </span>
+                  <span class="text-xs font-semibold text-slate-300">${group.length} copias repetidas de la misma imagen</span>
+                </div>
+                <span class="text-[11px] text-slate-400">Ordenadas de mayor a menor peso</span>
+              </div>
+
+              <div class="flex items-stretch gap-3 overflow-x-auto pb-2">
+                ${group.map((item, itemIdx) => {
+                  const isLargest = itemIdx === 0;
+                  const sizeLabel = formatFileSize(item.size) || 'Peso desconocido';
+                  return `
+                    <div class="w-44 sm:w-52 shrink-0 rounded-xl overflow-hidden bg-slate-950 border ${isLargest ? 'border-emerald-500/60' : 'border-slate-800'} flex flex-col">
+                      <div onclick="openDuplicateGroupLightbox(${gIdx}, ${itemIdx})" class="relative aspect-[3/4] bg-slate-800/80 overflow-hidden cursor-pointer">
+                        <img data-drive-id="${item.id}" src="" alt="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+
+                        <span class="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold ${isLargest ? 'bg-emerald-600 text-white' : 'bg-amber-600/90 text-white'}">
+                          ${isLargest ? '⭐ Mayor peso' : `Copia #${itemIdx + 1}`}
+                        </span>
+
+                        <span class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/80 text-xs font-bold text-indigo-200 border border-indigo-500/30">
+                          ${sizeLabel}
+                        </span>
+                      </div>
+
+                      <div class="p-2.5 flex-1 flex flex-col justify-between gap-2">
+                        <div>
+                          <div class="text-xs font-semibold text-white truncate" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+                          <div class="text-[10px] text-slate-400 truncate" title="${escapeHtml(item.folderPath)}">📁 ${escapeHtml(item.folderPath)}</div>
+                        </div>
+
+                        <button onclick="deleteDuplicateItemFromGroup(${gIdx}, '${item.id}', '${escapeHtml(item.name)}')" class="w-full py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 border border-rose-500/40 text-rose-200 hover:text-white font-bold text-xs transition">
+                          🗑️ Borrar esta copia
+                        </button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      grid.innerHTML = html;
     }
 
     // =========================================================================
@@ -3152,7 +3654,7 @@
     }
 
     // =========================================================================
-    // MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (RESPETANDO TAGS)
+    // MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (CON FILAS TAGS + ARTISTA AUTO)
     // =========================================================================
     function getSelectedDriveBrowserObjects() {
       const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
@@ -3168,6 +3670,8 @@
       document.getElementById('drive-to-app-count').textContent = selectedItems.length;
       document.getElementById('d2a-extra-tags').value = '';
       document.getElementById('d2a-spell-box').classList.add('hidden');
+      quickTagPickerState['d2a-quick-tag-picker'] = { activeFamily: null };
+      renderQuickTagPicker('d2a-quick-tag-picker', 'd2a-extra-tags', 'd2a-spell-box');
 
       const folders = selectedItems.filter(f =>
         f.mimeType === 'application/vnd.google-apps.folder' ||
@@ -3193,7 +3697,7 @@
       selectedItems.forEach(item => extractDriveFileTags(item).forEach(t => detectedTagsSet.add(t)));
       const tagsPreview = detectedTagsSet.size
         ? `Tags detectados en Drive que se respetarán: ${Array.from(detectedTagsSet).slice(0, 8).map(t => '#' + escapeHtml(t)).join(', ')}${detectedTagsSet.size > 8 ? '...' : ''}`
-        : 'Si los archivos ya tienen tags en Drive, se importarán intactos.';
+        : 'Se conservarán los tags de Drive y se añadirá automáticamente el nombre del artista.';
 
       document.getElementById('drive-to-app-summary').innerHTML = `
         <div>Seleccionados: <strong>${selectedItems.length}</strong> elemento(s) (${folders.length} carpeta(s), ${selectedItems.length - folders.length} archivo(s)).</div>
@@ -3346,12 +3850,12 @@
           return;
         }
 
+        const autoArtistTags = extractArtistNameTags(artist.name);
         const now = Date.now();
         let importedCount = 0;
 
         if (section === 'artistas') {
           if (!Array.isArray(artist.images)) artist.images = [];
-          const autoArtistTags = extractArtistNameTags(artist.name);
           const targetDriveFolder = alsoMoveInDrive ? await ensureTargetFolderForContext('artistas', artist, null) : null;
 
           const filesToImport = [];
@@ -3400,7 +3904,7 @@
             if (effectiveMime === 'application/vnd.google-apps.folder') continue;
 
             const driveTags = extractDriveFileTags(f);
-            const finalTags = normalizeTags([...driveTags, ...extraTags]);
+            const finalTags = normalizeTags([...autoArtistTags, ...driveTags, ...extraTags]);
 
             artist.items.unshift({
               id: generateId('story'),
@@ -3444,7 +3948,7 @@
             if (!folderPages.length) continue;
 
             const folderOwnTags = extractDriveFileTags(folder);
-            const allPagesTagsSet = new Set([...folderOwnTags, ...extraTags]);
+            const allPagesTagsSet = new Set([...autoArtistTags, ...folderOwnTags, ...extraTags]);
             folderPages.forEach(p => extractDriveFileTags(p).forEach(t => allPagesTagsSet.add(t)));
 
             const comicTitle = (folderItems.length === 1 && customComicTitle) ? customComicTitle : folder.name;
@@ -3468,7 +3972,7 @@
 
             for (let pIdx = 0; pIdx < folderPages.length; pIdx++) {
               const pg = folderPages[pIdx];
-              const pgTags = normalizeTags([...folderOwnTags, ...extractDriveFileTags(pg), ...extraTags]);
+              const pgTags = normalizeTags([...autoArtistTags, ...folderOwnTags, ...extractDriveFileTags(pg), ...extraTags]);
               newComic.pages.push({
                 id: generateId('page'),
                 title: (pg.name || `Página ${pIdx + 1}`).replace(/\.[^/.]+$/, ''),
@@ -3494,7 +3998,7 @@
             }
 
             if (!targetComic) {
-              const combinedLooseTags = new Set(extraTags);
+              const combinedLooseTags = new Set([...autoArtistTags, ...extraTags]);
               looseImageItems.forEach(img => extractDriveFileTags(img).forEach(t => combinedLooseTags.add(t)));
               targetComic = {
                 id: generateId('comic'),
@@ -3506,6 +4010,8 @@
                 pages: []
               };
               artist.comics.unshift(targetComic);
+            } else {
+              targetComic.tags = normalizeTags([...(targetComic.tags || []), ...autoArtistTags]);
             }
 
             const targetComicDriveFolder = alsoMoveInDrive ? await ensureTargetFolderForContext('comics', artist, targetComic) : null;
@@ -3515,7 +4021,7 @@
               const targetId = (img.mimeType === 'application/vnd.google-apps.shortcut' && img.shortcutDetails)
                 ? img.shortcutDetails.targetId
                 : img.id;
-              const pgTags = normalizeTags([...(targetComic.tags || []), ...extractDriveFileTags(img), ...extraTags]);
+              const pgTags = normalizeTags([...autoArtistTags, ...(targetComic.tags || []), ...extractDriveFileTags(img), ...extraTags]);
               targetComic.pages.push({
                 id: generateId('page'),
                 title: (img.name || `Página ${i + 1}`).replace(/\.[^/.]+$/, ''),
@@ -3542,7 +4048,6 @@
         driveBrowserState.selectedIds.clear();
         await indexAndUnifyAllDriveTags();
 
-        // Navegar directamente a la sección y artista destino para ver los elementos al instante
         state.section = section;
         state.artistId = artist.id;
         state.comicId = null;
@@ -3552,7 +4057,7 @@
         driveBrowserState.isGlobalTagSearch = false;
 
         renderAll();
-        showToast(`✅ ${importedCount} elemento(s) ya visibles en "${artist.name}"`);
+        showToast(`✅ ${importedCount} elemento(s) ya visibles en "${artist.name}" con tag #${autoArtistTags[0] || ''}`);
       } catch (e) {
         console.error('Error pasando de Drive a Mi App:', e);
         showToast('⚠️ Error al pasar los elementos a la app');
@@ -3807,7 +4312,7 @@
     }
 
     // =========================================================================
-    // CRUD: ARTISTAS, CÓMICS, IMÁGENES E HISTORIAS (CON BORRADO EN DRIVE)
+    // CRUD: ARTISTAS, CÓMICS, IMÁGENES E HISTORIAS (CON TAG ARTISTA AUTOMÁTICO)
     // =========================================================================
     function openArtistModal(section, artistId = null) {
       editingArtistContext = { section, artistId };
@@ -3852,13 +4357,30 @@
           targetArtist.name = name;
           targetArtist.tags = tags;
 
+          const newAutoTags = extractArtistNameTags(name);
+          const removedAliasSet = new Set(oldAutoTags.filter(t => !newAutoTags.includes(t)));
+
           if (section === 'artistas' && Array.isArray(targetArtist.images)) {
-            const newAutoTags = extractArtistNameTags(name);
-            const removedAliasSet = new Set(oldAutoTags.filter(t => !newAutoTags.includes(t)));
             for (const img of targetArtist.images) {
               const filtered = (img.tags || []).filter(t => !removedAliasSet.has(t));
               img.tags = normalizeTags([...newAutoTags, ...filtered]);
               if (img.driveId) updateDriveFileTagsMetadata(img.driveId, img.tags);
+            }
+          } else if (section === 'comics' && Array.isArray(targetArtist.comics)) {
+            for (const c of targetArtist.comics) {
+              const cFiltered = (c.tags || []).filter(t => !removedAliasSet.has(t));
+              c.tags = normalizeTags([...newAutoTags, ...cFiltered]);
+              for (const p of (c.pages || [])) {
+                const pFiltered = (p.tags || []).filter(t => !removedAliasSet.has(t));
+                p.tags = normalizeTags([...newAutoTags, ...pFiltered]);
+                if (p.driveId) updateDriveFileTagsMetadata(p.driveId, p.tags);
+              }
+            }
+          } else if (section === 'historia' && Array.isArray(targetArtist.items)) {
+            for (const st of targetArtist.items) {
+              const filtered = (st.tags || []).filter(t => !removedAliasSet.has(t));
+              st.tags = normalizeTags([...newAutoTags, ...filtered]);
+              if (st.driveId) updateDriveFileTagsMetadata(st.driveId, st.tags);
             }
           }
         }
@@ -3969,21 +4491,25 @@
       tagsHint.classList.add('hidden');
 
       if (mode === 'new-comic') {
+        const artist = libraryData.comics.find(a => a.id === artistId);
+        const autoNames = artist ? extractArtistNameTags(artist.name) : [];
         titleEl.textContent = 'Nuevo Cómic';
         comicTitleGroup.classList.remove('hidden');
         coverGroup.classList.remove('hidden');
         filesInput.accept = 'image/*';
-        tagsHint.textContent = 'Todas las páginas iniciales heredarán automáticamente los tags de este cómic y se guardarán en Drive.';
+        tagsHint.textContent = `Tag automático de artista: ${autoNames.map(t => '#' + t).join(', ')} (se guardará en todas las páginas y en Drive).`;
         tagsHint.classList.remove('hidden');
       } else if (mode === 'comic-pages') {
         const artist = libraryData.comics.find(a => a.id === artistId);
         const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
+        const autoNames = artist ? extractArtistNameTags(artist.name) : [];
         titleEl.textContent = 'Añadir Páginas al Cómic';
         comicTitleGroup.classList.add('hidden');
         coverGroup.classList.add('hidden');
         filesInput.accept = 'image/*';
-        if (comic && (comic.tags || []).length) {
-          tagsHint.textContent = `Se combinarán y guardarán en Drive con los tags del cómic: ${(comic.tags || []).map(t => '#' + t).join(', ')}`;
+        const combinedPreview = normalizeTags([...autoNames, ...((comic && comic.tags) || [])]);
+        if (combinedPreview.length) {
+          tagsHint.textContent = `Se combinarán con: ${combinedPreview.map(t => '#' + t).join(', ')}`;
           tagsHint.classList.remove('hidden');
         }
       } else if (mode === 'artist-images') {
@@ -3998,10 +4524,16 @@
           tagsHint.classList.remove('hidden');
         }
       } else if (mode === 'story-files') {
+        const artist = libraryData.historia.find(a => a.id === artistId);
+        const autoNames = artist ? extractArtistNameTags(artist.name) : [];
         titleEl.textContent = 'Subir Documentos / Multimedia';
         comicTitleGroup.classList.add('hidden');
         coverGroup.classList.add('hidden');
         filesInput.accept = '.pdf,.txt,.md,video/*,audio/*,image/*';
+        if (autoNames.length) {
+          tagsHint.textContent = `Tag automático de artista: ${autoNames.map(t => '#' + t).join(', ')}`;
+          tagsHint.classList.remove('hidden');
+        }
       }
 
       openModal('upload-modal');
@@ -4038,10 +4570,13 @@
           const artist = libraryData.comics.find(a => a.id === artistId);
           if (!artist) return;
 
+          const autoArtistTags = extractArtistNameTags(artist.name);
+          const mergedComicTags = normalizeTags([...autoArtistTags, ...rawTags]);
+
           const newComic = {
             id: generateId('comic'),
             title: comicTitle,
-            tags: [...rawTags],
+            tags: [...mergedComicTags],
             coverUrl: '',
             coverDriveId: '',
             createdAt: now,
@@ -4052,7 +4587,7 @@
 
           if (coverFile) {
             if (driveConfig.accessToken) {
-              const upCover = await uploadFileToDrive(coverFile, targetFolderId, rawTags);
+              const upCover = await uploadFileToDrive(coverFile, targetFolderId, mergedComicTags);
               newComic.coverDriveId = upCover.id;
             } else {
               newComic.coverUrl = URL.createObjectURL(coverFile);
@@ -4065,7 +4600,7 @@
             let driveId = '';
             let blobUrl = '';
             if (driveConfig.accessToken) {
-              const up = await uploadFileToDrive(f, targetFolderId, rawTags);
+              const up = await uploadFileToDrive(f, targetFolderId, mergedComicTags);
               driveId = up.id;
             } else {
               blobUrl = URL.createObjectURL(f);
@@ -4080,7 +4615,7 @@
               driveId,
               url: blobUrl,
               size: f.size || 0,
-              tags: [...rawTags],
+              tags: [...mergedComicTags],
               createdAt: now + i
             });
           }
@@ -4093,7 +4628,8 @@
           const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
           if (!comic) return;
 
-          const mergedTags = normalizeTags([...(comic.tags || []), ...rawTags]);
+          const autoArtistTags = extractArtistNameTags(artist.name);
+          const mergedTags = normalizeTags([...autoArtistTags, ...(comic.tags || []), ...rawTags]);
           const targetFolderId = await ensureTargetFolderForContext('comics', artist, comic);
 
           for (let i = 0; i < files.length; i++) {
@@ -4160,6 +4696,8 @@
           const artist = libraryData.historia.find(a => a.id === artistId);
           if (!artist) return;
 
+          const autoArtistTags = extractArtistNameTags(artist.name);
+          const mergedTags = normalizeTags([...autoArtistTags, ...rawTags]);
           const targetFolderId = await ensureTargetFolderForContext('historia', artist, null);
 
           for (let i = 0; i < files.length; i++) {
@@ -4174,7 +4712,7 @@
             }
 
             if (driveConfig.accessToken) {
-              const up = await uploadFileToDrive(f, targetFolderId, rawTags);
+              const up = await uploadFileToDrive(f, targetFolderId, mergedTags);
               driveId = up.id;
             } else {
               blobUrl = URL.createObjectURL(f);
@@ -4188,7 +4726,7 @@
               url: blobUrl,
               size: f.size || 0,
               textContent,
-              tags: [...rawTags],
+              tags: [...mergedTags],
               createdAt: now + i
             });
           }
@@ -5127,6 +5665,12 @@
         return;
       }
 
+      if (state.section === 'duplicates') {
+        renderDuplicatesView(breadcrumb, actions, grid);
+        hydrateDriveImages();
+        return;
+      }
+
       if (state.section === 'drive-browser') {
         renderDriveBrowserView(breadcrumb, actions, grid, pagination, paginationTop);
         hydrateDriveImages();
@@ -5739,6 +6283,7 @@
 
       const currentFolder = driveBrowserState.path[driveBrowserState.path.length - 1];
       actions.innerHTML = `
+        <button onclick="useCurrentExplorerFolderForDuplicates()" class="px-3 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/35 border border-rose-500/40 text-xs font-semibold text-rose-200">👯 Buscar duplicados aquí</button>
         <button onclick="jumpToLibraryRootInDriveBrowser()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-indigo-300">🏛️ Ir a Mi Biblioteca</button>
         <button onclick="loadDriveBrowserFolder('${currentFolder.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">🔄 Refrescar</button>
         <div class="flex items-center gap-1">
