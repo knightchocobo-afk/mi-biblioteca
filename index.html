@@ -101,9 +101,8 @@
         <span id="drive-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
       </button>
 
-      <button onclick="openDriveScannerModal()" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs font-medium bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/30 text-indigo-200 transition">
-        <span class="flex items-center gap-2"><span>🔄</span> Detectar archivos en Drive</span>
-        <span id="untracked-badge" class="hidden px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px]">0</span>
+      <button id="sidebar-sync-folders-btn" onclick="syncFoldersBidirectionalWithDrive()" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-500/40 text-emerald-200 transition">
+        <span class="flex items-center gap-2"><span>🔄</span> Actualizar Carpetas (App ↔ Drive)</span>
       </button>
 
       <div id="sync-indicator" class="hidden px-3.5 py-2 rounded-xl bg-indigo-950/60 border border-indigo-500/30 text-xs text-indigo-300 flex items-center gap-2">
@@ -175,11 +174,10 @@
           ⊞
         </button>
 
-        <!-- BOTÓN ESCANEAR DRIVE -->
-        <button onclick="openDriveScannerModal()" id="top-scan-btn" title="Detectar archivos subidos directo a Google Drive" class="relative flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-indigo-300 shrink-0">
+        <!-- BOTÓN ACTUALIZAR CARPETAS APP ↔ DRIVE -->
+        <button onclick="syncFoldersBidirectionalWithDrive()" id="top-sync-folders-btn" title="Sincronizar carpetas faltantes entre la App y Google Drive" class="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/40 text-xs font-semibold text-emerald-200 shrink-0">
           <span>🔄</span>
-          <span class="hidden lg:inline">Escanear Drive</span>
-          <span id="top-untracked-dot" class="hidden w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span>Actualizar</span>
         </button>
 
         <!-- BOTÓN RÁPIDO CONECTAR DRIVE -->
@@ -302,72 +300,6 @@
           </button>
         </div>
         <div id="drive-backups-list" class="max-h-48 overflow-y-auto space-y-1.5 text-xs"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===================================================================== -->
-  <!-- MODAL 2: DETECTAR E IMPORTAR ARCHIVOS SUBIDOS DIRECTO A DRIVE         -->
-  <!-- ===================================================================== -->
-  <div id="drive-scanner-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-5 space-y-4 shadow-2xl my-auto">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div>
-          <h2 class="text-lg font-bold text-white flex items-center gap-2">🔄 Archivos Directos en Google Drive</h2>
-          <p class="text-xs text-slate-400">Detecta archivos subidos manualmente a Drive que aún no aparecen en tu biblioteca.</p>
-        </div>
-        <button onclick="closeModal('drive-scanner-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
-      </div>
-
-      <div id="scanner-status-line" class="text-xs text-indigo-300 bg-indigo-950/50 border border-indigo-500/30 px-3 py-2 rounded-xl">
-        Pulsa "Buscar ahora" para escanear tu Google Drive.
-      </div>
-
-      <div class="flex items-center justify-between gap-2 flex-wrap">
-        <div class="flex items-center gap-2">
-          <button onclick="scanDriveForUntrackedFiles(true)" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">
-            🔍 Buscar ahora en Drive
-          </button>
-          <button onclick="toggleSelectAllUntracked(true)" class="px-2.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs">Seleccionar todos</button>
-          <button onclick="toggleSelectAllUntracked(false)" class="px-2.5 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs">Ninguno</button>
-        </div>
-        <span class="text-xs text-slate-400"><span id="untracked-selected-count" class="font-bold text-white">0</span> seleccionados</span>
-      </div>
-
-      <div id="untracked-files-list" class="max-h-64 overflow-y-auto space-y-2 border border-slate-800 rounded-xl p-2.5 bg-slate-950/60">
-        <div class="text-center text-xs text-slate-500 py-8">Sin resultados todavía.</div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-        <div>
-          <label class="block text-[11px] font-semibold text-slate-400 mb-1">1. Sección destino</label>
-          <select id="import-target-section" onchange="populateImportArtistDropdown()" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
-            <option value="artistas">🎨 Artistas (Galería)</option>
-            <option value="comics">💬 Comics</option>
-            <option value="historia">📚 Historia</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-[11px] font-semibold text-slate-400 mb-1">2. Artista (o crear nuevo)</label>
-          <select id="import-target-artist" onchange="populateImportSubDropdown()" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"></select>
-        </div>
-        <div id="import-sub-wrapper" class="hidden">
-          <label id="import-sub-label" class="block text-[11px] font-semibold text-slate-400 mb-1">3. Destino</label>
-          <select id="import-target-sub" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"></select>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        <input id="import-new-artist-name" type="text" placeholder="O escribe nombre de artista nuevo..." class="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
-        <input id="import-tags-input" type="text" oninput="handleTagInputSpellingCheck('import-tags-input', 'import-tags-spell-box')" placeholder="Tags para todos (ej: anthro, feline, male)" class="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
-      </div>
-      <div id="import-tags-spell-box" class="hidden"></div>
-
-      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
-        <button onclick="closeModal('drive-scanner-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium">Cancelar</button>
-        <button id="import-untracked-btn" onclick="importSelectedUntrackedFiles()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg">
-          ✅ Importar seleccionados a la Biblioteca
-        </button>
       </div>
     </div>
   </div>
@@ -1270,7 +1202,7 @@
       driveTagsIndex: new Map(),
       driveAllTaggedFiles: [],
       imageHashCache: new Map(),
-      untrackedFiles: []
+      isSyncingFolders: false
     };
 
     let state = {
@@ -1826,8 +1758,7 @@
         await hydrateMissingCatalogFileSizes();
         syncAllCatalogTagsToDriveMetadata();
         renderAll();
-        showToast('☁️ Conectado y tags unificados con Google Drive');
-        scanDriveForUntrackedFiles(false);
+        showToast('☁️ Conectado con Google Drive. Pulsa "Actualizar" para sincronizar carpetas.');
         if (state.section === 'drive-browser') {
           loadDriveBrowserFolder(driveBrowserState.path[driveBrowserState.path.length - 1].id);
         }
@@ -1963,6 +1894,334 @@
         return subItem.driveFolderId;
       }
       return artist.driveFolderId;
+    }
+
+    // =========================================================================
+    // SINCRONIZACIÓN BIDIRECCIONAL DE CARPETAS (APP ↔ DRIVE EN MI_BIBLIOTECA)
+    // =========================================================================
+    async function listDriveFolderDirectChildren(folderId) {
+      const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+      const url = `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=folder,name&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
+      return await driveFetchAllPages(url);
+    }
+
+    function resolveShortcutTarget(item) {
+      if (!item) return { id: '', mimeType: '', isFolder: false };
+      const isShortcut = item.mimeType === 'application/vnd.google-apps.shortcut' && item.shortcutDetails;
+      const targetId = isShortcut ? item.shortcutDetails.targetId : item.id;
+      const effectiveMime = isShortcut ? (item.shortcutDetails.targetMimeType || '') : (item.mimeType || '');
+      return {
+        id: targetId,
+        mimeType: effectiveMime,
+        isFolder: effectiveMime === 'application/vnd.google-apps.folder'
+      };
+    }
+
+    async function syncFoldersBidirectionalWithDrive() {
+      if (!driveConfig.accessToken) {
+        openDriveModal();
+        showToast('Conecta Google Drive primero para actualizar carpetas');
+        return;
+      }
+      if (driveConfig.isSyncingFolders) return;
+
+      driveConfig.isSyncingFolders = true;
+      const syncInd = document.getElementById('sync-indicator');
+      const syncText = document.getElementById('sync-text');
+      const topBtn = document.getElementById('top-sync-folders-btn');
+      if (topBtn) topBtn.disabled = true;
+      syncInd.classList.remove('hidden');
+      syncText.textContent = 'Actualizando carpetas App ↔ Drive...';
+
+      let createdInDrive = 0;
+      let importedToApp = 0;
+      let filesLinked = 0;
+
+      try {
+        await ensureDriveStructure();
+        const knownDriveIds = getAllKnownDriveIds();
+
+        // 1. APP -> DRIVE: Asegurar que todas las carpetas de la App existan en Drive
+        syncText.textContent = '1/2 Enviando carpetas faltantes a Drive...';
+        for (const section of ['artistas', 'comics', 'historia']) {
+          const artists = libraryData[section] || [];
+          for (const artist of artists) {
+            const hadFolder = !!artist.driveFolderId;
+            await ensureTargetFolderForContext(section, artist, null);
+            if (!hadFolder && artist.driveFolderId) createdInDrive++;
+
+            if (section === 'artistas') {
+              for (const folder of (artist.folders || [])) {
+                const hadSub = !!folder.driveFolderId;
+                await ensureTargetFolderForContext('artistas', artist, folder);
+                if (!hadSub && folder.driveFolderId) createdInDrive++;
+              }
+            } else if (section === 'comics') {
+              for (const comic of (artist.comics || [])) {
+                const hadSub = !!comic.driveFolderId;
+                await ensureTargetFolderForContext('comics', artist, comic);
+                if (!hadSub && comic.driveFolderId) createdInDrive++;
+              }
+            }
+          }
+        }
+
+        // 2. DRIVE -> APP: Traer carpetas faltantes dentro de Mi_Biblioteca_Multimedia (Artistas, Comics, Historia)
+        syncText.textContent = '2/2 Leyendo carpetas en Mi_Biblioteca_Multimedia...';
+
+        // 2A. SECCIÓN ARTISTAS EN DRIVE
+        const driveArtistsFolders = await listDriveFolderDirectChildren(driveConfig.sectionFolderIds.artistas);
+        for (const dArtItem of driveArtistsFolders) {
+          const info = resolveShortcutTarget(dArtItem);
+          if (!info.isFolder) continue;
+
+          let appArtist = libraryData.artistas.find(
+            a => a.driveFolderId === info.id || sanitizeFolderName(a.name).toLowerCase() === sanitizeFolderName(dArtItem.name).toLowerCase()
+          );
+
+          if (!appArtist) {
+            appArtist = {
+              id: generateId('art'),
+              name: dArtItem.name,
+              driveFolderId: info.id,
+              tags: extractDriveFileTags(dArtItem),
+              avatarUrl: '',
+              avatarDriveId: '',
+              createdAt: Date.now(),
+              folders: [],
+              images: []
+            };
+            libraryData.artistas.unshift(appArtist);
+            importedToApp++;
+          } else if (!appArtist.driveFolderId) {
+            appArtist.driveFolderId = info.id;
+          }
+
+          if (!Array.isArray(appArtist.folders)) appArtist.folders = [];
+          if (!Array.isArray(appArtist.images)) appArtist.images = [];
+
+          const autoArtistTags = extractArtistNameTags(appArtist.name);
+          const artistChildren = await listDriveFolderDirectChildren(info.id);
+
+          for (const child of artistChildren) {
+            const cInfo = resolveShortcutTarget(child);
+            if (cInfo.isFolder) {
+              // Subcarpeta dentro del artista
+              let appFolder = appArtist.folders.find(
+                f => f.driveFolderId === cInfo.id || sanitizeFolderName(f.name).toLowerCase() === sanitizeFolderName(child.name).toLowerCase()
+              );
+              const autoFolderTags = extractFolderNameTags(child.name);
+              const driveFolderTags = extractDriveFileTags(child);
+
+              if (!appFolder) {
+                appFolder = {
+                  id: generateId('afolder'),
+                  name: child.name,
+                  driveFolderId: cInfo.id,
+                  tags: normalizeTags([...autoArtistTags, ...autoFolderTags, ...driveFolderTags]),
+                  coverUrl: '',
+                  coverDriveId: '',
+                  createdAt: Date.now(),
+                  images: []
+                };
+                appArtist.folders.unshift(appFolder);
+                importedToApp++;
+              } else if (!appFolder.driveFolderId) {
+                appFolder.driveFolderId = cInfo.id;
+              }
+
+              const folderImgs = await fetchAllImagesInsideDriveFolder(cInfo.id);
+              for (const img of folderImgs) {
+                if (knownDriveIds.has(img.id)) continue;
+                knownDriveIds.add(img.id);
+                const mergedTags = normalizeTags([...autoArtistTags, ...autoFolderTags, ...(appFolder.tags || []), ...extractDriveFileTags(img)]);
+                appFolder.images.unshift({
+                  id: generateId('img'),
+                  title: (img.name || 'Imagen').replace(/\.[^/.]+$/, ''),
+                  driveId: img.id,
+                  url: '',
+                  size: Number(img.size) || 0,
+                  tags: mergedTags,
+                  createdAt: img.createdTime ? new Date(img.createdTime).getTime() : Date.now()
+                });
+                if (!appFolder.coverDriveId && !appFolder.coverUrl) {
+                  appFolder.coverDriveId = img.id;
+                }
+                await updateDriveFileTagsMetadata(img.id, mergedTags);
+                filesLinked++;
+              }
+            } else if (cInfo.mimeType.startsWith('image/')) {
+              // Imagen suelta dentro de la carpeta del artista
+              if (knownDriveIds.has(cInfo.id)) continue;
+              knownDriveIds.add(cInfo.id);
+              const mergedTags = normalizeTags([...autoArtistTags, ...extractDriveFileTags(child)]);
+              appArtist.images.unshift({
+                id: generateId('img'),
+                title: (child.name || 'Imagen').replace(/\.[^/.]+$/, ''),
+                driveId: cInfo.id,
+                url: '',
+                size: Number(child.size) || 0,
+                tags: mergedTags,
+                createdAt: child.createdTime ? new Date(child.createdTime).getTime() : Date.now()
+              });
+              await updateDriveFileTagsMetadata(cInfo.id, mergedTags);
+              filesLinked++;
+            }
+          }
+        }
+
+        // 2B. SECCIÓN COMICS EN DRIVE
+        const driveComicArtists = await listDriveFolderDirectChildren(driveConfig.sectionFolderIds.comics);
+        for (const dArtItem of driveComicArtists) {
+          const info = resolveShortcutTarget(dArtItem);
+          if (!info.isFolder) continue;
+
+          let appArtist = libraryData.comics.find(
+            a => a.driveFolderId === info.id || sanitizeFolderName(a.name).toLowerCase() === sanitizeFolderName(dArtItem.name).toLowerCase()
+          );
+
+          if (!appArtist) {
+            appArtist = {
+              id: generateId('art'),
+              name: dArtItem.name,
+              driveFolderId: info.id,
+              tags: extractDriveFileTags(dArtItem),
+              avatarUrl: '',
+              avatarDriveId: '',
+              createdAt: Date.now(),
+              comics: []
+            };
+            libraryData.comics.unshift(appArtist);
+            importedToApp++;
+          } else if (!appArtist.driveFolderId) {
+            appArtist.driveFolderId = info.id;
+          }
+
+          if (!Array.isArray(appArtist.comics)) appArtist.comics = [];
+          const autoArtistTags = extractArtistNameTags(appArtist.name);
+          const comicFolders = await listDriveFolderDirectChildren(info.id);
+
+          for (const cFolder of comicFolders) {
+            const cInfo = resolveShortcutTarget(cFolder);
+            if (!cInfo.isFolder) continue;
+
+            let appComic = appArtist.comics.find(
+              c => c.driveFolderId === cInfo.id || sanitizeFolderName(c.title).toLowerCase() === sanitizeFolderName(cFolder.name).toLowerCase()
+            );
+            const driveComicTags = extractDriveFileTags(cFolder);
+
+            if (!appComic) {
+              appComic = {
+                id: generateId('comic'),
+                title: cFolder.name,
+                driveFolderId: cInfo.id,
+                tags: normalizeTags([...autoArtistTags, ...driveComicTags]),
+                coverUrl: '',
+                coverDriveId: '',
+                createdAt: Date.now(),
+                pages: []
+              };
+              appArtist.comics.unshift(appComic);
+              importedToApp++;
+            } else if (!appComic.driveFolderId) {
+              appComic.driveFolderId = cInfo.id;
+            }
+
+            const pages = await fetchAllImagesInsideDriveFolder(cInfo.id);
+            for (const pg of pages) {
+              if (knownDriveIds.has(pg.id)) continue;
+              knownDriveIds.add(pg.id);
+              const mergedTags = normalizeTags([...autoArtistTags, ...(appComic.tags || []), ...extractDriveFileTags(pg)]);
+              appComic.pages.push({
+                id: generateId('page'),
+                title: (pg.name || 'Página').replace(/\.[^/.]+$/, ''),
+                driveId: pg.id,
+                url: '',
+                size: Number(pg.size) || 0,
+                tags: mergedTags,
+                createdAt: pg.createdTime ? new Date(pg.createdTime).getTime() : Date.now()
+              });
+              if (!appComic.coverDriveId && !appComic.coverUrl) {
+                appComic.coverDriveId = pg.id;
+              }
+              await updateDriveFileTagsMetadata(pg.id, mergedTags);
+              filesLinked++;
+            }
+          }
+        }
+
+        // 2C. SECCIÓN HISTORIA EN DRIVE
+        const driveHistoriaFolders = await listDriveFolderDirectChildren(driveConfig.sectionFolderIds.historia);
+        for (const dArtItem of driveHistoriaFolders) {
+          const info = resolveShortcutTarget(dArtItem);
+          if (!info.isFolder) continue;
+
+          let appArtist = libraryData.historia.find(
+            a => a.driveFolderId === info.id || sanitizeFolderName(a.name).toLowerCase() === sanitizeFolderName(dArtItem.name).toLowerCase()
+          );
+
+          if (!appArtist) {
+            appArtist = {
+              id: generateId('art'),
+              name: dArtItem.name,
+              driveFolderId: info.id,
+              tags: extractDriveFileTags(dArtItem),
+              avatarUrl: '',
+              avatarDriveId: '',
+              createdAt: Date.now(),
+              items: []
+            };
+            libraryData.historia.unshift(appArtist);
+            importedToApp++;
+          } else if (!appArtist.driveFolderId) {
+            appArtist.driveFolderId = info.id;
+          }
+
+          if (!Array.isArray(appArtist.items)) appArtist.items = [];
+          const autoArtistTags = extractArtistNameTags(appArtist.name);
+          const storyFiles = await listDriveFolderDirectChildren(info.id);
+
+          for (const stFile of storyFiles) {
+            const sInfo = resolveShortcutTarget(stFile);
+            if (sInfo.isFolder) continue;
+            if (knownDriveIds.has(sInfo.id)) continue;
+            knownDriveIds.add(sInfo.id);
+
+            const mergedTags = normalizeTags([...autoArtistTags, ...extractDriveFileTags(stFile)]);
+            appArtist.items.unshift({
+              id: generateId('story'),
+              title: (stFile.name || 'Documento').replace(/\.[^/.]+$/, ''),
+              mimeType: sInfo.mimeType || 'application/octet-stream',
+              driveId: sInfo.id,
+              url: '',
+              size: Number(stFile.size) || 0,
+              tags: mergedTags,
+              createdAt: stFile.createdTime ? new Date(stFile.createdTime).getTime() : Date.now()
+            });
+            await updateDriveFileTagsMetadata(sInfo.id, mergedTags);
+            filesLinked++;
+          }
+        }
+
+        if (createdInDrive > 0 || importedToApp > 0 || filesLinked > 0) {
+          await persistLibrary(`Actualización carpetas App ↔ Drive (+${createdInDrive} en Drive, +${importedToApp} carpetas en App, +${filesLinked} archivos)`);
+        }
+        await indexAndUnifyAllDriveTags();
+        renderAll();
+
+        if (createdInDrive === 0 && importedToApp === 0 && filesLinked === 0) {
+          showToast('✅ Todas las carpetas entre App y Drive ya están al día');
+        } else {
+          showToast(`✅ Actualizado: ${importedToApp} carpeta(s) traídas, ${createdInDrive} creadas en Drive y ${filesLinked} archivo(s)`);
+        }
+      } catch (err) {
+        console.error('Error actualizando carpetas App ↔ Drive:', err);
+        showToast('⚠️ Error al actualizar las carpetas con Drive');
+      } finally {
+        driveConfig.isSyncingFolders = false;
+        syncInd.classList.add('hidden');
+        if (topBtn) topBtn.disabled = false;
+      }
     }
 
     async function uploadFileToDrive(file, parentFolderId, tags = []) {
@@ -2442,9 +2701,6 @@
       });
     }
 
-    // =========================================================================
-    // ESCÁNER DE ARCHIVOS SUBIDOS DIRECTAMENTE A GOOGLE DRIVE
-    // =========================================================================
     function getAllKnownDriveIds() {
       const ids = new Set();
       if (driveConfig.metadataFileId) ids.add(driveConfig.metadataFileId);
@@ -2478,261 +2734,6 @@
         }
       }
       return ids;
-    }
-
-    function openDriveScannerModal() {
-      openModal('drive-scanner-modal');
-      populateImportArtistDropdown();
-      if (driveConfig.accessToken) {
-        scanDriveForUntrackedFiles(true);
-      } else {
-        document.getElementById('scanner-status-line').textContent = 'Conecta primero tu cuenta de Google Drive para escanear archivos.';
-      }
-    }
-
-    async function scanDriveForUntrackedFiles(renderList = true) {
-      if (!driveConfig.accessToken) return;
-      const statusEl = document.getElementById('scanner-status-line');
-      if (renderList) statusEl.textContent = 'Escaneando carpetas de Google Drive...';
-
-      try {
-        await ensureDriveStructure();
-        const knownIds = getAllKnownDriveIds();
-        const q = encodeURIComponent(`trashed=false and mimeType!='application/vnd.google-apps.folder' and name!='${METADATA_FILENAME}' and name!='${ACTIVITY_LOG_FILENAME}'`);
-        const allFiles = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime desc&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties)`);
-
-        const untracked = allFiles.filter(f => {
-          if (knownIds.has(f.id)) return false;
-          if (f.name && f.name.startsWith('respaldo_') && f.name.endsWith('.json')) return false;
-          return true;
-        });
-
-        driveConfig.untrackedFiles = untracked.map(f => ({ ...f, selected: true }));
-
-        const badge = document.getElementById('untracked-badge');
-        const topDot = document.getElementById('top-untracked-dot');
-        if (untracked.length > 0) {
-          badge.textContent = untracked.length;
-          badge.classList.remove('hidden');
-          topDot.classList.remove('hidden');
-        } else {
-          badge.classList.add('hidden');
-          topDot.classList.add('hidden');
-        }
-
-        if (renderList) {
-          statusEl.textContent = untracked.length
-            ? `Se encontraron ${untracked.length} archivo(s) nuevos en Google Drive.`
-            : 'Todo está al día: no hay archivos sin registrar en Drive.';
-          renderUntrackedFilesList();
-        }
-      } catch (e) {
-        if (renderList) statusEl.textContent = '⚠️ Error al escanear Google Drive.';
-      }
-    }
-
-    function renderUntrackedFilesList() {
-      const container = document.getElementById('untracked-files-list');
-      const countEl = document.getElementById('untracked-selected-count');
-      const items = driveConfig.untrackedFiles;
-      countEl.textContent = items.filter(i => i.selected).length;
-
-      if (!items.length) {
-        container.innerHTML = '<div class="text-center text-xs text-slate-500 py-8">No se detectaron archivos sueltos en Drive.</div>';
-        return;
-      }
-
-      container.innerHTML = items.map((f, idx) => {
-        const sizeLabel = formatFileSize(f.size);
-        const existingTags = extractDriveFileTags(f);
-        return `
-          <label class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/40 cursor-pointer">
-            <input type="checkbox" ${f.selected ? 'checked' : ''} onchange="toggleUntrackedSelection(${idx}, this.checked)" class="w-4 h-4 accent-indigo-500 shrink-0" />
-            <div class="min-w-0 flex-1">
-              <div class="text-xs font-semibold text-white truncate">${escapeHtml(f.name)}</div>
-              <div class="text-[10px] text-slate-400 flex items-center gap-2 flex-wrap">
-                <span>${escapeHtml(f.mimeType || '')}</span>
-                ${sizeLabel ? `<span class="text-indigo-300 font-semibold">${sizeLabel}</span>` : ''}
-                ${existingTags.length ? `<span class="text-emerald-300">${existingTags.map(t => '#' + escapeHtml(t)).join(' ')}</span>` : ''}
-              </div>
-            </div>
-          </label>
-        `;
-      }).join('');
-    }
-
-    function toggleUntrackedSelection(idx, checked) {
-      if (driveConfig.untrackedFiles[idx]) {
-        driveConfig.untrackedFiles[idx].selected = checked;
-        document.getElementById('untracked-selected-count').textContent = driveConfig.untrackedFiles.filter(i => i.selected).length;
-      }
-    }
-
-    function toggleSelectAllUntracked(val) {
-      driveConfig.untrackedFiles.forEach(i => i.selected = val);
-      renderUntrackedFilesList();
-    }
-
-    function populateImportArtistDropdown() {
-      const section = document.getElementById('import-target-section').value;
-      const artistSel = document.getElementById('import-target-artist');
-      const subWrap = document.getElementById('import-sub-wrapper');
-
-      const artists = libraryData[section] || [];
-      artistSel.innerHTML =
-        `<option value="__new__">+ Crear artista nuevo...</option>` +
-        artists.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
-
-      if (artists.length > 0) artistSel.value = artists[0].id;
-
-      if (section === 'comics' || section === 'artistas') {
-        subWrap.classList.remove('hidden');
-        populateImportSubDropdown();
-      } else {
-        subWrap.classList.add('hidden');
-      }
-    }
-
-    function populateImportSubDropdown() {
-      const section = document.getElementById('import-target-section').value;
-      const subSel = document.getElementById('import-target-sub');
-      const subLabel = document.getElementById('import-sub-label');
-
-      if (section === 'comics') {
-        subLabel.textContent = '3. Cómic destino';
-        const artistId = document.getElementById('import-target-artist').value;
-        const artist = libraryData.comics.find(a => a.id === artistId);
-        const comics = artist ? (artist.comics || []) : [];
-        subSel.innerHTML =
-          `<option value="__new__">+ Nuevo cómic ("Importados")</option>` +
-          comics.map(c => `<option value="${c.id}">${escapeHtml(c.title)}</option>`).join('');
-        if (comics.length > 0) subSel.value = comics[0].id;
-      } else if (section === 'artistas') {
-        subLabel.textContent = '3. Carpeta dentro del Artista';
-        const artistId = document.getElementById('import-target-artist').value;
-        const artist = libraryData.artistas.find(a => a.id === artistId);
-        const folders = artist ? (artist.folders || []) : [];
-        subSel.innerHTML =
-          `<option value="__loose__">🖼️ Galería general (sin carpeta)</option>` +
-          folders.map(f => `<option value="${f.id}">📁 Carpeta: ${escapeHtml(f.name)}</option>`).join('');
-      }
-    }
-
-    async function importSelectedUntrackedFiles() {
-      const selected = driveConfig.untrackedFiles.filter(i => i.selected);
-      if (!selected.length) {
-        showToast('Selecciona al menos un archivo para importar');
-        return;
-      }
-
-      const section = document.getElementById('import-target-section').value;
-      const selectedArtistId = document.getElementById('import-target-artist').value;
-      const newArtistName = document.getElementById('import-new-artist-name').value.trim();
-      const extraTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('import-tags-input').value));
-
-      let artist = null;
-      if (selectedArtistId === '__new__' || newArtistName) {
-        const name = newArtistName || 'Importados Drive';
-        artist = {
-          id: generateId('art'),
-          name,
-          tags: [...extraTags],
-          avatarUrl: '',
-          avatarDriveId: '',
-          createdAt: Date.now(),
-          ...(section === 'historia' ? { items: [] } : section === 'comics' ? { comics: [] } : { folders: [], images: [] })
-        };
-        libraryData[section].unshift(artist);
-      } else {
-        artist = libraryData[section].find(a => a.id === selectedArtistId);
-      }
-
-      if (!artist) {
-        showToast('Selecciona o crea un artista destino');
-        return;
-      }
-
-      const autoArtistTags = extractArtistNameTags(artist.name);
-      const now = Date.now();
-
-      if (section === 'artistas') {
-        const subId = document.getElementById('import-target-sub').value;
-        const targetFolder = subId && subId !== '__loose__' ? (artist.folders || []).find(f => f.id === subId) : null;
-        const folderAutoTags = targetFolder ? [...extractFolderNameTags(targetFolder.name), ...(targetFolder.tags || [])] : [];
-        const targetList = targetFolder ? targetFolder.images : artist.images;
-
-        for (let i = 0; i < selected.length; i++) {
-          const f = selected[i];
-          const nativeTags = extractDriveFileTags(f);
-          const mergedTags = normalizeTags([...autoArtistTags, ...folderAutoTags, ...nativeTags, ...extraTags]);
-          targetList.unshift({
-            id: generateId('img'),
-            title: f.name.replace(/\.[^/.]+$/, ''),
-            driveId: f.id,
-            url: '',
-            size: Number(f.size) || 0,
-            tags: mergedTags,
-            createdAt: now + i
-          });
-          await updateDriveFileTagsMetadata(f.id, mergedTags);
-        }
-      } else if (section === 'comics') {
-        const comicId = document.getElementById('import-target-sub').value;
-        let comic = (artist.comics || []).find(c => c.id === comicId);
-        if (!comic) {
-          comic = {
-            id: generateId('comic'),
-            title: 'Importados Drive',
-            tags: normalizeTags([...autoArtistTags, ...extraTags]),
-            coverUrl: '',
-            coverDriveId: selected[0].id,
-            createdAt: now,
-            pages: []
-          };
-          artist.comics.unshift(comic);
-        } else {
-          comic.tags = normalizeTags([...(comic.tags || []), ...autoArtistTags]);
-        }
-        for (let i = 0; i < selected.length; i++) {
-          const f = selected[i];
-          const nativeTags = extractDriveFileTags(f);
-          const mergedTags = normalizeTags([...autoArtistTags, ...(comic.tags || []), ...nativeTags, ...extraTags]);
-          comic.pages.push({
-            id: generateId('page'),
-            title: f.name.replace(/\.[^/.]+$/, ''),
-            driveId: f.id,
-            url: '',
-            size: Number(f.size) || 0,
-            tags: mergedTags,
-            createdAt: now + i
-          });
-          await updateDriveFileTagsMetadata(f.id, mergedTags);
-        }
-      } else if (section === 'historia') {
-        for (let i = 0; i < selected.length; i++) {
-          const f = selected[i];
-          const nativeTags = extractDriveFileTags(f);
-          const mergedTags = normalizeTags([...autoArtistTags, ...nativeTags, ...extraTags]);
-          artist.items.unshift({
-            id: generateId('story'),
-            title: f.name.replace(/\.[^/.]+$/, ''),
-            mimeType: f.mimeType || 'application/octet-stream',
-            driveId: f.id,
-            url: '',
-            size: Number(f.size) || 0,
-            tags: mergedTags,
-            createdAt: now + i
-          });
-          await updateDriveFileTagsMetadata(f.id, mergedTags);
-        }
-      }
-
-      await persistLibrary(`Importados ${selected.length} archivo(s) desde Drive a ${artist.name}`);
-      closeModal('drive-scanner-modal');
-      scanDriveForUntrackedFiles(false);
-      await indexAndUnifyAllDriveTags();
-      renderAll();
-      showToast(`✅ ${selected.length} archivo(s) importados con tag #${autoArtistTags[0] || ''}`);
     }
 
     // =========================================================================
@@ -5560,7 +5561,7 @@
         if (state.comicId === subId) state.comicId = null;
       } else if (type === 'comic-page') {
         const artist = libraryData.comics.find(a => a.id === artistId);
-        const comic = artist ? artist.comics.find(c => c.id === subId) : null;
+        const comic = artist ? (artist.comics || []).find(c => c.id === subId) : null;
         const page = comic ? (comic.pages || []).find(p => p.id === itemId) : null;
         if (page && page.driveId && driveConfig.accessToken) {
           await trashDriveItemById(page.driveId);
