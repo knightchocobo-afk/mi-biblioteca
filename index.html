@@ -196,6 +196,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button onclick="openBulkTagModal()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow">🏷️ Etiquetar / Quitar tags</button>
+          <button onclick="openAppMoveModal({ mode: 'bulk-artist-images' })" class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow">📁 Mover</button>
           <button onclick="deleteSelectedArtistImages()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs shadow">🗑️ Borrar</button>
           <button onclick="toggleBulkSelectMode(false)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs">Salir</button>
         </div>
@@ -212,6 +213,7 @@
           <button onclick="openDriveImportToAppModal()" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow">📥 Pasar a Mi App</button>
           <button onclick="openDriveMoveModal()" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow">📁 Mover a carpeta</button>
           <button onclick="openDriveBrowserTagModal()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow">🏷️ Poner / Quitar Tags</button>
+          <button onclick="renameSingleSelectedDriveBrowserItem()" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs shadow">✏️ Renombrar</button>
           <button onclick="deleteSelectedDriveBrowserItems()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs shadow">🗑️ Enviar a papelera</button>
         </div>
       </div>
@@ -660,6 +662,71 @@
         <button onclick="confirmDupFolderSelection()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm">
           👯 Analizar esta carpeta
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 11: MOVER IMÁGENES O CARPETAS DENTRO DE LA APP (Y EN DRIVE)      -->
+  <!-- ===================================================================== -->
+  <div id="app-move-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 id="app-move-modal-title" class="text-lg font-bold text-white">📁 Mover dentro de la App</h2>
+        <button onclick="closeModal('app-move-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
+      </div>
+
+      <div id="app-move-summary" class="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-xs text-amber-200"></div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">1. Artista destino</label>
+          <select id="app-move-artist-select" onchange="onAppMoveArtistChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white"></select>
+        </div>
+
+        <div id="app-move-new-artist-group" class="hidden">
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">Nombre del nuevo Artista</label>
+          <input id="app-move-new-artist-input" type="text" placeholder="Ej: Kaelen Studio" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+        </div>
+
+        <div id="app-move-folder-group" class="space-y-2.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">2. Carpeta destino dentro del Artista</label>
+            <select id="app-move-folder-select" onchange="onAppMoveFolderChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white"></select>
+          </div>
+
+          <div id="app-move-new-folder-group" class="hidden">
+            <label class="block text-xs font-semibold text-amber-300 mb-1">Nombre de la nueva carpeta</label>
+            <input id="app-move-new-folder-input" type="text" placeholder="Ej: Sketches 2026" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeModal('app-move-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
+        <button id="app-move-confirm-btn" onclick="executeAppMove()" class="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm shadow-lg">
+          ✅ Mover aquí
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 12: RENOMBRAR ARCHIVO O CARPETA EN GOOGLE DRIVE                 -->
+  <!-- ===================================================================== -->
+  <div id="drive-rename-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 class="text-lg font-bold text-white">✏️ Cambiar nombre en Drive</h2>
+        <button onclick="closeModal('drive-rename-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1">Nuevo nombre</label>
+        <input id="drive-rename-input" type="text" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+      </div>
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeModal('drive-rename-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
+        <button id="drive-rename-confirm-btn" onclick="executeDriveBrowserRename()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm">Guardar nombre</button>
       </div>
     </div>
   </div>
@@ -1265,6 +1332,8 @@
     let editingArtistFolderContext = null;
     let uploadContext = null;
     let editingTagsContext = null;
+    let appMoveContext = null;
+    let driveRenameContext = null;
     let bulkTagChipsState = { activeTags: [], removedTags: new Set() };
     let driveTagChipsState = { activeTags: [], removedTags: new Set() };
     let pickedFileSystemEntries = [];
@@ -2296,6 +2365,389 @@
         });
       } catch (e) {
         console.warn('No se pudieron actualizar metadatos de tags en Drive:', e);
+      }
+    }
+
+    async function renameDriveItemById(driveId, newName, preserveExtension = false) {
+      if (!driveConfig.accessToken || !driveId || !newName) return;
+      try {
+        let finalName = sanitizeFolderName(newName);
+        if (preserveExtension) {
+          const metaRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?fields=name,mimeType&supportsAllDrives=true`);
+          if (metaRes.ok) {
+            const meta = await metaRes.json();
+            if (meta.mimeType !== 'application/vnd.google-apps.folder' && meta.name && meta.name.includes('.')) {
+              const extMatch = meta.name.match(/(\.[^./\\]+)$/);
+              if (extMatch && !finalName.toLowerCase().endsWith(extMatch[1].toLowerCase())) {
+                finalName += extMatch[1];
+              }
+            }
+          }
+        }
+        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?supportsAllDrives=true`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: finalName })
+        });
+      } catch (e) {
+        console.warn('No se pudo renombrar elemento en Drive:', driveId, e);
+      }
+    }
+
+    function openDriveRenameModal(fileId, currentName) {
+      driveRenameContext = { fileId, currentName };
+      document.getElementById('drive-rename-input').value = currentName || '';
+      openModal('drive-rename-modal');
+    }
+
+    function renameSingleSelectedDriveBrowserItem() {
+      const ids = Array.from(driveBrowserState.selectedIds);
+      if (ids.length !== 1) {
+        showToast('Selecciona exactamente 1 archivo o carpeta para renombrarlo');
+        return;
+      }
+      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
+      const item = sourceList.find(f => f.id === ids[0]);
+      if (!item) return;
+      openDriveRenameModal(item.id, item.name);
+    }
+
+    async function executeDriveBrowserRename() {
+      if (!driveRenameContext) return;
+      const newName = document.getElementById('drive-rename-input').value.trim();
+      if (!newName) {
+        showToast('Escribe un nombre válido');
+        return;
+      }
+      const btn = document.getElementById('drive-rename-confirm-btn');
+      btn.disabled = true;
+      btn.textContent = 'Renombrando...';
+
+      try {
+        const { fileId } = driveRenameContext;
+        await renameDriveItemById(fileId, newName, false);
+
+        const cleanTitle = newName.replace(/\.[^/.]+$/, '');
+        for (const sec of ['artistas', 'comics', 'historia']) {
+          for (const a of (libraryData[sec] || [])) {
+            if (a.driveFolderId === fileId) a.name = cleanTitle;
+            for (const f of (a.folders || [])) {
+              if (f.driveFolderId === fileId) f.name = cleanTitle;
+              for (const img of (f.images || [])) {
+                if (img.driveId === fileId) img.title = cleanTitle;
+              }
+            }
+            for (const img of (a.images || [])) {
+              if (img.driveId === fileId) img.title = cleanTitle;
+            }
+            for (const c of (a.comics || [])) {
+              if (c.driveFolderId === fileId) c.title = cleanTitle;
+              for (const p of (c.pages || [])) {
+                if (p.driveId === fileId) p.title = cleanTitle;
+              }
+            }
+            for (const st of (a.items || [])) {
+              if (st.driveId === fileId) st.title = cleanTitle;
+            }
+          }
+        }
+
+        await persistLibrary(`Renombrado en Drive a "${newName}"`);
+        closeModal('drive-rename-modal');
+        showToast(`✏️ Renombrado a "${newName}"`);
+
+        if (state.activeTags.length > 0) {
+          await runDeepUnifiedTagSearch(state.activeTags);
+        } else {
+          await loadDriveBrowserFolder(driveBrowserState.path[driveBrowserState.path.length - 1].id);
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar nombre';
+      }
+    }
+
+    // =========================================================================
+    // MOVER IMÁGENES O CARPETAS DENTRO DE LA APP (SINCRONIZADO CON DRIVE)
+    // =========================================================================
+    function openAppMoveModal(context) {
+      appMoveContext = context;
+      const artistSel = document.getElementById('app-move-artist-select');
+      const folderGroup = document.getElementById('app-move-folder-group');
+      const summaryEl = document.getElementById('app-move-summary');
+      const titleEl = document.getElementById('app-move-modal-title');
+
+      document.getElementById('app-move-new-artist-input').value = '';
+      document.getElementById('app-move-new-folder-input').value = '';
+
+      const artists = libraryData.artistas || [];
+      artistSel.innerHTML =
+        `<option value="__new__">+ Crear nuevo artista...</option>` +
+        artists.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
+
+      if (context.artistId && artists.some(a => a.id === context.artistId)) {
+        artistSel.value = context.artistId;
+      } else if (state.artistId && artists.some(a => a.id === state.artistId)) {
+        artistSel.value = state.artistId;
+      } else if (artists.length > 0) {
+        artistSel.value = artists[0].id;
+      }
+
+      if (context.mode === 'artist-folder') {
+        titleEl.textContent = '📁 Mover Carpeta a otro Artista';
+        folderGroup.classList.add('hidden');
+        summaryEl.textContent = `Mover la carpeta "${context.folderName || 'Carpeta'}" y todas sus imágenes al artista que elijas (actualizando tags y carpeta en Drive).`;
+      } else {
+        const count = context.mode === 'bulk-artist-images' ? state.selectedImageIds.size : 1;
+        if (!count) return;
+        titleEl.textContent = `📁 Mover ${count} imagen(es)`;
+        folderGroup.classList.remove('hidden');
+        summaryEl.textContent = `Elige a qué artista o carpeta deseas mover ${count === 1 ? 'esta imagen' : `estas ${count} imágenes`}. Se actualizarán sus tags automáticos y su ubicación en Google Drive.`;
+      }
+
+      onAppMoveArtistChange();
+      openModal('app-move-modal');
+    }
+
+    function onAppMoveArtistChange() {
+      const artistId = document.getElementById('app-move-artist-select').value;
+      const newArtistGroup = document.getElementById('app-move-new-artist-group');
+      if (artistId === '__new__') {
+        newArtistGroup.classList.remove('hidden');
+      } else {
+        newArtistGroup.classList.add('hidden');
+      }
+
+      if (appMoveContext && appMoveContext.mode === 'artist-folder') return;
+
+      const folderSel = document.getElementById('app-move-folder-select');
+      const artist = libraryData.artistas.find(a => a.id === artistId);
+      const folders = artist ? (artist.folders || []) : [];
+
+      folderSel.innerHTML =
+        `<option value="__loose__">🖼️ Galería principal del artista (sueltas)</option>` +
+        `<option value="__new_folder__">+ Crear nueva carpeta aquí...</option>` +
+        folders.map(f => `<option value="${f.id}">📁 ${escapeHtml(f.name)}</option>`).join('');
+
+      onAppMoveFolderChange();
+    }
+
+    function onAppMoveFolderChange() {
+      const folderVal = document.getElementById('app-move-folder-select').value;
+      const newFolderGroup = document.getElementById('app-move-new-folder-group');
+      if (folderVal === '__new_folder__') {
+        newFolderGroup.classList.remove('hidden');
+      } else {
+        newFolderGroup.classList.add('hidden');
+      }
+    }
+
+    async function moveDriveFileToTargetParent(driveFileId, newParentFolderId) {
+      if (!driveConfig.accessToken || !driveFileId || !newParentFolderId) return;
+      try {
+        const metaRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?fields=parents&supportsAllDrives=true`);
+        if (!metaRes.ok) return;
+        const meta = await metaRes.json();
+        const prevParents = Array.isArray(meta.parents) ? meta.parents : [];
+        if (prevParents.includes(newParentFolderId)) return;
+        const removeParam = prevParents.length ? `&removeParents=${encodeURIComponent(prevParents.join(','))}` : '';
+        await driveApiFetch(
+          `https://www.googleapis.com/drive/v3/files/${driveFileId}?addParents=${encodeURIComponent(newParentFolderId)}${removeParam}&supportsAllDrives=true&fields=id,parents`,
+          { method: 'PATCH' }
+        );
+      } catch (e) {
+        console.warn('No se pudo mover archivo/carpeta en Drive:', driveFileId, e);
+      }
+    }
+
+    async function executeAppMove() {
+      if (!appMoveContext) return;
+      const targetArtistId = document.getElementById('app-move-artist-select').value;
+      const newArtistName = document.getElementById('app-move-new-artist-input').value.trim();
+
+      if (targetArtistId === '__new__' && !newArtistName) {
+        showToast('Escribe el nombre del nuevo artista');
+        return;
+      }
+
+      const btn = document.getElementById('app-move-confirm-btn');
+      btn.disabled = true;
+      btn.textContent = 'Moviendo...';
+
+      try {
+        let destArtist = null;
+        if (targetArtistId === '__new__') {
+          destArtist = {
+            id: generateId('art'),
+            name: newArtistName,
+            tags: [],
+            avatarUrl: '',
+            avatarDriveId: '',
+            createdAt: Date.now(),
+            folders: [],
+            images: []
+          };
+          libraryData.artistas.unshift(destArtist);
+        } else {
+          destArtist = libraryData.artistas.find(a => a.id === targetArtistId);
+        }
+
+        if (!destArtist) return;
+        if (!Array.isArray(destArtist.folders)) destArtist.folders = [];
+        if (!Array.isArray(destArtist.images)) destArtist.images = [];
+
+        const newArtistAutoTags = extractArtistNameTags(destArtist.name);
+
+        // CASO A: MOVER CARPETA COMPLETA DE UN ARTISTA A OTRO ARTISTA
+        if (appMoveContext.mode === 'artist-folder') {
+          const srcArtist = libraryData.artistas.find(a => a.id === appMoveContext.artistId);
+          const folderIdx = srcArtist ? (srcArtist.folders || []).findIndex(f => f.id === appMoveContext.folderId) : -1;
+          if (folderIdx === -1) return;
+
+          if (srcArtist.id === destArtist.id) {
+            closeModal('app-move-modal');
+            showToast('La carpeta ya pertenece a ese artista');
+            return;
+          }
+
+          const [folderObj] = srcArtist.folders.splice(folderIdx, 1);
+          const oldArtistTagsSet = new Set(extractArtistNameTags(srcArtist.name));
+          const folderAutoTags = extractFolderNameTags(folderObj.name);
+
+          folderObj.tags = normalizeTags([
+            ...(folderObj.tags || []).filter(t => !oldArtistTagsSet.has(t)),
+            ...newArtistAutoTags,
+            ...folderAutoTags
+          ]);
+
+          if (driveConfig.accessToken) {
+            const destArtistDriveFolder = await ensureTargetFolderForContext('artistas', destArtist, null);
+            if (folderObj.driveFolderId && destArtistDriveFolder) {
+              await moveDriveFileToTargetParent(folderObj.driveFolderId, destArtistDriveFolder);
+            }
+          }
+
+          for (const img of (folderObj.images || [])) {
+            img.tags = normalizeTags([
+              ...(img.tags || []).filter(t => !oldArtistTagsSet.has(t)),
+              ...newArtistAutoTags,
+              ...folderAutoTags
+            ]);
+            if (img.driveId) {
+              await updateDriveFileTagsMetadata(img.driveId, img.tags);
+            }
+          }
+
+          destArtist.folders.unshift(folderObj);
+          if (state.artistFolderId === folderObj.id) {
+            state.artistId = destArtist.id;
+          }
+
+          await persistLibrary(`Movida carpeta "${folderObj.name}" de ${srcArtist.name} a ${destArtist.name}`);
+          closeModal('app-move-modal');
+          renderAll();
+          showToast(`📁 Carpeta "${folderObj.name}" movida a ${destArtist.name}`);
+          return;
+        }
+
+        // CASO B: MOVER 1 O VARIAS IMÁGENES
+        const srcArtist = libraryData.artistas.find(a => a.id === (appMoveContext.artistId || state.artistId));
+        if (!srcArtist) return;
+
+        const srcFolderId = appMoveContext.mode === 'bulk-artist-images'
+          ? state.artistFolderId
+          : (appMoveContext.folderId || null);
+        const srcFolder = srcFolderId ? (srcArtist.folders || []).find(f => f.id === srcFolderId) : null;
+        const srcList = srcFolder ? (srcFolder.images || []) : (srcArtist.images || []);
+
+        const idsToMove = appMoveContext.mode === 'bulk-artist-images'
+          ? new Set(state.selectedImageIds)
+          : new Set([appMoveContext.itemId]);
+
+        const destFolderChoice = document.getElementById('app-move-folder-select').value;
+        const newFolderName = document.getElementById('app-move-new-folder-input').value.trim();
+
+        if (destFolderChoice === '__new_folder__' && !newFolderName) {
+          showToast('Escribe el nombre de la nueva carpeta');
+          return;
+        }
+
+        let destFolder = null;
+        if (destFolderChoice === '__new_folder__') {
+          const autoF = extractFolderNameTags(newFolderName);
+          destFolder = {
+            id: generateId('afolder'),
+            name: newFolderName,
+            driveFolderId: '',
+            tags: normalizeTags([...newArtistAutoTags, ...autoF]),
+            coverUrl: '',
+            coverDriveId: '',
+            createdAt: Date.now(),
+            images: []
+          };
+          destArtist.folders.unshift(destFolder);
+        } else if (destFolderChoice !== '__loose__') {
+          destFolder = destArtist.folders.find(f => f.id === destFolderChoice) || null;
+        }
+
+        if (srcArtist.id === destArtist.id && ((srcFolder && destFolder && srcFolder.id === destFolder.id) || (!srcFolder && !destFolder))) {
+          closeModal('app-move-modal');
+          showToast('Las imágenes ya están en esa ubicación');
+          return;
+        }
+
+        const extractedImages = [];
+        const remainingImages = [];
+        for (const img of srcList) {
+          if (idsToMove.has(img.id)) extractedImages.push(img);
+          else remainingImages.push(img);
+        }
+
+        if (!extractedImages.length) return;
+
+        if (srcFolder) srcFolder.images = remainingImages;
+        else srcArtist.images = remainingImages;
+
+        const oldArtistTagsSet = new Set(extractArtistNameTags(srcArtist.name));
+        const oldFolderTagsSet = new Set(srcFolder ? extractFolderNameTags(srcFolder.name) : []);
+        const destFolderAutoTags = destFolder ? [...extractFolderNameTags(destFolder.name), ...(destFolder.tags || [])] : [];
+
+        const destDriveParentId = driveConfig.accessToken
+          ? await ensureTargetFolderForContext('artistas', destArtist, destFolder)
+          : null;
+
+        for (const img of extractedImages) {
+          const cleanedOld = (img.tags || []).filter(t => !oldArtistTagsSet.has(t) && !oldFolderTagsSet.has(t));
+          img.tags = normalizeTags([...cleanedOld, ...newArtistAutoTags, ...destFolderAutoTags]);
+          if (img.driveId) {
+            await updateDriveFileTagsMetadata(img.driveId, img.tags);
+            if (destDriveParentId) {
+              await moveDriveFileToTargetParent(img.driveId, destDriveParentId);
+            }
+          }
+        }
+
+        if (destFolder) {
+          destFolder.images = [...extractedImages, ...(destFolder.images || [])];
+          if (!destFolder.coverDriveId && !destFolder.coverUrl && extractedImages[0]) {
+            destFolder.coverDriveId = extractedImages[0].driveId || '';
+            destFolder.coverUrl = extractedImages[0].url || '';
+          }
+        } else {
+          destArtist.images = [...extractedImages, ...(destArtist.images || [])];
+        }
+
+        state.selectedImageIds.clear();
+        state.bulkSelectMode = false;
+        driveBrowserState.folderCoverCache.clear();
+
+        await persistLibrary(`Movidas ${extractedImages.length} imagen(es) a ${destArtist.name}${destFolder ? ' / ' + destFolder.name : ''}`);
+        closeModal('app-move-modal');
+        renderAll();
+        showToast(`📁 ${extractedImages.length} imagen(es) movidas a ${destArtist.name}${destFolder ? ' / ' + destFolder.name : ''}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✅ Mover aquí';
       }
     }
 
@@ -4648,6 +5100,10 @@
           const newAutoTags = extractArtistNameTags(name);
           const removedAliasSet = new Set(oldAutoTags.filter(t => !newAutoTags.includes(t)));
 
+          if (targetArtist.driveFolderId && driveConfig.accessToken) {
+            renameDriveItemById(targetArtist.driveFolderId, name, false);
+          }
+
           if (section === 'artistas') {
             for (const img of (targetArtist.images || [])) {
               const filtered = (img.tags || []).filter(t => !removedAliasSet.has(t));
@@ -4770,6 +5226,10 @@
           const removedOldFolderTag = new Set(oldFolderAutoTags.filter(t => !autoFolderTags.includes(t)));
           targetFolder.name = name;
           targetFolder.tags = mergedFolderTags;
+
+          if (targetFolder.driveFolderId && driveConfig.accessToken) {
+            renameDriveItemById(targetFolder.driveFolderId, name, false);
+          }
 
           for (const img of (targetFolder.images || [])) {
             const kept = (img.tags || []).filter(t => !removedOldFolderTag.has(t));
@@ -5261,7 +5721,12 @@
         const artist = libraryData.comics.find(a => a.id === artistId);
         const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
         if (comic) {
-          if (newTitle) comic.title = newTitle;
+          if (newTitle) {
+            comic.title = newTitle;
+            if (comic.driveFolderId && driveConfig.accessToken) {
+              await renameDriveItemById(comic.driveFolderId, newTitle, false);
+            }
+          }
           comic.tags = finalTags;
           for (const p of (comic.pages || [])) {
             const pFiltered = (p.tags || []).filter(t => !removedTags.has(t));
@@ -5277,7 +5742,12 @@
         const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
         const page = comic ? comic.pages.find(p => p.id === itemId) : null;
         if (page) {
-          if (newTitle) page.title = newTitle;
+          if (newTitle) {
+            page.title = newTitle;
+            if (page.driveId && driveConfig.accessToken) {
+              await renameDriveItemById(page.driveId, newTitle, true);
+            }
+          }
           page.tags = finalTags;
           if (removedTags.size > 0 && comic) {
             comic.tags = normalizeTags((comic.tags || []).filter(t => !removedTags.has(t)));
@@ -5293,7 +5763,12 @@
         const imgList = folder ? (folder.images || []) : (artist ? (artist.images || []) : []);
         const img = imgList.find(i => i.id === itemId);
         if (img) {
-          if (newTitle) img.title = newTitle;
+          if (newTitle) {
+            img.title = newTitle;
+            if (img.driveId && driveConfig.accessToken) {
+              await renameDriveItemById(img.driveId, newTitle, true);
+            }
+          }
           img.tags = finalTags;
           if (removedTags.size > 0) {
             if (folder) folder.tags = normalizeTags((folder.tags || []).filter(t => !removedTags.has(t)));
@@ -5308,7 +5783,12 @@
         const artist = libraryData.historia.find(a => a.id === artistId);
         const st = artist ? artist.items.find(i => i.id === itemId) : null;
         if (st) {
-          if (newTitle) st.title = newTitle;
+          if (newTitle) {
+            st.title = newTitle;
+            if (st.driveId && driveConfig.accessToken) {
+              await renameDriveItemById(st.driveId, newTitle, true);
+            }
+          }
           st.tags = finalTags;
           if (removedTags.size > 0 && artist) {
             artist.tags = normalizeTags((artist.tags || []).filter(t => !removedTags.has(t)));
@@ -6487,7 +6967,10 @@
                     <button onclick="toggleFavorite('artist-image', '${artist.id}', '${activeFolder.id}', '${img.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                       ${img.favorite ? '⭐' : '☆'}
                     </button>
-                    <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, folderId: activeFolder.id, itemId: img.id, currentTitle: img.title, currentTags: img.tags || [] })})' class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
+                    <button onclick='openAppMoveModal(${JSON.stringify({ mode: 'single-artist-image', artistId: artist.id, folderId: activeFolder.id, itemId: img.id })})' title="Mover imagen" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-amber-300 flex items-center justify-center">
+                      📁
+                    </button>
+                    <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, folderId: activeFolder.id, itemId: img.id, currentTitle: img.title, currentTags: img.tags || [] })})' title="Renombrar y tags" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                       🏷️
                     </button>
                     <button onclick="deleteSubItem('artist-image', '${artist.id}', '${activeFolder.id}', '${img.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-rose-300 flex items-center justify-center">
@@ -6566,7 +7049,10 @@
                     <button onclick="toggleFavorite('artist-folder', '${artist.id}', '${folder.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                       ${folder.favorite ? '⭐' : '☆'}
                     </button>
-                    <button onclick="openArtistFolderModal('${artist.id}', '${folder.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
+                    <button onclick='openAppMoveModal(${JSON.stringify({ mode: 'artist-folder', artistId: artist.id, folderId: folder.id, folderName: folder.name })})' title="Mover carpeta a otro artista" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-amber-300 flex items-center justify-center">
+                      📁
+                    </button>
+                    <button onclick="openArtistFolderModal('${artist.id}', '${folder.id}')" title="Renombrar y editar tags" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                       ✏️
                     </button>
                     <button onclick="deleteArtistFolder('${artist.id}', '${folder.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-rose-300 flex items-center justify-center">
@@ -6611,7 +7097,10 @@
                   <button onclick="toggleFavorite('artist-image', '${artist.id}', null, '${img.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                     ${img.favorite ? '⭐' : '☆'}
                   </button>
-                  <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, folderId: null, itemId: img.id, currentTitle: img.title, currentTags: img.tags || [] })})' class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
+                  <button onclick='openAppMoveModal(${JSON.stringify({ mode: 'single-artist-image', artistId: artist.id, folderId: null, itemId: img.id })})' title="Mover imagen" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-amber-300 flex items-center justify-center">
+                    📁
+                  </button>
+                  <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, folderId: null, itemId: img.id, currentTitle: img.title, currentTags: img.tags || [] })})' title="Renombrar y tags" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                     🏷️
                   </button>
                   <button onclick="deleteSubItem('artist-image', '${artist.id}', null, '${img.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-rose-300 flex items-center justify-center">
@@ -7043,6 +7532,9 @@
                     🏷️
                   </button>
                 ` : ''}
+                <button onclick="openDriveRenameModal('${f.id}', '${escapeHtml(f.name)}')" title="Cambiar nombre" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-amber-200 flex items-center justify-center">
+                  ✏️
+                </button>
                 <button onclick="deleteSingleDriveBrowserItem('${f.id}', '${escapeHtml(f.name)}', ${isFolder})" title="${isFolder ? 'Borrar si está vacía' : 'Enviar a papelera'}" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-rose-300 flex items-center justify-center">
                   🗑️
                 </button>
