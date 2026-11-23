@@ -680,7 +680,7 @@
 
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">1. Artista destino</label>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">1. Sección y Artista destino</label>
           <select id="app-move-artist-select" onchange="onAppMoveArtistChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white"></select>
         </div>
 
@@ -691,12 +691,12 @@
 
         <div id="app-move-folder-group" class="space-y-2.5">
           <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">2. Carpeta destino dentro del Artista</label>
+            <label id="app-move-folder-label" class="block text-xs font-semibold text-slate-400 mb-1">2. Carpeta o Cómic destino</label>
             <select id="app-move-folder-select" onchange="onAppMoveFolderChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white"></select>
           </div>
 
           <div id="app-move-new-folder-group" class="hidden">
-            <label class="block text-xs font-semibold text-amber-300 mb-1">Nombre de la nueva carpeta</label>
+            <label id="app-move-new-folder-label" class="block text-xs font-semibold text-amber-300 mb-1">Nombre de la nueva carpeta o cómic</label>
             <input id="app-move-new-folder-input" type="text" placeholder="Ej: Sketches 2026" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
           </div>
         </div>
@@ -808,471 +808,24 @@
 
   <script>
     // =========================================================================
-    // TAXONOMÍA DE TAGS POR FILAS + CORRECTOR ORTOGRÁFICO EN INGLÉS
+    // CONSTANTES, ESTADO GLOBAL Y CONFIGURACIÓN DE GOOGLE DRIVE
     // =========================================================================
-    const QUICK_TAG_ROW_1 = [
-      'anthro', 'ctf', 'female', 'feral', 'ftm', 'inanimate', 'male', 'mtf', 'no tf', 'tf', 'tftg'
-    ];
-
-    const QUICK_TAG_TAXONOMY = {
-      amphibians: [
-        'axolotl', 'bullfrog', 'caecilian', 'frog', 'gecko', 'newt', 'poison dart frog', 'salamander', 'toad', 'tree frog'
-      ],
-      birds: [
-        'albatross', 'barn owl', 'blue jay', 'canary', 'cassowary', 'chicken', 'cockatiel', 'cockatoo', 'condor',
-        'cormorant', 'crane', 'crow', 'dove', 'duck', 'eagle', 'emu', 'falcon', 'flamingo', 'goose', 'griffin',
-        'harpy', 'hawk', 'heron', 'hummingbird', 'ibis', 'kingfisher', 'kiwi', 'macaw', 'magpie', 'ostrich',
-        'owl', 'parakeet', 'parrot', 'peacock', 'pelican', 'penguin', 'peregrine falcon', 'pheasant', 'phoenix',
-        'pigeon', 'puffin', 'quail', 'raven', 'roadrunner', 'robin', 'rooster', 'seagull', 'secretary bird',
-        'shoebill', 'sparrow', 'stork', 'swallow', 'swan', 'toucan', 'turkey', 'vulture', 'woodpecker'
-      ],
-      canine: [
-        'afghan hound', 'akita', 'arctic fox', 'australian shepherd', 'basenji', 'basset hound', 'beagle',
-        'bernese mountain dog', 'bloodhound', 'border collie', 'borzoi', 'boxer', 'bulldog', 'cerberus',
-        'chihuahua', 'chow chow', 'cocker spaniel', 'corgi', 'coyote', 'dachshund', 'dalmatian', 'dhole',
-        'dingo', 'dire wolf', 'doberman', 'dog', 'fennec fox', 'fox', 'french bulldog', 'german shepherd',
-        'golden retriever', 'gray wolf', 'great dane', 'greyhound', 'hellhound', 'husky', 'jackal', 'kitsune',
-        'labrador', 'malamute', 'maned wolf', 'mastiff', 'newfoundland', 'pitbull', 'pomeranian', 'poodle',
-        'pug', 'red fox', 'rottweiler', 'saint bernard', 'samoyed', 'shiba inu', 'silver fox', 'spitz',
-        'terrier', 'timber wolf', 'werewolf', 'whippet', 'wolf'
-      ],
-      cervine: [
-        'antelope', 'axis deer', 'bighorn sheep', 'bison', 'blackbuck', 'buffalo', 'caribou', 'chamois',
-        'deer', 'dik-dik', 'doe', 'eland', 'elk', 'fallow deer', 'gazelle', 'gemsbok', 'giraffe', 'gnu',
-        'goat', 'ibex', 'impala', 'kudu', 'moose', 'mountain goat', 'mule deer', 'muntjac', 'muskox',
-        'nyala', 'okapi', 'oryx', 'pronghorn', 'ram', 'red deer', 'reindeer', 'roe deer', 'saiga',
-        'sambar', 'serow', 'sheep', 'sika deer', 'springbok', 'stag', 'takin', 'waterbuck', 'white-tailed deer', 'wildebeest'
-      ],
-      digimon: [
-        'agumon', 'angewomon', 'beelzemon', 'blackwargreymon', 'coronamon', 'dorugamon', 'flamedramon',
-        'gabumon', 'garurumon', 'gatomon', 'greymon', 'guilmon', 'impmon', 'leomon', 'lilithmon',
-        'lopmon', 'lucemon', 'metalgarurumon', 'metalgreymon', 'omnimon', 'patamon', 'renamon',
-        'seraphimon', 'terriermon', 'veemon', 'wargreymon', 'weregarurumon'
-      ],
-      dinosaur: [
-        'allosaurus', 'ankylosaurus', 'archaeopteryx', 'baryonyx', 'brachiosaurus', 'brontosaurus',
-        'carnotaurus', 'ceratosaurus', 'compsognathus', 'deinonychus', 'dilophosaurus', 'diplodocus',
-        'gallimimus', 'giganotosaurus', 'iguanodon', 'mosasaurus', 'oviraptor', 'pachycephalosaurus',
-        'parasaurolophus', 'plesiosaur', 'pteranodon', 'pterodactyl', 'quetzalcoatlus', 'raptor',
-        'spinosaurus', 'stegosaurus', 'therizinosaurus', 'triceratops', 'tyrannosaurus', 'utahraptor', 'velociraptor'
-      ],
-      equine: [
-        'alicorn', 'appaloosa', 'arabian horse', 'bronco', 'burro', 'centaur', 'clydesdale', 'colt',
-        'donkey', 'draft horse', 'falabella', 'filly', 'foal', 'friesian', 'gypsy vanner', 'horse',
-        'kelpie', 'mare', 'mule', 'mustang', 'onager', 'palomino', 'pegasus', 'percheron', 'pinto',
-        'pony', 'quarter horse', 'shetland pony', 'shire horse', 'stallion', 'thoroughbred', 'unicorn', 'zebra'
-      ],
-      feline: [
-        'abyssinian', 'african wildcat', 'asian golden cat', 'bengal', 'black panther', 'bobcat',
-        'british shorthair', 'calico', 'caracal', 'cat', 'cheetah', 'clouded leopard', 'cougar',
-        'egyptian mau', 'eurasian lynx', 'fishing cat', 'hellcat', 'iberian lynx', 'jaguar',
-        'jaguarundi', 'jungle cat', 'leopard', 'lion', 'lioness', 'lynx', 'maine coon', 'manul',
-        'margay', 'mountain lion', 'munchkin', 'nekomata', 'ocelot', 'pallas cat', 'panther',
-        'persian cat', 'puma', 'ragdoll', 'russian blue', 'sabretooth', 'sand cat', 'savannah cat',
-        'scottish fold', 'serval', 'siamese', 'siberian tiger', 'smilodon', 'snowleopard', 'sphynx',
-        'tabby', 'tiger', 'tigress', 'white tiger'
-      ],
-      insects: [
-        'ant', 'bee', 'beetle', 'bumblebee', 'butterfly', 'caterpillar', 'centipede', 'cicada',
-        'cockroach', 'cricket', 'dragonfly', 'firefly', 'flea', 'fly', 'grasshopper', 'hornet',
-        'ladybug', 'locust', 'mantis', 'millipede', 'mosquito', 'moth', 'praying mantis', 'rhinoceros beetle',
-        'scarab', 'scorpion', 'silkworm', 'spider', 'stag beetle', 'tarantula', 'termite', 'wasp'
-      ],
-      mustelids: [
-        'american badger', 'american marten', 'american mink', 'badger', 'beech marten', 'black-footed ferret',
-        'ermine', 'european badger', 'european mink', 'ferret', 'fisher', 'giant otter', 'grison',
-        'honey badger', 'least weasel', 'long-tailed weasel', 'marten', 'mink', 'otter', 'pine marten',
-        'polecat', 'river otter', 'sable', 'sea otter', 'skunk', 'stoat', 'tayra', 'weasel', 'wolverine', 'zorilla'
-      ],
-      myth: [
-        'alicorn', 'anubis', 'basilisk', 'behemoth', 'centaur', 'cerberus', 'chimera', 'cockatrice',
-        'cyclops', 'demon', 'drake', 'dragon', 'eastern dragon', 'elemental', 'elf', 'fairy',
-        'faun', 'fenrir', 'gargoyle', 'genie', 'ghoul', 'golem', 'gorgon', 'griffin', 'harpy',
-        'hellcat', 'hellhound', 'hippogriff', 'hydra', 'imp', 'jackalope', 'kelpie', 'kirin',
-        'kitsune', 'kobold', 'kraken', 'lamia', 'leviathan', 'lizardfolk', 'manticore', 'medusa',
-        'mermaid', 'merman', 'minotaur', 'naga', 'nekomata', 'ogre', 'oni', 'orc', 'pegasus',
-        'peryton', 'phoenix', 'pixie', 'satyr', 'sea serpent', 'selkie', 'siren', 'sphinx',
-        'succubus', 'tanuki', 'tengu', 'thunderbird', 'tiefling', 'troll', 'unicorn', 'vampire',
-        'wendigo', 'werebeast', 'werecat', 'werewolf', 'western dragon', 'wyrm', 'wyvern', 'yokai'
-      ],
-      'other mamals': [
-        'aardvark', 'alpaca', 'anteater', 'ape', 'armadillo', 'baboon', 'bandicoot', 'bat', 'bilby',
-        'boar', 'bonobo', 'bushbaby', 'camel', 'capuchin', 'chimpanzee', 'coati', 'colugo', 'cow',
-        'coypu', 'cuscus', 'dromedary', 'echidna', 'elephant', 'flying fox', 'flying squirrel', 'fossa',
-        'fruit bat', 'galago', 'gibbon', 'gorilla', 'hedgehog', 'hippo', 'hippopotamus', 'hog',
-        'hyena', 'hyrax', 'kangaroo', 'kinkajou', 'koala', 'lemur', 'llama', 'loris', 'macaque',
-        'mammoth', 'mandrill', 'marmoset', 'meerkat', 'mole', 'mongoose', 'monkey', 'numbat',
-        'opossum', 'orangutan', 'orycteropus', 'pangolin', 'peccary', 'pig', 'platypus', 'possum',
-        'quokka', 'quoll', 'raccoon', 'red panda', 'rhino', 'rhinoceros', 'ringtail', 'sloth',
-        'sugar glider', 'tapir', 'tarsier', 'tasmanian devil', 'tenrec', 'thylacine', 'vampire bat',
-        'vicuna', 'wallaby', 'warthog', 'wild boar', 'wombat', 'yak'
-      ],
-      pokemon: [
-        'absol', 'arcanine', 'blaziken', 'braixen', 'buizel', 'charizard', 'cinderace', 'delphox',
-        'dragonite', 'eevee', 'espeon', 'flareon', 'floatzel', 'flygon', 'furret', 'gardevoir',
-        'gengar', 'glaceon', 'goodra', 'greninja', 'growlithe', 'incineroar', 'inteleon', 'jolteon',
-        'leafeon', 'litten', 'lopunny', 'lucario', 'lugia', 'luxray', 'lycanroc', 'meowscarada',
-        'mew', 'mewtwo', 'mightyena', 'nickit', 'ninetales', 'noivern', 'pikachu', 'poochyena',
-        'raichu', 'reshiram', 'riolu', 'rockruff', 'salazzle', 'scorbunny', 'serperior', 'snivy',
-        'sylveon', 'thievul', 'typhlosion', 'umbreon', 'vaporeon', 'vulpix', 'weavile', 'zekrom',
-        'zeraora', 'zoroark', 'zorua'
-      ],
-      reptils: [
-        'adder', 'agama', 'alligator', 'anaconda', 'anole', 'basilisk lizard', 'bearded dragon',
-        'black mamba', 'blue-tongued skink', 'boa', 'caiman', 'chameleon', 'cobra', 'komodo dragon',
-        'copperhead', 'corn snake', 'crocodile', 'frilled lizard', 'garter snake', 'gecko', 'gharial',
-        'gila monster', 'green iguana', 'horned lizard', 'iguana', 'king cobra', 'lizard', 'monitor lizard',
-        'nile crocodile', 'python', 'rattlesnake', 'sea turtle', 'skink', 'snake', 'snapping turtle',
-        'tegu', 'terrapin', 'thorny devil', 'tortoise', 'tuatara', 'turtle', 'viper', 'water monitor'
-      ],
-      rodents: [
-        'agouti', 'beaver', 'bunny', 'capybara', 'chinchilla', 'chipmunk', 'cottontail', 'degu',
-        'dormouse', 'field mouse', 'gerbil', 'gopher', 'groundhog', 'guinea pig', 'hamster', 'hare',
-        'jackrabbit', 'jerboa', 'lemming', 'lop rabbit', 'marmot', 'mouse', 'muskrat', 'nutria',
-        'pika', 'porcupine', 'prairie dog', 'rabbit', 'rat', 'red squirrel', 'squirrel', 'vole', 'woodchuck'
-      ],
-      ursine: [
-        'andean bear', 'asiatic black bear', 'bear', 'black bear', 'brown bear', 'cave bear',
-        'cinnamon bear', 'grizzly', 'grizzly bear', 'kermode bear', 'kodiak bear', 'moon bear',
-        'panda', 'polar bear', 'short-faced bear', 'sloth bear', 'spectacled bear', 'sun bear', 'teddy bear'
-      ],
-      water: [
-        'anglerfish', 'axolotl', 'barracuda', 'beluga', 'blue whale', 'bottlenose dolphin', 'bull shark',
-        'carp', 'catfish', 'clownfish', 'cod', 'coelacanth', 'crab', 'cuttlefish', 'dolphin',
-        'dugong', 'eel', 'electric eel', 'elephant seal', 'fin whale', 'fish', 'fur seal', 'goldfish',
-        'great white shark', 'hammerhead shark', 'harbor seal', 'humpback whale', 'jellyfish',
-        'killer whale', 'koi', 'krill', 'leopard seal', 'lionfish', 'lobster', 'mako shark', 'manatee',
-        'manta ray', 'marlin', 'moray eel', 'narwhal', 'nautilus', 'octopus', 'orca', 'otter',
-        'piranha', 'platypus', 'porpoise', 'pufferfish', 'ray', 'salmon', 'sawfish', 'sea lion',
-        'sea otter', 'sea serpent', 'sea turtle', 'seahorse', 'seal', 'shark', 'shrimp', 'sperm whale',
-        'squid', 'starfish', 'stingray', 'sturgeon', 'swordfish', 'tiger shark', 'trout', 'tuna',
-        'walrus', 'whale', 'whale shark'
-      ]
-    };
-
-    const QUICK_TAG_ROW_2 = Object.keys(QUICK_TAG_TAXONOMY).sort((a, b) => a.localeCompare(b));
-
-    const ENGLISH_TAG_CORRECTIONS = {
-      'femele': 'female', 'famale': 'female', 'femal': 'female', 'fem': 'female', 'mujer': 'female', 'hembra': 'female',
-      'mela': 'male', 'mal': 'male', 'hombre': 'male', 'macho': 'male',
-      'mtf': 'mtf', 'm2f': 'mtf', 'ftm': 'ftm', 'f2m': 'ftm', 'tgtf': 'tftg',
-      'notf': 'no tf', 'no-tf': 'no tf', 'non tf': 'no tf', 'nontf': 'no tf',
-      'ferral': 'feral', 'ferel': 'feral',
-      'antro': 'anthro', 'antho': 'anthro', 'anthr': 'anthro', 'antrho': 'anthro', 'furry': 'anthro',
-      'inanimte': 'inanimate', 'inanimat': 'inanimate', 'inanimado': 'inanimate', 'object': 'inanimate',
-      'canines': 'canine', 'canino': 'canine', 'caninos': 'canine',
-      'felines': 'feline', 'felino': 'feline', 'felinos': 'feline',
-      'equines': 'equine', 'equino': 'equine', 'equinos': 'equine',
-      'cervines': 'cervine', 'cervido': 'cervine', 'cervidos': 'cervine',
-      'ursines': 'ursine', 'ursino': 'ursine', 'osos': 'ursine',
-      'bird': 'birds', 'ave': 'birds', 'aves': 'birds', 'pajaro': 'birds', 'pajaros': 'birds', 'avian': 'birds',
-      'agua': 'water', 'aquatic': 'water', 'acuatico': 'water', 'marine': 'water', 'marino': 'water',
-      'rodent': 'rodents', 'roedor': 'rodents', 'roedores': 'rodents',
-      'reptil': 'reptils', 'reptile': 'reptils', 'reptiles': 'reptils',
-      'dinosaurs': 'dinosaur', 'dino': 'dinosaur', 'dinosaurio': 'dinosaur', 'dinosaurios': 'dinosaur',
-      'mythical': 'myth', 'mythic': 'myth', 'mitologico': 'myth', 'fantasy': 'myth',
-      'mustelid': 'mustelids', 'mustelido': 'mustelids', 'mustelidos': 'mustelids',
-      'insect': 'insects', 'insecto': 'insects', 'insectos': 'insects', 'bug': 'insects', 'bugs': 'insects',
-      'pokemons': 'pokemon', 'pokémon': 'pokemon',
-      'digimons': 'digimon',
-      'other mammals': 'other mamals', 'othermammals': 'other mamals', 'mammals': 'other mamals', 'mamiferos': 'other mamals',
-      'wolfe': 'wolf', 'wolve': 'wolf', 'lobo': 'wolf', 'werewolve': 'werewolf', 'hombre lobo': 'werewolf',
-      'helhound': 'hellhound', 'hell hound': 'hellhound',
-      'cerbero': 'cerberus', 'cerberuz': 'cerberus',
-      'helcat': 'hellcat', 'hell cat': 'hellcat',
-      'snow leopard': 'snowleopard', 'snow-leopard': 'snowleopard', 'leopardo de las nieves': 'snowleopard',
-      'lepard': 'leopard', 'leopardo': 'leopard',
-      'cheeta': 'cheetah', 'guepardo': 'cheetah',
-      'panter': 'panther', 'pantera': 'panther',
-      'tigger': 'tiger', 'tigre': 'tiger',
-      'lions': 'lion', 'leon': 'lion', 'leona': 'lioness',
-      'zorro': 'fox', 'foxes': 'fox', 'fenec': 'fennec fox',
-      'perro': 'dog', 'dogs': 'dog', 'gato': 'cat', 'cats': 'cat',
-      'caballo': 'horse', 'horses': 'horse', 'yegua': 'mare', 'semental': 'stallion',
-      'unicornio': 'unicorn', 'pegaso': 'pegasus', 'centauro': 'centaur',
-      'ciervo': 'deer', 'venado': 'deer', 'alce': 'moose', 'reno': 'reindeer', 'cabra': 'goat', 'oveja': 'sheep',
-      'oso': 'bear', 'bears': 'bear', 'oso polar': 'polar bear', 'osopolar': 'polar bear',
-      'aguila': 'eagle', 'buho': 'owl', 'lechuza': 'barn owl', 'cuervo': 'raven', 'halcon': 'falcon',
-      'pinguino': 'penguin', 'pato': 'duck', 'cisne': 'swan', 'fenix': 'phoenix',
-      'tiburon': 'shark', 'sharks': 'shark', 'ballena': 'whale', 'whales': 'whale',
-      'delfin': 'dolphin', 'dolphins': 'dolphin', 'foca': 'seal', 'seals': 'seal',
-      'pez': 'fish', 'fishes': 'fish', 'pulpo': 'octopus', 'calamar': 'squid', 'nutria': 'otter', 'morsa': 'walrus',
-      'raton': 'mouse', 'mice': 'mouse', 'rata': 'rat', 'rats': 'rat', 'ardilla': 'squirrel',
-      'conejo': 'rabbit', 'rabbits': 'rabbit', 'castor': 'beaver', 'capibara': 'capybara',
-      'serpiente': 'snake', 'snakes': 'snake', 'lagarto': 'lizard', 'cocodrilo': 'crocodile',
-      'caiman': 'alligator', 'tortuga': 'turtle', 'camaleon': 'chameleon', 'dragon de komodo': 'komodo dragon',
-      'dragon': 'dragon', 'dragons': 'dragon', 'grifo': 'griffin', 'minotauro': 'minotaur',
-      'huron': 'ferret', 'tejon': 'badger', 'comadreja': 'weasel', 'zorrillo': 'skunk', 'mofeta': 'skunk',
-      'abeja': 'bee', 'mariposa': 'butterfly', 'polilla': 'moth', 'arana': 'spider', 'escorpion': 'scorpion', 'hormiga': 'ant',
-      'mapache': 'raccoon', 'racoon': 'raccoon', 'hiena': 'hyena', 'canguro': 'kangaroo',
-      'elefante': 'elephant', 'rinoceronte': 'rhinoceros', 'hipopotamo': 'hippopotamus', 'murcielago': 'bat', 'mono': 'monkey'
-    };
-
-    const ALL_KNOWN_ENGLISH_TAGS = (() => {
-      const set = new Set([...QUICK_TAG_ROW_1, ...QUICK_TAG_ROW_2]);
-      Object.values(QUICK_TAG_TAXONOMY).forEach(list => list.forEach(item => set.add(item)));
-      return Array.from(set).sort((a, b) => a.localeCompare(b));
-    })();
-
-    const quickTagPickerState = {
-      'upload-quick-tag-picker': { activeFamily: null },
-      'edit-quick-tag-picker': { activeFamily: null },
-      'bulk-quick-tag-picker': { activeFamily: null },
-      'drive-quick-tag-picker': { activeFamily: null },
-      'd2a-quick-tag-picker': { activeFamily: null },
-      'folder-quick-tag-picker': { activeFamily: null }
-    };
-
-    function levenshteinDistance(a, b) {
-      const m = a.length, n = b.length;
-      if (!m) return n;
-      if (!n) return m;
-      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-      for (let i = 0; i <= m; i++) dp[i][0] = i;
-      for (let j = 0; j <= n; j++) dp[0][j] = j;
-      for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
-          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-          dp[i][j] = Math.min(
-            dp[i - 1][j] + 1,
-            dp[i][j - 1] + 1,
-            dp[i - 1][j - 1] + cost
-          );
-        }
-      }
-      return dp[m][n];
-    }
-
-    function findEnglishTagSuggestion(rawToken) {
-      const clean = String(rawToken || '').trim().replace(/^#+/, '').toLowerCase();
-      if (!clean || clean.length < 2) return null;
-      if (ALL_KNOWN_ENGLISH_TAGS.includes(clean)) return null;
-      if (ENGLISH_TAG_CORRECTIONS[clean]) {
-        return ENGLISH_TAG_CORRECTIONS[clean];
-      }
-      let bestMatch = null;
-      let bestDist = Infinity;
-      const maxAllowed = clean.length <= 4 ? 1 : 2;
-      for (const candidate of ALL_KNOWN_ENGLISH_TAGS) {
-        if (Math.abs(candidate.length - clean.length) > maxAllowed) continue;
-        const d = levenshteinDistance(clean, candidate);
-        if (d > 0 && d <= maxAllowed && d < bestDist) {
-          bestDist = d;
-          bestMatch = candidate;
-        }
-      }
-      return bestMatch;
-    }
-
-    function autoCorrectKnownEnglishTypos(tagsArray) {
-      return normalizeTags(tagsArray.map(t => ENGLISH_TAG_CORRECTIONS[t] || t));
-    }
-
-    function handleTagInputSpellingCheck(inputId, spellBoxId) {
-      const input = document.getElementById(inputId);
-      const box = document.getElementById(spellBoxId);
-      if (!input || !box) return;
-
-      const rawParts = input.value.split(',');
-      const suggestions = [];
-
-      rawParts.forEach((part, idx) => {
-        const clean = part.trim().replace(/^#+/, '').toLowerCase();
-        if (!clean) return;
-        const suggestion = findEnglishTagSuggestion(clean);
-        if (suggestion && suggestion !== clean) {
-          suggestions.push({ idx, wrong: clean, right: suggestion });
-        }
-      });
-
-      if (!suggestions.length) {
-        box.classList.add('hidden');
-        box.innerHTML = '';
-        return;
-      }
-
-      box.classList.remove('hidden');
-      box.innerHTML = `
-        <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-amber-950/70 border border-amber-500/50 text-[11px] text-amber-200">
-          <span class="font-semibold">✨ Corrección inglés:</span>
-          ${suggestions.map(s => `
-            <button type="button" onclick="applyEnglishTagCorrection('${inputId}', '${spellBoxId}', '${escapeHtml(s.wrong)}', '${escapeHtml(s.right)}')"
-              class="px-2 py-0.5 rounded-full bg-amber-500/25 hover:bg-amber-500/45 border border-amber-400/50 text-amber-100 font-bold">
-              "${escapeHtml(s.wrong)}" → #${escapeHtml(s.right)}
-            </button>
-          `).join('')}
-        </div>
-      `;
-    }
-
-    function applyEnglishTagCorrection(inputId, spellBoxId, wrongTag, rightTag, pickerId = null) {
-      const input = document.getElementById(inputId);
-      if (!input) return;
-      const parts = input.value.split(',').map(p => {
-        const c = p.trim().replace(/^#+/, '').toLowerCase();
-        return c === wrongTag ? rightTag : p.trim();
-      });
-      input.value = normalizeTags(parts).join(', ');
-      handleTagInputSpellingCheck(inputId, spellBoxId);
-      if (pickerId) renderQuickTagPicker(pickerId, inputId, spellBoxId);
-    }
-
-    function onQuickTagManualInputChange(inputId, pickerId, spellBoxId) {
-      handleTagInputSpellingCheck(inputId, spellBoxId);
-      renderQuickTagPicker(pickerId, inputId, spellBoxId);
-    }
-
-    function toggleQuickTagInInput(inputId, pickerId, spellBoxId, tag) {
-      const input = document.getElementById(inputId);
-      if (!input) return;
-      const clean = normalizeTags([tag])[0];
-      let current = normalizeTags(input.value);
-      if (current.includes(clean)) {
-        current = current.filter(t => t !== clean);
-      } else {
-        current.push(clean);
-      }
-      input.value = current.join(', ');
-      handleTagInputSpellingCheck(inputId, spellBoxId);
-      renderQuickTagPicker(pickerId, inputId, spellBoxId);
-    }
-
-    function selectQuickTagFamily(pickerId, inputId, spellBoxId, familyKey) {
-      const st = quickTagPickerState[pickerId] || { activeFamily: null };
-      st.activeFamily = st.activeFamily === familyKey ? null : familyKey;
-      quickTagPickerState[pickerId] = st;
-
-      if (st.activeFamily) {
-        const input = document.getElementById(inputId);
-        if (input) {
-          const current = normalizeTags(input.value);
-          if (!current.includes(familyKey)) {
-            current.push(familyKey);
-            input.value = current.join(', ');
-          }
-        }
-      }
-      renderQuickTagPicker(pickerId, inputId, spellBoxId);
-    }
-
-    function renderQuickTagPicker(pickerId, inputId, spellBoxId) {
-      const container = document.getElementById(pickerId);
-      const input = document.getElementById(inputId);
-      if (!container || !input) return;
-
-      const selectedSet = new Set(normalizeTags(input.value));
-      const st = quickTagPickerState[pickerId] || { activeFamily: null };
-      const activeFamily = st.activeFamily;
-      const subSpeciesList = activeFamily ? (QUICK_TAG_TAXONOMY[activeFamily] || []) : [];
-
-      const renderRow1Btn = (tag) => {
-        const active = selectedSet.has(tag);
-        return `
-          <button type="button" onclick="toggleQuickTagInInput('${inputId}', '${pickerId}', '${spellBoxId}', '${escapeHtml(tag)}')"
-            class="px-2 py-1 rounded-lg text-[11px] font-bold transition ${
-              active
-                ? 'bg-indigo-600 text-white shadow ring-1 ring-indigo-300'
-                : 'bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300'
-            }">
-            ${active ? '✓ ' : ''}${escapeHtml(tag)}
-          </button>
-        `;
-      };
-
-      const renderRow2Btn = (fam) => {
-        const isOpen = activeFamily === fam;
-        const isTagged = selectedSet.has(fam);
-        return `
-          <button type="button" onclick="selectQuickTagFamily('${pickerId}', '${inputId}', '${spellBoxId}', '${escapeHtml(fam)}')"
-            class="px-2 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1 ${
-              isOpen
-                ? 'bg-emerald-600 text-white shadow ring-1 ring-emerald-300'
-                : isTagged
-                  ? 'bg-emerald-950/90 border border-emerald-500/70 text-emerald-200'
-                  : 'bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300'
-            }">
-            <span>${escapeHtml(fam)}</span>
-            <span class="text-[9px] opacity-80">${isOpen ? '▲' : '▼'}</span>
-          </button>
-        `;
-      };
-
-      const renderRow3Btn = (sp) => {
-        const active = selectedSet.has(sp);
-        return `
-          <button type="button" onclick="toggleQuickTagInInput('${inputId}', '${pickerId}', '${spellBoxId}', '${escapeHtml(sp)}')"
-            class="px-2 py-0.5 rounded-md text-[11px] font-medium transition ${
-              active
-                ? 'bg-purple-600 text-white font-bold shadow'
-                : 'bg-slate-950 hover:bg-slate-800 border border-slate-700/70 text-slate-300'
-            }">
-            ${active ? '✓ ' : ''}${escapeHtml(sp)}
-          </button>
-        `;
-      };
-
-      container.innerHTML = `
-        <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2">
-          <div>
-            <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 mb-1">1. Tipo / Género / TF</div>
-            <div class="flex flex-wrap gap-1">
-              ${QUICK_TAG_ROW_1.map(renderRow1Btn).join('')}
-            </div>
-          </div>
-
-          <div class="pt-1.5 border-t border-slate-800/80">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-1">2. Familia / Especie (toca para desplegar subespecies A–Z)</div>
-            <div class="flex flex-wrap gap-1">
-              ${QUICK_TAG_ROW_2.map(renderRow2Btn).join('')}
-            </div>
-          </div>
-
-          ${activeFamily ? `
-            <div class="pt-1.5 border-t border-emerald-500/30 bg-slate-900/70 p-2 rounded-lg">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-purple-300">3. Subespecies de ${escapeHtml(activeFamily)} (${subSpeciesList.length})</span>
-                <button type="button" onclick="selectQuickTagFamily('${pickerId}', '${inputId}', '${spellBoxId}', '${escapeHtml(activeFamily)}')" class="text-[10px] text-slate-400 hover:text-white">Cerrar ✕</button>
-              </div>
-              <div class="flex flex-wrap gap-1 max-h-36 overflow-y-auto pr-0.5">
-                ${subSpeciesList.map(renderRow3Btn).join('')}
-              </div>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }
-
-    // =========================================================================
-    // ESTADO GLOBAL Y CONFIGURACIÓN
-    // =========================================================================
-    const STORAGE_KEY = 'mi_boveda_multimedia_v2';
-    const CREDS_KEY = 'mi_boveda_drive_creds_v1';
+    const LOCAL_STORAGE_KEY = 'mi_boveda_multimedia_v2';
+    const DRIVE_CREDS_KEY = 'mi_boveda_drive_creds_v1';
+    const DRIVE_TOKEN_KEY = 'mi_boveda_drive_token_v1';
     const ROOT_FOLDER_NAME = 'Mi_Biblioteca_Multimedia';
-    const BACKUP_FOLDER_NAME = 'Respaldos_Biblioteca';
+    const BACKUP_FOLDER_NAME = '_Resguardos_Automaticos';
     const METADATA_FILENAME = 'index_metadata.json';
-    const ACTIVITY_LOG_FILENAME = 'historial_actividad.txt';
+    const ACTIVITY_LOG_FILENAME = 'registro_actividad.txt';
     const ITEMS_PER_PAGE = 24;
 
-    let driveConfig = {
-      clientId: '',
-      apiKey: '',
-      accessToken: null,
-      tokenClient: null,
-      lastClientId: '',
-      rootFolderId: null,
-      sectionFolderIds: { historia: null, comics: null, artistas: null },
-      backupFolderId: null,
-      metadataFileId: null,
-      activityLogFileId: null,
-      driveBlobCache: new Map(),
-      driveSizeCache: new Map(),
-      driveTagsIndex: new Map(),
-      driveAllTaggedFiles: [],
-      imageHashCache: new Map(),
-      isSyncingFolders: false
+    let libraryData = {
+      historia: [],
+      comics: [],
+      artistas: []
     };
 
-    let state = {
+    const state = {
       section: 'artistas',
       artistId: null,
       artistFolderId: null,
@@ -1280,12 +833,39 @@
       search: '',
       tagQuickSearch: '',
       activeTags: [],
+      expandTags: false,
       sortBy: 'date-desc',
       page: 1,
       compactGrid: false,
-      expandTags: false,
       bulkSelectMode: false,
       selectedImageIds: new Set()
+    };
+
+    const driveConfig = {
+      clientId: '',
+      apiKey: '',
+      accessToken: '',
+      rootFolderId: '',
+      backupFolderId: '',
+      sectionFolders: { historia: '', comics: '', artistas: '' },
+      metadataFileId: '',
+      activityLogFileId: '',
+      driveBlobCache: new Map(),
+      driveSizeCache: new Map(),
+      driveTagsIndex: new Map(),
+      driveAllTaggedFiles: [],
+      imageHashCache: new Map()
+    };
+
+    const driveBrowserState = {
+      path: [{ id: 'root', name: 'Mi Unidad' }],
+      items: [],
+      loading: false,
+      isGlobalTagSearch: false,
+      selectedIds: new Set(),
+      movePath: [{ id: 'root', name: 'Mi Unidad' }],
+      moveFolders: [],
+      folderCoverCache: new Map()
     };
 
     let unifiedTagResults = {
@@ -1298,21 +878,9 @@
       expandedSections: { comics: false, artistas: false, historia: false, drive: false }
     };
 
-    let driveBrowserState = {
-      path: [{ id: 'root', name: 'Mi Unidad' }],
-      items: [],
-      globalTagResults: [],
-      isGlobalTagSearch: false,
-      folderCoverCache: new Map(),
-      selectedIds: new Set(),
-      loading: false,
-      movePath: [{ id: 'root', name: 'Mi Unidad' }],
-      moveFolders: []
-    };
-
-    let duplicateFinderState = {
+    const duplicateFinderState = {
       targetFolderId: 'root',
-      targetFolderName: 'Mi Unidad (Elige una carpeta)',
+      targetFolderName: 'Mi Unidad',
       includeSubfolders: true,
       sensitivity: 10,
       scanning: false,
@@ -1322,23 +890,7 @@
       pickerPath: [{ id: 'root', name: 'Mi Unidad' }]
     };
 
-    let libraryData = {
-      historia: [],
-      comics: [],
-      artistas: []
-    };
-
-    let editingArtistContext = null;
-    let editingArtistFolderContext = null;
-    let uploadContext = null;
-    let editingTagsContext = null;
-    let appMoveContext = null;
-    let driveRenameContext = null;
-    let bulkTagChipsState = { activeTags: [], removedTags: new Set() };
-    let driveTagChipsState = { activeTags: [], removedTags: new Set() };
-    let pickedFileSystemEntries = [];
-
-    let lightboxState = {
+    const lightboxState = {
       items: [],
       index: 0,
       scale: 1,
@@ -1347,78 +899,215 @@
       slideshowTimer: null
     };
 
-    // =========================================================================
-    // DIÁLOGO DE CONFIRMACIÓN PERSONALIZADO (1 PASO O DOBLE PASO CON SÍ / NO)
-    // =========================================================================
-    function askYesNoConfirm({ title = 'Confirmar', message = '', doubleStep = false, icon = '⚠️', yesLabel = 'Sí', noLabel = 'No' }) {
-      return new Promise((resolve) => {
-        const titleEl = document.getElementById('app-confirm-title');
-        const msgEl = document.getElementById('app-confirm-message');
-        const iconEl = document.getElementById('app-confirm-icon');
-        const stepBadge = document.getElementById('app-confirm-step-badge');
-        const yesBtn = document.getElementById('app-confirm-yes-btn');
-        const noBtn = document.getElementById('app-confirm-no-btn');
-
-        let currentStep = 1;
-        iconEl.textContent = icon;
-        titleEl.textContent = title;
-        msgEl.textContent = message;
-        yesBtn.textContent = yesLabel;
-        noBtn.textContent = noLabel;
-        stepBadge.classList.add('hidden');
-
-        const cleanup = (result) => {
-          yesBtn.onclick = null;
-          noBtn.onclick = null;
-          closeModal('app-confirm-modal');
-          resolve(result);
-        };
-
-        noBtn.onclick = () => cleanup(false);
-        yesBtn.onclick = () => {
-          if (doubleStep && currentStep === 1) {
-            currentStep = 2;
-            titleEl.textContent = '¿Estás completamente seguro?';
-            stepBadge.classList.remove('hidden');
-            yesBtn.textContent = 'Sí, confirmar';
-            return;
-          }
-          cleanup(true);
-        };
-
-        openModal('app-confirm-modal');
-      });
-    }
+    let editingArtistContext = null;
+    let editingArtistFolderContext = null;
+    let uploadContext = null;
+    let editingTagsContext = null;
+    let bulkTagChipsState = { activeTags: [], removedTags: new Set() };
+    let driveTagChipsState = { activeTags: [], removedTags: new Set() };
+    let appMoveContext = null;
+    let driveRenameTargetId = null;
+    let pickedFileSystemEntries = [];
+    const quickTagPickerState = {};
 
     // =========================================================================
-    // UTILIDADES GENERALES, FORMATO DE PESO Y NORMALIZACIÓN
+    // DICCIONARIO DE TAGS RÁPIDOS POR FILAS (A–Z) Y CORRECTOR EN INGLÉS
+    // =========================================================================
+    const QUICK_TAGS_ROW_1 = [
+      'anthro', 'ctf', 'female', 'feral', 'ftm', 'inanimate', 'male', 'mtf', 'no tf', 'tf', 'tftg'
+    ];
+
+    const QUICK_TAGS_FAMILIES = {
+      amphibians: ['axolotl', 'bullfrog', 'frog', 'newt', 'salamander', 'toad', 'treefrog'],
+      birds: [
+        'albatross', 'barn owl', 'bluejay', 'cardinal', 'cassowary', 'chicken', 'cockatiel', 'cockatoo',
+        'condor', 'cormorant', 'crane', 'crow', 'dove', 'duck', 'eagle', 'emu', 'falcon', 'flamingo',
+        'goose', 'griffin', 'hawk', 'heron', 'hummingbird', 'ibis', 'jay', 'kestrel', 'kingfisher',
+        'kiwi', 'kookaburra', 'macaw', 'magpie', 'mallard', 'mockingbird', 'ostrich', 'owl', 'parakeet',
+        'parrot', 'peacock', 'pelican', 'penguin', 'peregrine', 'pheasant', 'phoenix', 'pigeon',
+        'puffin', 'quail', 'raven', 'roadrunner', 'robin', 'rooster', 'seagull', 'secretarybird',
+        'shoebill', 'sparrow', 'stork', 'swallow', 'swan', 'toucan', 'turkey', 'vulture', 'woodpecker'
+      ],
+      canine: [
+        'african wild dog', 'akita', 'arctic fox', 'australian shepherd', 'basenji', 'beagle', 'bernese',
+        'black wolf', 'bloodhound', 'border collie', 'borzoi', 'boxer', 'bulldog', 'cerberus', 'chihuahua',
+        'chow chow', 'corgi', 'coyote', 'dachshund', 'dalmatian', 'dhole', 'dingo', 'doberman', 'fennec',
+        'fox', 'german shepherd', 'golden retriever', 'gray wolf', 'great dane', 'greyhound', 'hellhound',
+        'husky', 'jackal', 'kitsune', 'labrador', 'malamute', 'maned wolf', 'mastiff', 'pitbull',
+        'pomeranian', 'poodle', 'pug', 'red fox', 'rottweiler', 'saint bernard', 'saluki', 'samoyed',
+        'shiba inu', 'silver fox', 'timber wolf', 'weimaraner', 'werewolf', 'whippet', 'white wolf', 'wolf'
+      ],
+      cervine: [
+        'antelope', 'axis deer', 'bighorn', 'bison', 'blackbuck', 'buffalo', 'caribou', 'chamois',
+        'deer', 'doe', 'elk', 'fallow deer', 'gazelle', 'giraffe', 'gnu', 'goat', 'ibex', 'impala',
+        'kudu', 'markhor', 'moose', 'mountaingoat', 'muntjac', 'muskox', 'okapi', 'oryx', 'pronghorn',
+        'ram', 'red deer', 'reindeer', 'roe deer', 'sable antelope', 'sheep', 'sika deer', 'springbok',
+        'stag', 'water buffalo', 'white-tailed deer', 'wildebeest', 'yak'
+      ],
+      digimon: [
+        'agumon', 'angewomon', 'beelzemon', 'blackwargreymon', 'dorugamon', 'flamedramon', 'gabumon',
+        'gatomon', 'garurumon', 'greymon', 'guilmon', 'leomon', 'lilithmon', 'lopmon', 'metalgarurumon',
+        'metalgreymon', 'patamon', 'renamon', 'terriermon', 'veemon', 'wargreymon', 'weregarurumon'
+      ],
+      dinosaur: [
+        'allosaurus', 'ankylosaurus', 'archaeopteryx', 'baryonyx', 'brachiosaurus', 'carnotaurus',
+        'ceratosaurus', 'compsognathus', 'deinonychus', 'dilophosaurus', 'diplodocus', 'dromaeosaur',
+        'gallimimus', 'giganotosaurus', 'iguanodon', 'mosasaurus', 'oviraptor', 'pachycephalosaurus',
+        'parasaurolophus', 'plesiosaur', 'pteranodon', 'pterodactyl', 'quetzalcoatlus', 'raptor',
+        'spinosaurus', 'stegosaurus', 'therizinosaurus', 'triceratops', 'tyrannosaurus', 'utahraptor', 'velociraptor'
+      ],
+      equine: [
+        'alicorn', 'appaloosa', 'arabian horse', 'brahma', 'bronco', 'bull', 'clydesdale', 'colt',
+        'cow', 'donkey', 'draft horse', 'filly', 'friesian', 'highland cattle', 'hippogriff', 'horse',
+        'kelpie', 'kirin', 'longhorn', 'mare', 'minotaur', 'mule', 'mustang', 'ox', 'palomino',
+        'pegasus', 'percheron', 'pony', 'quarter horse', 'shetland', 'shire', 'stallion', 'thoroughbred',
+        'unicorn', 'zebra', 'zebroid'
+      ],
+      feline: [
+        'abyssinian', 'bengal', 'black panther', 'bobcat', 'british shorthair', 'calico', 'caracal',
+        'cat', 'cheetah', 'clouded leopard', 'cougar', 'egyptian mau', 'hellcat', 'jaguar', 'jaguarundi',
+        'leopard', 'lion', 'lioness', 'lynx', 'maine coon', 'margay', 'mountain lion', 'nekomata',
+        'norwegian forest', 'ocelot', 'pallas cat', 'panther', 'persian cat', 'puma', 'ragdoll',
+        'russian blue', 'sabretooth', 'sand cat', 'savannah cat', 'scottish fold', 'serval', 'siamese',
+        'siberian tiger', 'smilodon', 'snowleopard', 'sphynx', 'tabby', 'tiger', 'tigress', 'white tiger'
+      ],
+      insects: [
+        'ant', 'bee', 'beetle', 'bumblebee', 'butterfly', 'caterpillar', 'centipede', 'cicada',
+        'cockroach', 'cricket', 'dragonfly', 'firefly', 'flea', 'fly', 'grasshopper', 'hornet',
+        'ladybug', 'locust', 'mantis', 'millipede', 'mosquito', 'moth', 'praying mantis', 'rhino beetle',
+        'scarab', 'scorpion', 'spider', 'stag beetle', 'tarantula', 'termite', 'wasp'
+      ],
+      mustelids: [
+        'american badger', 'badger', 'beech marten', 'black-footed ferret', 'ermine', 'european badger',
+        'ferret', 'fisher', 'honey badger', 'least weasel', 'marten', 'mink', 'otter', 'pine marten',
+        'polecat', 'river otter', 'sable', 'sea otter', 'skunk', 'stoat', 'tayra', 'weasel', 'wolverine', 'zorilla'
+      ],
+      myth: [
+        'anubis', 'basilisk', 'centaur', 'chimera', 'cockatrice', 'demon', 'dragon', 'drake',
+        'eastern dragon', 'faun', 'gargoyle', 'hellhound', 'hydra', 'kobold', 'leviathan', 'manticore',
+        'mermaid', 'minotaur', 'naga', 'oni', 'pegasus', 'phoenix', 'satyr', 'serpent', 'sphinx',
+        'thunderbird', 'unicorn', 'western dragon', 'wyrm', 'wyvern'
+      ],
+      'other mamals': [
+        'aardvark', 'anteater', 'armadillo', 'baboon', 'bat', 'binturong', 'boar', 'bonobo',
+        'camel', 'capuchin', 'chimpanzee', 'civet', 'coati', 'elephant', 'fruit bat', 'genet',
+        'gibbon', 'gorilla', 'hedgehog', 'hippo', 'hippopotamus', 'hyena', 'kangaroo', 'koala',
+        'lemur', 'llama', 'mandrill', 'meerkat', 'mole', 'mongoose', 'monkey', 'opossum', 'orangutan',
+        'pangolin', 'pig', 'platypus', 'possum', 'quokka', 'raccoon', 'red panda', 'rhino',
+        'rhinoceros', 'ringtail', 'sloth', 'spotted hyena', 'sugar glider', 'tanuki', 'tapir',
+        'tasmanian devil', 'tenrec', 'vampire bat', 'wallaby', 'warthog', 'wild boar', 'wombat'
+      ],
+      pokemon: [
+        'absol', 'arcanine', 'blaziken', 'braixen', 'buizel', 'charizard', 'cinderace', 'decidueye',
+        'delphox', 'dragonite', 'eevee', 'espeon', 'flareon', 'floatzel', 'flygon', 'furret',
+        'gardevoir', 'garchomp', 'glaceon', 'greninja', 'growlithe', 'incineroar', 'inteleon',
+        'jolteon', 'leafeon', 'linoone', 'lopunny', 'lucario', 'lugia', 'luxray', 'lycanroc',
+        'meowscarada', 'mewtwo', 'midnight lycanroc', 'mightyena', 'nickit', 'ninetales', 'noivern',
+        'obstagoon', 'pikachu', 'raichu', 'riolu', 'rockruff', 'salazzle', 'samurott', 'sceptile',
+        'scorbunny', 'serperior', 'snivy', 'sylveon', 'thievul', 'typhlosion', 'umbreon', 'vaporeon',
+        'vulpix', 'weavile', 'zeraora', 'zoroark', 'zorua'
+      ],
+      reptils: [
+        'adder', 'alligator', 'anaconda', 'anole', 'basilisk', 'bearded dragon', 'black mamba',
+        'boa', 'caiman', 'chameleon', 'cobra', 'copperhead', 'crocodile', 'frilled lizard', 'garter snake',
+        'gecko', 'gharial', 'gila monster', 'green iguana', 'iguana', 'king cobra', 'komodo dragon',
+        'leopard gecko', 'lizard', 'monitor lizard', 'python', 'rattlesnake', 'sea turtle', 'skink',
+        'snake', 'snapping turtle', 'tegu', 'terrapin', 'tortoise', 'tuatara', 'turtle', 'viper', 'water monitor'
+      ],
+      rodents: [
+        'agouti', 'beaver', 'bunny', 'capybara', 'chinchilla', 'chipmunk', 'cottontail', 'degu',
+        'dormouse', 'flying squirrel', 'gerbil', 'gopher', 'groundhog', 'guinea pig', 'hamster',
+        'hare', 'jackrabbit', 'jerboa', 'lemming', 'marmot', 'mouse', 'muskrat', 'nutria', 'pika',
+        'porcupine', 'prairie dog', 'rabbit', 'rat', 'red squirrel', 'squirrel', 'vole', 'woodchuck'
+      ],
+      ursine: [
+        'american black bear', 'asiatic bear', 'bear', 'black bear', 'brown bear', 'cave bear',
+        'cinnamon bear', 'grizzly', 'grizzly bear', 'kermode bear', 'kodiak', 'kodiak bear',
+        'moon bear', 'panda', 'polar bear', 'sloth bear', 'spectacled bear', 'spirit bear', 'sun bear'
+      ],
+      water: [
+        'anglerfish', 'axolotl', 'barracuda', 'beluga', 'blue shark', 'blue whale', 'bottlenose dolphin',
+        'bull shark', 'catfish', 'clownfish', 'coelacanth', 'crab', 'dolphin', 'dugong', 'eel',
+        'electric eel', 'elephant seal', 'fur seal', 'great white shark', 'hammerhead', 'harp seal',
+        'humpback whale', 'jellyfish', 'killer whale', 'koi', 'leopard seal', 'lionfish', 'lobster',
+        'mako shark', 'manatee', 'manta ray', 'marlin', 'moray eel', 'narwhal', 'nurse shark',
+        'octopus', 'orca', 'piranha', 'porpoise', 'pufferfish', 'ray', 'salmon', 'sawfish', 'sea lion',
+        'seahorse', 'seal', 'shark', 'shrimp', 'sperm whale', 'squid', 'stingray', 'sturgeon',
+        'swordfish', 'tiger shark', 'trout', 'tuna', 'walrus', 'whale', 'whale shark'
+      ]
+    };
+
+    const ENGLISH_TAG_CORRECTIONS = {
+      femele: 'female', femal: 'female', hembra: 'female', mujer: 'female',
+      maile: 'male', macho: 'male', hombre: 'male',
+      antrho: 'anthro', anto: 'anthro', antro: 'anthro',
+      ferel: 'feral',
+      inanimat: 'inanimate', inanimado: 'inanimate',
+      canin: 'canine', canino: 'canine', perro: 'dog', lobo: 'wolf', wolfe: 'wolf', zorro: 'fox',
+      helhound: 'hellhound', cerbero: 'cerberus',
+      felin: 'feline', felino: 'feline', gato: 'cat', leon: 'lion', tigre: 'tiger',
+      snowlepard: 'snowleopard', 'snow leopard': 'snowleopard', helcat: 'hellcat',
+      equin: 'equine', equino: 'equine', caballo: 'horse',
+      cervin: 'cervine', ciervo: 'deer', venado: 'deer',
+      ursin: 'ursine', oso: 'bear',
+      bird: 'birds', pajaro: 'birds', ave: 'birds', aguila: 'eagle', buho: 'owl', cuervo: 'raven',
+      agua: 'water', pez: 'fish', tiburon: 'shark', delfin: 'dolphin', ballena: 'whale', foca: 'seal',
+      rodent: 'rodents', roedor: 'rodents', conejo: 'rabbit', raton: 'mouse', rata: 'rat', ardilla: 'squirrel',
+      reptile: 'reptils', reptiles: 'reptils', reptil: 'reptils', dragon: 'dragon', serpiente: 'snake', lagarto: 'lizard',
+      dinosaurs: 'dinosaur', dinosaurio: 'dinosaur',
+      mythical: 'myth', mitologico: 'myth',
+      mustelid: 'mustelids', nutria: 'otter', huron: 'ferret', tejón: 'badger', tejon: 'badger',
+      insect: 'insects', insecto: 'insects', abeja: 'bee', mariposa: 'butterfly', polilla: 'moth', arana: 'spider',
+      othermamals: 'other mamals', 'other mammals': 'other mamals', mapache: 'raccoon', hiena: 'hyena'
+    };
+
+    // =========================================================================
+    // UTILIDADES GENERALES, NORMALIZACIÓN Y MODALES
     // =========================================================================
     function generateId(prefix = 'id') {
-      return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     function formatFileSize(bytes) {
-      const num = Number(bytes);
-      if (!num || num <= 0) return '';
-      if (num < 1024) return `${num} B`;
-      if (num < 1024 * 1024) return `${(num / 1024).toFixed(1)} KB`;
-      if (num < 1024 * 1024 * 1024) return `${(num / (1024 * 1024)).toFixed(2)} MB`;
-      return `${(num / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+      const n = Number(bytes) || 0;
+      if (n <= 0) return '';
+      if (n >= 1024 * 1024 * 1024) return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+      if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+      if (n >= 1024) return `${Math.round(n / 1024)} KB`;
+      return `${n} B`;
     }
 
-    function normalizeTags(input) {
-      if (!input) return [];
-      const arr = Array.isArray(input) ? input : String(input).split(',');
+    function normalizeTags(raw) {
+      const arr = Array.isArray(raw)
+        ? raw
+        : String(raw || '').split(/[,;|]+/);
       const seen = new Set();
       const out = [];
-      for (const raw of arr) {
-        const clean = String(raw).trim().replace(/^#+/, '').toLowerCase();
+      for (const item of arr) {
+        const clean = String(item || '')
+          .trim()
+          .replace(/^#+/, '')
+          .replace(/\s+/g, ' ')
+          .toLowerCase();
         if (clean && !seen.has(clean)) {
           seen.add(clean);
           out.push(clean);
         }
       }
       return out;
+    }
+
+    function autoCorrectKnownEnglishTypos(tags) {
+      return normalizeTags((tags || []).map(t => ENGLISH_TAG_CORRECTIONS[t] || t));
     }
 
     function extractArtistNameTags(artistName) {
@@ -1428,48 +1117,7 @@
 
     function extractFolderNameTags(folderName) {
       if (!folderName) return [];
-      return normalizeTags([String(folderName).trim()]);
-    }
-
-    function sanitizeFolderName(name) {
-      return String(name || 'Sin_Nombre').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Sin_Nombre';
-    }
-
-    function escapeHtml(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function showToast(msg, duration = 2800) {
-      const el = document.getElementById('toast');
-      el.textContent = msg;
-      el.classList.remove('hidden');
-      clearTimeout(el._timer);
-      el._timer = setTimeout(() => el.classList.add('hidden'), duration);
-    }
-
-    function toggleSidebar(force) {
-      const sidebar = document.getElementById('sidebar');
-      const backdrop = document.getElementById('sidebar-backdrop');
-      const open = typeof force === 'boolean' ? force : sidebar.classList.contains('-translate-x-full');
-      if (open) {
-        sidebar.classList.remove('-translate-x-full');
-        backdrop.classList.remove('hidden');
-      } else {
-        sidebar.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
-      }
-    }
-
-    function closeModal(id) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.classList.add('hidden');
-      el.classList.remove('flex');
+      return normalizeTags([folderName]);
     }
 
     function openModal(id) {
@@ -1479,147 +1127,324 @@
       el.classList.add('flex');
     }
 
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    }
+
+    function toggleSidebar(force) {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const isOpen = !sidebar.classList.contains('-translate-x-full');
+      const next = typeof force === 'boolean' ? force : !isOpen;
+      if (next) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
     function toggleGridDensity() {
       state.compactGrid = !state.compactGrid;
       const grid = document.getElementById('main-grid');
       if (state.compactGrid) {
-        grid.className = 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5';
+        grid.className = 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-2.5';
       } else {
         grid.className = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5';
       }
     }
 
-    // =========================================================================
-    // PERSISTENCIA LOCAL Y EN GOOGLE DRIVE
-    // =========================================================================
-    function getSerializableLibraryData() {
-      const stripBlobs = (obj) => {
-        if (Array.isArray(obj)) return obj.map(stripBlobs);
-        if (obj && typeof obj === 'object') {
-          const copy = {};
-          for (const [k, v] of Object.entries(obj)) {
-            if (typeof v === 'string' && v.startsWith('blob:')) {
-              copy[k] = '';
-            } else {
-              copy[k] = stripBlobs(v);
-            }
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden'), 3400);
+    }
+
+    function askYesNoConfirm({ title = 'Confirmar', message = '', doubleStep = false, icon = '⚠️', yesLabel = 'Sí', noLabel = 'No' }) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('app-confirm-modal');
+        const titleEl = document.getElementById('app-confirm-title');
+        const msgEl = document.getElementById('app-confirm-message');
+        const iconEl = document.getElementById('app-confirm-icon');
+        const badgeEl = document.getElementById('app-confirm-step-badge');
+        const yesBtn = document.getElementById('app-confirm-yes-btn');
+        const noBtn = document.getElementById('app-confirm-no-btn');
+
+        let step = 1;
+        iconEl.textContent = icon;
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        yesBtn.textContent = yesLabel;
+        noBtn.textContent = noLabel;
+        badgeEl.classList.add('hidden');
+        openModal('app-confirm-modal');
+
+        const cleanup = () => {
+          yesBtn.onclick = null;
+          noBtn.onclick = null;
+          closeModal('app-confirm-modal');
+        };
+
+        noBtn.onclick = () => {
+          cleanup();
+          resolve(false);
+        };
+
+        yesBtn.onclick = () => {
+          if (doubleStep && step === 1) {
+            step = 2;
+            badgeEl.classList.remove('hidden');
+            yesBtn.textContent = 'Sí, confirmar definitivamente';
+            return;
           }
-          return copy;
+          cleanup();
+          resolve(true);
+        };
+      });
+    }
+
+    // =========================================================================
+    // SELECTOR RÁPIDO DE TAGS POR FILAS + CORRECTOR ORTOGRÁFICO EN INGLÉS
+    // =========================================================================
+    function handleTagInputSpellingCheck(inputId, spellBoxId) {
+      const input = document.getElementById(inputId);
+      const spellBox = document.getElementById(spellBoxId);
+      if (!input || !spellBox) return;
+
+      const rawTokens = normalizeTags(input.value);
+      const suggestions = [];
+      for (const tok of rawTokens) {
+        if (ENGLISH_TAG_CORRECTIONS[tok] && ENGLISH_TAG_CORRECTIONS[tok] !== tok) {
+          suggestions.push({ wrong: tok, right: ENGLISH_TAG_CORRECTIONS[tok] });
         }
-        return obj;
-      };
-      return stripBlobs(libraryData);
-    }
-
-    function saveLocalOnly() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(getSerializableLibraryData()));
-      } catch (e) {
-        console.warn('No se pudo guardar copia en localStorage:', e);
       }
+
+      if (!suggestions.length) {
+        spellBox.classList.add('hidden');
+        spellBox.innerHTML = '';
+        return;
+      }
+
+      spellBox.classList.remove('hidden');
+      spellBox.innerHTML = `
+        <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-amber-950/60 border border-amber-500/40 text-[11px] text-amber-200">
+          <span>💡 Corrección en inglés:</span>
+          ${suggestions.map(s => `
+            <button type="button" onclick="applySpellingSuggestion('${inputId}', '${spellBoxId}', '${escapeHtml(s.wrong)}', '${escapeHtml(s.right)}')" class="px-2 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold">
+              ${escapeHtml(s.wrong)} → ${escapeHtml(s.right)}
+            </button>
+          `).join('')}
+        </div>
+      `;
     }
 
+    function applySpellingSuggestion(inputId, spellBoxId, wrong, right) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const tokens = normalizeTags(input.value).map(t => (t === wrong ? right : t));
+      input.value = normalizeTags(tokens).join(', ');
+      handleTagInputSpellingCheck(inputId, spellBoxId);
+    }
+
+    function onQuickTagManualInputChange(inputId, pickerId, spellBoxId) {
+      handleTagInputSpellingCheck(inputId, spellBoxId);
+      renderQuickTagPicker(pickerId, inputId, spellBoxId);
+    }
+
+    function toggleQuickTagInInput(inputId, pickerId, spellBoxId, tag, familyKey = null) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const clean = normalizeTags([tag])[0];
+      const current = normalizeTags(input.value);
+      const idx = current.indexOf(clean);
+      if (idx >= 0) {
+        current.splice(idx, 1);
+      } else {
+        current.push(clean);
+      }
+      input.value = current.join(', ');
+
+      if (familyKey) {
+        if (!quickTagPickerState[pickerId]) quickTagPickerState[pickerId] = { activeFamily: null };
+        quickTagPickerState[pickerId].activeFamily =
+          quickTagPickerState[pickerId].activeFamily === familyKey && idx >= 0 ? null : familyKey;
+      }
+
+      renderQuickTagPicker(pickerId, inputId, spellBoxId);
+    }
+
+    function renderQuickTagPicker(pickerId, inputId, spellBoxId) {
+      const container = document.getElementById(pickerId);
+      const input = document.getElementById(inputId);
+      if (!container || !input) return;
+
+      if (!quickTagPickerState[pickerId]) quickTagPickerState[pickerId] = { activeFamily: null };
+      const selectedSet = new Set(normalizeTags(input.value));
+      const activeFamily = quickTagPickerState[pickerId].activeFamily;
+      const familyKeys = Object.keys(QUICK_TAGS_FAMILIES).sort();
+
+      let html = `
+        <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2.5">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">1. Tipo / Género / TF</div>
+            <div class="flex flex-wrap gap-1">
+              ${QUICK_TAGS_ROW_1.map(t => `
+                <button type="button" onclick="toggleQuickTagInInput('${inputId}', '${pickerId}', '${spellBoxId}', '${escapeHtml(t)}')"
+                  class="px-2 py-0.5 rounded-full text-[11px] font-semibold transition ${
+                    selectedSet.has(t)
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300'
+                  }">
+                  ${selectedSet.has(t) ? '✓ ' : ''}${escapeHtml(t)}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">2. Familia / Especie (toca para desplegar subespecies A–Z)</div>
+            <div class="flex flex-wrap gap-1">
+              ${familyKeys.map(fam => {
+                const isSelected = selectedSet.has(fam);
+                const isOpen = activeFamily === fam;
+                return `
+                  <button type="button" onclick="toggleQuickTagInInput('${inputId}', '${pickerId}', '${spellBoxId}', '${escapeHtml(fam)}', '${escapeHtml(fam)}')"
+                    class="px-2 py-0.5 rounded-full text-[11px] font-semibold transition ${
+                      isOpen
+                        ? 'bg-emerald-600 text-white ring-1 ring-emerald-300'
+                        : isSelected
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300'
+                    }">
+                    ${isSelected ? '✓ ' : ''}${escapeHtml(fam)} ${isOpen ? '▾' : ''}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+      `;
+
+      if (activeFamily && QUICK_TAGS_FAMILIES[activeFamily]) {
+        const subList = [...QUICK_TAGS_FAMILIES[activeFamily]].sort();
+        html += `
+          <div class="pt-2 border-t border-slate-800">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-300">3. Subespecies de ${escapeHtml(activeFamily)} (A–Z)</span>
+              <button type="button" onclick="quickTagPickerState['${pickerId}'].activeFamily = null; renderQuickTagPicker('${pickerId}', '${inputId}', '${spellBoxId}');" class="text-[10px] text-slate-400 hover:text-white">Cerrar ✕</button>
+            </div>
+            <div class="flex flex-wrap gap-1 max-h-32 overflow-y-auto pr-1">
+              ${subList.map(sub => `
+                <button type="button" onclick="toggleQuickTagInInput('${inputId}', '${pickerId}', '${spellBoxId}', '${escapeHtml(sub)}')"
+                  class="px-2 py-0.5 rounded-full text-[11px] transition ${
+                    selectedSet.has(sub)
+                      ? 'bg-emerald-600 text-white font-bold shadow'
+                      : 'bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300'
+                  }">
+                  ${selectedSet.has(sub) ? '✓ ' : ''}${escapeHtml(sub)}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    // =========================================================================
+    // PERSISTENCIA LOCAL, EXPORTACIÓN/IMPORTACIÓN JSON Y NORMALIZACIÓN
+    // =========================================================================
     function ensureArtistCollectionsNormalized() {
-      for (const a of (libraryData.artistas || [])) {
+      if (!Array.isArray(libraryData.historia)) libraryData.historia = [];
+      if (!Array.isArray(libraryData.comics)) libraryData.comics = [];
+      if (!Array.isArray(libraryData.artistas)) libraryData.artistas = [];
+
+      for (const a of libraryData.artistas) {
         if (!Array.isArray(a.images)) a.images = [];
         if (!Array.isArray(a.folders)) a.folders = [];
         for (const f of a.folders) {
           if (!Array.isArray(f.images)) f.images = [];
-          if (!Array.isArray(f.tags)) f.tags = [];
         }
+      }
+      for (const a of libraryData.comics) {
+        if (!Array.isArray(a.comics)) a.comics = [];
+        for (const c of a.comics) {
+          if (!Array.isArray(c.pages)) c.pages = [];
+        }
+      }
+      for (const a of libraryData.historia) {
+        if (!Array.isArray(a.items)) a.items = [];
+      }
+    }
+
+    function getSerializableLibraryData() {
+      const cleanItem = (it) => {
+        const copy = { ...it };
+        if (copy.url && copy.url.startsWith('blob:')) copy.url = '';
+        return copy;
+      };
+      return {
+        historia: libraryData.historia.map(a => ({
+          ...cleanItem(a),
+          items: (a.items || []).map(cleanItem)
+        })),
+        comics: libraryData.comics.map(a => ({
+          ...cleanItem(a),
+          comics: (a.comics || []).map(c => ({
+            ...cleanItem(c),
+            pages: (c.pages || []).map(cleanItem)
+          }))
+        })),
+        artistas: libraryData.artistas.map(a => ({
+          ...cleanItem(a),
+          images: (a.images || []).map(cleanItem),
+          folders: (a.folders || []).map(f => ({
+            ...cleanItem(f),
+            images: (f.images || []).map(cleanItem)
+          }))
+        }))
+      };
+    }
+
+    function saveLocalOnly() {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(getSerializableLibraryData()));
+      } catch (e) {
+        console.warn('No se pudo guardar en localStorage:', e);
       }
     }
 
     function loadLocalData() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           libraryData = {
-            historia: Array.isArray(parsed.historia) ? parsed.historia : [],
-            comics: Array.isArray(parsed.comics) ? parsed.comics : [],
-            artistas: Array.isArray(parsed.artistas) ? parsed.artistas : []
+            historia: parsed.historia || [],
+            comics: parsed.comics || [],
+            artistas: parsed.artistas || []
           };
-          ensureArtistCollectionsNormalized();
-          return;
         }
-      } catch (e) {}
-
-      const now = Date.now();
-      libraryData = {
-        historia: [
-          {
-            id: 'art_hist_1',
-            name: 'Crónicas de Aethel',
-            tags: ['fantasia', 'lore', 'novela'],
-            avatarUrl: '',
-            avatarDriveId: '',
-            createdAt: now - 300000,
-            items: [
-              {
-                id: 'story_1',
-                title: 'Capítulo 1: El Despertar del Cristal',
-                mimeType: 'text/plain',
-                textContent: 'En las tierras altas de Aethel, los antiguos archivos guardaban memorias de un cielo plateado...',
-                tags: ['crónicas de aethel', 'fantasia', 'capitulo1'],
-                size: 102,
-                createdAt: now - 250000
-              }
-            ]
-          }
-        ],
-        comics: [
-          {
-            id: 'art_com_1',
-            name: 'Kaelen Studio',
-            tags: ['anthro', 'canine'],
-            avatarUrl: '',
-            avatarDriveId: '',
-            createdAt: now - 200000,
-            comics: [
-              {
-                id: 'comic_1',
-                title: 'Horizonte Carmesí',
-                tags: ['kaelen studio', 'anthro', 'wolf'],
-                coverUrl: '',
-                coverDriveId: '',
-                createdAt: now - 150000,
-                pages: []
-              }
-            ]
-          }
-        ],
-        artistas: [
-          {
-            id: 'art_gal_1',
-            name: 'Sora Takahashi',
-            tags: ['anthro', 'feline'],
-            avatarUrl: '',
-            avatarDriveId: '',
-            createdAt: now - 100000,
-            folders: [],
-            images: []
-          }
-        ]
-      };
-      saveLocalOnly();
+      } catch (e) {
+        console.warn('Error leyendo datos locales:', e);
+      }
+      ensureArtistCollectionsNormalized();
     }
 
-    async function persistLibrary(activityDescription = '') {
+    async function persistLibrary(logMessage = '') {
       saveLocalOnly();
-      updateSidebarCounts();
-
-      if (!driveConfig.accessToken) return;
-
-      const syncInd = document.getElementById('sync-indicator');
-      const syncText = document.getElementById('sync-text');
-      syncInd.classList.remove('hidden');
-      syncText.textContent = 'Guardando en Drive...';
-
+      if (!driveConfig.accessToken || !driveConfig.rootFolderId) return;
       try {
-        await ensureDriveStructure();
         const payload = JSON.stringify(getSerializableLibraryData(), null, 2);
-
         if (driveConfig.metadataFileId) {
           await driveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${driveConfig.metadataFileId}?uploadType=media`, {
             method: 'PATCH',
@@ -1629,143 +1454,110 @@
         } else {
           driveConfig.metadataFileId = await uploadTextFileToDrive(METADATA_FILENAME, payload, 'application/json', driveConfig.rootFolderId);
         }
-
-        if (activityDescription) {
-          await appendDriveActivityLog(activityDescription);
-          await createDriveBackupSnapshot(activityDescription);
+        if (logMessage) {
+          await appendDriveActivityLog(logMessage);
         }
-      } catch (err) {
-        console.error('Error sincronizando con Drive:', err);
-        showToast('⚠️ Error guardando índice en Drive');
-      } finally {
-        syncInd.classList.add('hidden');
+      } catch (e) {
+        console.warn('Error guardando índice en Drive:', e);
       }
     }
 
     function exportLocalBackupJson() {
-      const dataStr = JSON.stringify(getSerializableLibraryData(), null, 2);
-      const blob = new Blob([dataStr], { type: 'application/json' });
+      const payload = JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        data: getSerializableLibraryData()
+      }, null, 2);
+      const blob = new Blob([payload], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      const stamp = new Date().toISOString().slice(0, 10);
       a.href = url;
-      a.download = `respaldo_boveda_${stamp}.json`;
+      a.download = `mi_boveda_respaldo_${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       showToast('📥 Respaldo .json descargado');
     }
 
-    function importLocalBackupJson(event) {
-      const file = event.target.files[0];
+    async function importLocalBackupJson(event) {
+      const file = event.target.files?.[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const parsed = JSON.parse(e.target.result);
-          if (!parsed || (!parsed.historia && !parsed.comics && !parsed.artistas)) {
-            showToast('⚠️ El archivo JSON no tiene el formato válido');
-            return;
-          }
-          libraryData = {
-            historia: parsed.historia || [],
-            comics: parsed.comics || [],
-            artistas: parsed.artistas || []
-          };
-          ensureArtistCollectionsNormalized();
-          await persistLibrary('Importación desde archivo respaldo .json local');
-          renderAll();
-          showToast('✅ Biblioteca restaurada desde .json');
-        } catch (err) {
-          showToast('⚠️ Error leyendo el archivo JSON');
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = '';
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const imported = parsed.data ? parsed.data : parsed;
+        libraryData = {
+          historia: imported.historia || [],
+          comics: imported.comics || [],
+          artistas: imported.artistas || []
+        };
+        ensureArtistCollectionsNormalized();
+        await persistLibrary('Importado archivo .json manual');
+        renderAll();
+        showToast('✅ Respaldo .json importado');
+      } catch (e) {
+        showToast('⚠️ El archivo .json no es válido');
+      } finally {
+        event.target.value = '';
+      }
     }
 
     // =========================================================================
-    // CONEXIÓN OAUTH GOOGLE DRIVE (REDIRECCIÓN + POPUP) + RESGUARDOS
+    // CONEXIÓN OAUTH GOOGLE DRIVE, API HELPERS Y SINCRONIZACIÓN DE CARPETAS
     // =========================================================================
     function loadSavedCredentials() {
       try {
-        const raw = localStorage.getItem(CREDS_KEY);
+        const raw = localStorage.getItem(DRIVE_CREDS_KEY);
         if (raw) {
-          const parsed = JSON.parse(raw);
-          driveConfig.clientId = parsed.clientId || '';
-          driveConfig.apiKey = parsed.apiKey || '';
+          const creds = JSON.parse(raw);
+          driveConfig.clientId = creds.clientId || '';
+          driveConfig.apiKey = creds.apiKey || '';
+          const cidEl = document.getElementById('input-client-id');
+          const keyEl = document.getElementById('input-api-key');
+          if (cidEl) cidEl.value = driveConfig.clientId;
+          if (keyEl) keyEl.value = driveConfig.apiKey;
         }
       } catch (e) {}
-      document.getElementById('input-client-id').value = driveConfig.clientId;
-      document.getElementById('input-api-key').value = driveConfig.apiKey;
     }
 
     function saveCredentialsToStorage(clientId, apiKey) {
       driveConfig.clientId = clientId.trim();
       driveConfig.apiKey = apiKey.trim();
-      localStorage.setItem(CREDS_KEY, JSON.stringify({
+      localStorage.setItem(DRIVE_CREDS_KEY, JSON.stringify({
         clientId: driveConfig.clientId,
         apiKey: driveConfig.apiKey
       }));
     }
 
     function openDriveModal() {
-      document.getElementById('input-client-id').value = driveConfig.clientId || '';
-      document.getElementById('input-api-key').value = driveConfig.apiKey || '';
+      loadSavedCredentials();
+      document.getElementById('drive-oauth-error-box').classList.add('hidden');
       openModal('drive-modal');
       if (driveConfig.accessToken) {
+        document.getElementById('drive-backups-panel').classList.remove('hidden');
         loadDriveBackupsList();
       }
     }
 
-    function showDriveOauthError(msg) {
+    function showDriveOAuthError(text) {
       const box = document.getElementById('drive-oauth-error-box');
       const txt = document.getElementById('drive-oauth-error-text');
-      txt.textContent = msg;
-      box.classList.remove('hidden');
-    }
-
-    function checkUrlHashForOAuthToken() {
-      const hash = window.location.hash;
-      if (!hash || hash.length < 2) return false;
-      const params = new URLSearchParams(hash.substring(1));
-      const token = params.get('access_token');
-      const error = params.get('error');
-
-      if (error) {
-        history.replaceState(null, '', window.location.pathname + window.location.search);
-        openDriveModal();
-        showDriveOauthError(`Error de autorización: ${error} (${params.get('error_description') || ''})`);
-        return true;
+      if (box && txt) {
+        txt.textContent = text;
+        box.classList.remove('hidden');
       }
-
-      if (token) {
-        driveConfig.accessToken = token;
-        history.replaceState(null, '', window.location.pathname + window.location.search);
-        onGoogleDriveConnected();
-        return true;
-      }
-      return false;
     }
 
     function connectGoogleDriveRedirect() {
       const clientId = document.getElementById('input-client-id').value.trim();
       const apiKey = document.getElementById('input-api-key').value.trim();
       if (!clientId) {
-        showDriveOauthError('Introduce primero tu OAuth Client ID.');
+        showDriveOAuthError('Introduce tu OAuth Client ID antes de conectar.');
         return;
       }
       saveCredentialsToStorage(clientId, apiKey);
 
       const redirectUri = window.location.origin + window.location.pathname;
       const scope = encodeURIComponent('https://www.googleapis.com/auth/drive');
-      const authUrl =
-        `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}` +
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&response_type=token` +
-        `&scope=${scope}` +
-        `&include_granted_scopes=true` +
-        `&prompt=consent`;
-
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${scope}&include_granted_scopes=true&prompt=consent`;
       window.location.href = authUrl;
     }
 
@@ -1773,88 +1565,107 @@
       const clientId = document.getElementById('input-client-id').value.trim();
       const apiKey = document.getElementById('input-api-key').value.trim();
       if (!clientId) {
-        showDriveOauthError('Introduce primero tu OAuth Client ID.');
+        showDriveOAuthError('Introduce tu OAuth Client ID antes de conectar.');
         return;
       }
       saveCredentialsToStorage(clientId, apiKey);
 
       if (!window.google || !google.accounts || !google.accounts.oauth2) {
-        showDriveOauthError('La librería de Google aún está cargando. Prueba con "Conectar en esta misma pestaña".');
+        connectGoogleDriveRedirect();
         return;
       }
 
-      document.getElementById('drive-oauth-error-box').classList.add('hidden');
-
-      driveConfig.tokenClient = google.accounts.oauth2.initTokenClient({
+      const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: 'https://www.googleapis.com/auth/drive',
-        callback: (resp) => {
-          if (resp.error) {
-            showDriveOauthError(`Error: ${resp.error}`);
-            return;
+        callback: async (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            await onDriveTokenObtained(tokenResponse.access_token, Number(tokenResponse.expires_in) || 3600);
+          } else {
+            showDriveOAuthError('No se recibió token de acceso. Prueba el botón "Conectar en esta misma pestaña".');
           }
-          if (resp.access_token) {
-            driveConfig.accessToken = resp.access_token;
-            closeModal('drive-modal');
-            onGoogleDriveConnected();
-          }
-        },
-        error_callback: (err) => {
-          showDriveOauthError(`No se pudo abrir la ventana emergente (${err.type || 'popup'}). Usa el botón azul "Conectar en esta misma pestaña".`);
         }
       });
-
-      driveConfig.tokenClient.requestAccessToken({ prompt: 'consent' });
+      tokenClient.requestAccessToken({ prompt: 'consent' });
     }
 
-    async function onGoogleDriveConnected() {
-      document.getElementById('drive-btn-label').textContent = 'Drive Conectado';
+    async function checkUrlHashForOAuthToken() {
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const token = params.get('access_token');
+        const expiresIn = Number(params.get('expires_in')) || 3600;
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+        if (token) {
+          await onDriveTokenObtained(token, expiresIn);
+          return;
+        }
+      }
+
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(DRIVE_TOKEN_KEY) || 'null');
+        if (saved && saved.token && saved.expiresAt > Date.now() + 60000) {
+          await onDriveTokenObtained(saved.token, Math.floor((saved.expiresAt - Date.now()) / 1000), true);
+        }
+      } catch (e) {}
+    }
+
+    async function onDriveTokenObtained(token, expiresIn = 3600, silent = false) {
+      driveConfig.accessToken = token;
+      try {
+        sessionStorage.setItem(DRIVE_TOKEN_KEY, JSON.stringify({
+          token,
+          expiresAt: Date.now() + expiresIn * 1000
+        }));
+      } catch (e) {}
+
+      document.getElementById('drive-btn-label').textContent = 'Google Drive Conectado';
       document.getElementById('top-drive-label').textContent = 'Drive Activo';
       document.getElementById('drive-status-dot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
-      document.getElementById('storage-mode-badge').textContent = 'Google Drive + Local';
+      document.getElementById('storage-mode-badge').textContent = 'Sincronizado con Drive';
       document.getElementById('storage-mode-badge').className = 'font-semibold text-emerald-400';
       document.getElementById('drive-backups-panel').classList.remove('hidden');
+      closeModal('drive-modal');
 
       const syncInd = document.getElementById('sync-indicator');
       const syncText = document.getElementById('sync-text');
       syncInd.classList.remove('hidden');
-      syncText.textContent = 'Unificando tags y Drive...';
+      syncText.textContent = 'Conectando estructura de Drive...';
 
       try {
-        await ensureDriveStructure();
+        await ensureDriveFolderStructure();
         await loadMetadataFromDrive();
         await indexAndUnifyAllDriveTags();
         await hydrateMissingCatalogFileSizes();
-        syncAllCatalogTagsToDriveMetadata();
-        renderAll();
-        showToast('☁️ Conectado con Google Drive. Pulsa "Actualizar" para sincronizar carpetas.');
-        if (state.section === 'drive-browser') {
-          loadDriveBrowserFolder(driveBrowserState.path[driveBrowserState.path.length - 1].id);
+        await syncAllCatalogTagsToDriveMetadata();
+        if (!silent) {
+          await createDriveBackupSnapshot('Conexión de sesión');
+          showToast('☁️ Google Drive conectado y tags unificados');
         }
-      } catch (err) {
-        console.error(err);
-        showToast('⚠️ Error conectando carpetas de Drive');
+      } catch (e) {
+        console.error('Error inicializando Drive:', e);
+        showToast('⚠️ Error sincronizando con Google Drive');
       } finally {
         syncInd.classList.add('hidden');
+        renderAll();
       }
     }
 
-    async function driveApiFetch(url, options = {}, timeoutMs = 30000) {
-      if (!driveConfig.accessToken) throw new Error('Sin token de Google Drive');
+    async function driveApiFetch(url, options = {}, timeoutMs = 25000) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const headers = Object.assign({}, options.headers || {}, {
+        const headers = {
+          ...(options.headers || {}),
           Authorization: `Bearer ${driveConfig.accessToken}`
-        });
+        };
         const res = await fetch(url, { ...options, headers, signal: controller.signal });
         if (res.status === 401) {
-          driveConfig.accessToken = null;
+          driveConfig.accessToken = '';
+          sessionStorage.removeItem(DRIVE_TOKEN_KEY);
           document.getElementById('drive-status-dot').className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
-          document.getElementById('drive-btn-label').textContent = 'Reconectar Drive';
-          document.getElementById('top-drive-label').textContent = 'Reconectar';
-          showToast('⚠️ La sesión de Drive caducó. Reconecta para continuar.');
-          throw new Error('Token expirado');
+          document.getElementById('top-drive-label').textContent = 'Reconectar Drive';
+          showToast('🔑 Tu sesión de Google Drive expiró; vuelve a conectar.');
         }
         return res;
       } finally {
@@ -1862,159 +1673,259 @@
       }
     }
 
-    async function driveFetchAllPages(baseUrl, maxItems = 15000) {
-      const allFiles = [];
+    async function driveFetchAllPages(baseUrl) {
+      let allFiles = [];
       let pageToken = '';
       do {
         const sep = baseUrl.includes('?') ? '&' : '?';
-        const pageParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
-        const res = await driveApiFetch(`${baseUrl}${sep}pageSize=1000${pageParam}`);
+        const url = `${baseUrl}${sep}pageSize=1000${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
+        const res = await driveApiFetch(url);
         if (!res.ok) break;
         const data = await res.json();
         if (Array.isArray(data.files)) {
-          allFiles.push(...data.files);
+          allFiles = allFiles.concat(data.files);
         }
         pageToken = data.nextPageToken || '';
-      } while (pageToken && allFiles.length < maxItems);
+      } while (pageToken);
       return allFiles;
     }
 
+    async function findOrCreateFolder(name, parentId = 'root') {
+      const safeName = String(name).replace(/'/g, "\\'");
+      const q = encodeURIComponent(`'${parentId}' in parents and name='${safeName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+      const searchRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=files(id,name)`);
+      const searchData = await searchRes.json();
+      if (searchData.files && searchData.files.length > 0) {
+        return searchData.files[0].id;
+      }
+
+      const createRes = await driveApiFetch('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&fields=id,name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [parentId]
+        })
+      });
+      const created = await createRes.json();
+      return created.id;
+    }
+
+    async function ensureDriveFolderStructure() {
+      if (!driveConfig.accessToken) return;
+      driveConfig.rootFolderId = await findOrCreateFolder(ROOT_FOLDER_NAME, 'root');
+      driveConfig.backupFolderId = await findOrCreateFolder(BACKUP_FOLDER_NAME, driveConfig.rootFolderId);
+      driveConfig.sectionFolders.historia = await findOrCreateFolder('Historia', driveConfig.rootFolderId);
+      driveConfig.sectionFolders.comics = await findOrCreateFolder('Comics', driveConfig.rootFolderId);
+      driveConfig.sectionFolders.artistas = await findOrCreateFolder('Artistas', driveConfig.rootFolderId);
+    }
+
+    async function ensureTargetFolderForContext(section, artist, subFolderOrComic = null) {
+      if (!driveConfig.accessToken) return 'root';
+      if (!driveConfig.rootFolderId) await ensureDriveFolderStructure();
+
+      const sectionParentId = driveConfig.sectionFolders[section] || driveConfig.rootFolderId;
+      if (!artist.driveFolderId) {
+        artist.driveFolderId = await findOrCreateFolder(artist.name, sectionParentId);
+      }
+
+      if (subFolderOrComic) {
+        const subName = subFolderOrComic.title || subFolderOrComic.name || 'Carpeta';
+        if (!subFolderOrComic.driveFolderId) {
+          subFolderOrComic.driveFolderId = await findOrCreateFolder(subName, artist.driveFolderId);
+        }
+        return subFolderOrComic.driveFolderId;
+      }
+
+      return artist.driveFolderId;
+    }
+
+    async function uploadTextFileToDrive(filename, content, mimeType, parentId) {
+      const metadata = { name: filename, mimeType, parents: [parentId] };
+      const boundary = '-------314159265358979323846';
+      const body =
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+        `${JSON.stringify(metadata)}\r\n` +
+        `--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n` +
+        `${content}\r\n` +
+        `--${boundary}--`;
+
+      const res = await driveApiFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` },
+        body
+      });
+      const data = await res.json();
+      return data.id;
+    }
+
+    async function uploadFileToDrive(file, parentId, tags = []) {
+      const cleanTags = normalizeTags(tags);
+      const description = cleanTags.length
+        ? `Tags: ${cleanTags.map(t => '#' + t).join(' ')} | ${cleanTags.map(t => '[#' + t + ']').join(' ')}`
+        : '';
+
+      const metadata = {
+        name: file.name,
+        parents: [parentId],
+        ...(description ? { description } : {}),
+        ...(cleanTags.length ? { appProperties: { tags: cleanTags.join(',') } } : {})
+      };
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const res = await driveApiFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,size,mimeType', {
+        method: 'POST',
+        body: form
+      }, 60000);
+
+      if (!res.ok) {
+        throw new Error(`Error subiendo ${file.name} (${res.status})`);
+      }
+      const uploaded = await res.json();
+      if (uploaded.id && cleanTags.length) {
+        await updateDriveFileTagsMetadata(uploaded.id, cleanTags);
+      }
+      return uploaded;
+    }
+
+    async function updateDriveFileTagsMetadata(driveId, tags = []) {
+      if (!driveConfig.accessToken || !driveId) return;
+      const cleanTags = normalizeTags(tags);
+      driveConfig.driveTagsIndex.set(driveId, cleanTags);
+
+      const description = cleanTags.length
+        ? `Tags: ${cleanTags.map(t => '#' + t).join(' ')} | ${cleanTags.map(t => '[#' + t + ']').join(' ')}`
+        : '';
+
+      try {
+        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?supportsAllDrives=true&fields=id`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            description,
+            appProperties: { tags: cleanTags.join(',') }
+          })
+        });
+      } catch (e) {
+        console.warn('No se pudieron actualizar metadatos de tags en Drive:', driveId, e);
+      }
+    }
+
+    async function renameDriveItemById(driveId, newTitle, preserveExtension = true) {
+      if (!driveConfig.accessToken || !driveId || !newTitle) return;
+      try {
+        let finalName = newTitle.trim();
+        if (preserveExtension) {
+          const metaRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?fields=name&supportsAllDrives=true`);
+          if (metaRes.ok) {
+            const meta = await metaRes.json();
+            const extMatch = String(meta.name || '').match(/(\.[^./\\]+)$/);
+            if (extMatch && !finalName.toLowerCase().endsWith(extMatch[1].toLowerCase())) {
+              finalName += extMatch[1];
+            }
+          }
+        }
+        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?supportsAllDrives=true&fields=id,name`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: finalName })
+        });
+      } catch (e) {
+        console.warn('Error renombrando elemento en Drive:', driveId, e);
+      }
+    }
+
+    function openDriveRenameModal(fileId, currentName) {
+      driveRenameTargetId = fileId;
+      document.getElementById('drive-rename-input').value = currentName || '';
+      openModal('drive-rename-modal');
+    }
+
+    function renameSingleSelectedDriveBrowserItem() {
+      const ids = Array.from(driveBrowserState.selectedIds);
+      if (ids.length !== 1) {
+        showToast('Selecciona un solo archivo o carpeta para renombrarlo');
+        return;
+      }
+      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
+      const item = sourceList.find(f => f.id === ids[0]);
+      if (item) openDriveRenameModal(item.id, item.name);
+    }
+
+    async function executeDriveBrowserRename() {
+      const newName = document.getElementById('drive-rename-input').value.trim();
+      if (!driveRenameTargetId || !newName) return;
+
+      const btn = document.getElementById('drive-rename-confirm-btn');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      try {
+        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveRenameTargetId}?supportsAllDrives=true&fields=id,name`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName })
+        });
+        closeModal('drive-rename-modal');
+        showToast(`✏️ Renombrado a "${newName}"`);
+
+        if (state.activeTags.length > 0) {
+          await runDeepUnifiedTagSearch(state.activeTags);
+        } else {
+          const currentFolder = driveBrowserState.path[driveBrowserState.path.length - 1];
+          await loadDriveBrowserFolder(currentFolder.id);
+        }
+      } catch (e) {
+        showToast('⚠️ Error cambiando el nombre en Drive');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar nombre';
+      }
+    }
+
     async function trashDriveItemById(driveId) {
-      if (!driveConfig.accessToken || !driveId || driveId === 'root') return;
+      if (!driveConfig.accessToken || !driveId) return;
       try {
         await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?supportsAllDrives=true`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ trashed: true })
         });
-        driveConfig.driveBlobCache.delete(driveId);
-        driveConfig.driveSizeCache.delete(driveId);
-        driveConfig.driveTagsIndex.delete(driveId);
-        driveConfig.driveAllTaggedFiles = driveConfig.driveAllTaggedFiles.filter(f => f.id !== driveId);
       } catch (e) {
-        console.warn('No se pudo enviar elemento a la papelera de Drive:', driveId, e);
+        console.warn('No se pudo enviar a papelera en Drive:', driveId, e);
       }
-    }
-
-    async function findOrCreateFolder(name, parentId = null) {
-      const safeName = sanitizeFolderName(name);
-      const escaped = safeName.replace(/'/g, "\\'");
-      const parentFilter = parentId ? `'${parentId}' in parents and ` : `'root' in parents and `;
-      const q = encodeURIComponent(`${parentFilter}name='${escaped}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-      const searchRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&includeItemsFromAllDrives=true&supportsAllDrives=true`);
-      const searchData = await searchRes.json();
-      if (searchData.files && searchData.files.length > 0) {
-        return searchData.files[0].id;
-      }
-
-      const body = {
-        name: safeName,
-        mimeType: 'application/vnd.google-apps.folder'
-      };
-      if (parentId) body.parents = [parentId];
-
-      const createRes = await driveApiFetch('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const created = await createRes.json();
-      return created.id;
-    }
-
-    async function ensureDriveStructure() {
-      if (!driveConfig.accessToken) return;
-      if (!driveConfig.rootFolderId) {
-        driveConfig.rootFolderId = await findOrCreateFolder(ROOT_FOLDER_NAME, null);
-      }
-      if (!driveConfig.sectionFolderIds.historia) {
-        driveConfig.sectionFolderIds.historia = await findOrCreateFolder('Historia', driveConfig.rootFolderId);
-      }
-      if (!driveConfig.sectionFolderIds.comics) {
-        driveConfig.sectionFolderIds.comics = await findOrCreateFolder('Comics', driveConfig.rootFolderId);
-      }
-      if (!driveConfig.sectionFolderIds.artistas) {
-        driveConfig.sectionFolderIds.artistas = await findOrCreateFolder('Artistas', driveConfig.rootFolderId);
-      }
-      if (!driveConfig.backupFolderId) {
-        driveConfig.backupFolderId = await findOrCreateFolder(BACKUP_FOLDER_NAME, driveConfig.rootFolderId);
-      }
-    }
-
-    async function ensureTargetFolderForContext(section, artist, subItem = null) {
-      if (!driveConfig.accessToken) return null;
-      await ensureDriveStructure();
-      const secFolderId = driveConfig.sectionFolderIds[section] || driveConfig.rootFolderId;
-      if (!artist) return secFolderId;
-
-      if (!artist.driveFolderId) {
-        artist.driveFolderId = await findOrCreateFolder(artist.name, secFolderId);
-      }
-      if (section === 'comics' && subItem) {
-        if (!subItem.driveFolderId) {
-          subItem.driveFolderId = await findOrCreateFolder(subItem.title, artist.driveFolderId);
-        }
-        return subItem.driveFolderId;
-      }
-      if (section === 'artistas' && subItem) {
-        if (!subItem.driveFolderId) {
-          subItem.driveFolderId = await findOrCreateFolder(subItem.name, artist.driveFolderId);
-        }
-        return subItem.driveFolderId;
-      }
-      return artist.driveFolderId;
     }
 
     // =========================================================================
-    // SINCRONIZACIÓN BIDIRECCIONAL DE CARPETAS (APP ↔ DRIVE EN MI_BIBLIOTECA)
+    // BOTÓN 🔄 ACTUALIZAR: SINCRONIZACIÓN BIDIRECCIONAL DE CARPETAS (APP ↔ DRIVE)
     // =========================================================================
-    async function listDriveFolderDirectChildren(folderId) {
-      const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-      const url = `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=folder,name&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
-      return await driveFetchAllPages(url);
-    }
-
-    function resolveShortcutTarget(item) {
-      if (!item) return { id: '', mimeType: '', isFolder: false };
-      const isShortcut = item.mimeType === 'application/vnd.google-apps.shortcut' && item.shortcutDetails;
-      const targetId = isShortcut ? item.shortcutDetails.targetId : item.id;
-      const effectiveMime = isShortcut ? (item.shortcutDetails.targetMimeType || '') : (item.mimeType || '');
-      return {
-        id: targetId,
-        mimeType: effectiveMime,
-        isFolder: effectiveMime === 'application/vnd.google-apps.folder'
-      };
-    }
-
     async function syncFoldersBidirectionalWithDrive() {
       if (!driveConfig.accessToken) {
         openDriveModal();
-        showToast('Conecta Google Drive primero para actualizar carpetas');
+        showToast('Conecta Google Drive para sincronizar carpetas');
         return;
       }
-      if (driveConfig.isSyncingFolders) return;
 
-      driveConfig.isSyncingFolders = true;
       const syncInd = document.getElementById('sync-indicator');
       const syncText = document.getElementById('sync-text');
-      const topBtn = document.getElementById('top-sync-folders-btn');
-      if (topBtn) topBtn.disabled = true;
       syncInd.classList.remove('hidden');
       syncText.textContent = 'Actualizando carpetas App ↔ Drive...';
 
-      let createdInDrive = 0;
-      let importedToApp = 0;
-      let filesLinked = 0;
-
       try {
-        await ensureDriveStructure();
-        const knownDriveIds = getAllKnownDriveIds();
+        await ensureDriveFolderStructure();
+        let createdInDrive = 0;
+        let importedFromDrive = 0;
 
-        // 1. APP -> DRIVE: Asegurar que todas las carpetas de la App existan en Drive
-        syncText.textContent = '1/2 Enviando carpetas faltantes a Drive...';
         for (const section of ['artistas', 'comics', 'historia']) {
-          const artists = libraryData[section] || [];
-          for (const artist of artists) {
+          const sectionFolderId = driveConfig.sectionFolders[section];
+          if (!sectionFolderId) continue;
+
+          // 1. APP -> DRIVE: Asegurar que todas las carpetas de la app existan en Drive
+          for (const artist of (libraryData[section] || [])) {
             const hadFolder = !!artist.driveFolderId;
             await ensureTargetFolderForContext(section, artist, null);
             if (!hadFolder && artist.driveFolderId) createdInDrive++;
@@ -2027,460 +1938,192 @@
               }
             } else if (section === 'comics') {
               for (const comic of (artist.comics || [])) {
-                const hadSub = !!comic.driveFolderId;
+                const hadComic = !!comic.driveFolderId;
                 await ensureTargetFolderForContext('comics', artist, comic);
-                if (!hadSub && comic.driveFolderId) createdInDrive++;
+                if (!hadComic && comic.driveFolderId) createdInDrive++;
               }
             }
           }
-        }
 
-        // 2. DRIVE -> APP: Traer carpetas faltantes dentro de Mi_Biblioteca_Multimedia (Artistas, Comics, Historia)
-        syncText.textContent = '2/2 Leyendo carpetas en Mi_Biblioteca_Multimedia...';
+          // 2. DRIVE -> APP: Detectar carpetas faltantes dentro de Mi_Biblioteca_Multimedia/<Sección>
+          const q = encodeURIComponent(`'${sectionFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+          const driveArtistFolders = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,description,appProperties)`);
 
-        // 2A. SECCIÓN ARTISTAS EN DRIVE
-        const driveArtistsFolders = await listDriveFolderDirectChildren(driveConfig.sectionFolderIds.artistas);
-        for (const dArtItem of driveArtistsFolders) {
-          const info = resolveShortcutTarget(dArtItem);
-          if (!info.isFolder) continue;
-
-          let appArtist = libraryData.artistas.find(
-            a => a.driveFolderId === info.id || sanitizeFolderName(a.name).toLowerCase() === sanitizeFolderName(dArtItem.name).toLowerCase()
-          );
-
-          if (!appArtist) {
-            appArtist = {
-              id: generateId('art'),
-              name: dArtItem.name,
-              driveFolderId: info.id,
-              tags: extractDriveFileTags(dArtItem),
-              avatarUrl: '',
-              avatarDriveId: '',
-              createdAt: Date.now(),
-              folders: [],
-              images: []
-            };
-            libraryData.artistas.unshift(appArtist);
-            importedToApp++;
-          } else if (!appArtist.driveFolderId) {
-            appArtist.driveFolderId = info.id;
-          }
-
-          if (!Array.isArray(appArtist.folders)) appArtist.folders = [];
-          if (!Array.isArray(appArtist.images)) appArtist.images = [];
-
-          const autoArtistTags = extractArtistNameTags(appArtist.name);
-          const artistChildren = await listDriveFolderDirectChildren(info.id);
-
-          for (const child of artistChildren) {
-            const cInfo = resolveShortcutTarget(child);
-            if (cInfo.isFolder) {
-              // Subcarpeta dentro del artista
-              let appFolder = appArtist.folders.find(
-                f => f.driveFolderId === cInfo.id || sanitizeFolderName(f.name).toLowerCase() === sanitizeFolderName(child.name).toLowerCase()
-              );
-              const autoFolderTags = extractFolderNameTags(child.name);
-              const driveFolderTags = extractDriveFileTags(child);
-
-              if (!appFolder) {
-                appFolder = {
-                  id: generateId('afolder'),
-                  name: child.name,
-                  driveFolderId: cInfo.id,
-                  tags: normalizeTags([...autoArtistTags, ...autoFolderTags, ...driveFolderTags]),
-                  coverUrl: '',
-                  coverDriveId: '',
-                  createdAt: Date.now(),
-                  images: []
-                };
-                appArtist.folders.unshift(appFolder);
-                importedToApp++;
-              } else if (!appFolder.driveFolderId) {
-                appFolder.driveFolderId = cInfo.id;
-              }
-
-              const folderImgs = await fetchAllImagesInsideDriveFolder(cInfo.id);
-              for (const img of folderImgs) {
-                if (knownDriveIds.has(img.id)) continue;
-                knownDriveIds.add(img.id);
-                const mergedTags = normalizeTags([...autoArtistTags, ...autoFolderTags, ...(appFolder.tags || []), ...extractDriveFileTags(img)]);
-                appFolder.images.unshift({
-                  id: generateId('img'),
-                  title: (img.name || 'Imagen').replace(/\.[^/.]+$/, ''),
-                  driveId: img.id,
-                  url: '',
-                  size: Number(img.size) || 0,
-                  tags: mergedTags,
-                  createdAt: img.createdTime ? new Date(img.createdTime).getTime() : Date.now()
-                });
-                if (!appFolder.coverDriveId && !appFolder.coverUrl) {
-                  appFolder.coverDriveId = img.id;
-                }
-                await updateDriveFileTagsMetadata(img.id, mergedTags);
-                filesLinked++;
-              }
-            } else if (cInfo.mimeType.startsWith('image/')) {
-              // Imagen suelta dentro de la carpeta del artista
-              if (knownDriveIds.has(cInfo.id)) continue;
-              knownDriveIds.add(cInfo.id);
-              const mergedTags = normalizeTags([...autoArtistTags, ...extractDriveFileTags(child)]);
-              appArtist.images.unshift({
-                id: generateId('img'),
-                title: (child.name || 'Imagen').replace(/\.[^/.]+$/, ''),
-                driveId: cInfo.id,
-                url: '',
-                size: Number(child.size) || 0,
-                tags: mergedTags,
-                createdAt: child.createdTime ? new Date(child.createdTime).getTime() : Date.now()
-              });
-              await updateDriveFileTagsMetadata(cInfo.id, mergedTags);
-              filesLinked++;
-            }
-          }
-        }
-
-        // 2B. SECCIÓN COMICS EN DRIVE
-        const driveComicArtists = await listDriveFolderDirectChildren(driveConfig.sectionFolderIds.comics);
-        for (const dArtItem of driveComicArtists) {
-          const info = resolveShortcutTarget(dArtItem);
-          if (!info.isFolder) continue;
-
-          let appArtist = libraryData.comics.find(
-            a => a.driveFolderId === info.id || sanitizeFolderName(a.name).toLowerCase() === sanitizeFolderName(dArtItem.name).toLowerCase()
-          );
-
-          if (!appArtist) {
-            appArtist = {
-              id: generateId('art'),
-              name: dArtItem.name,
-              driveFolderId: info.id,
-              tags: extractDriveFileTags(dArtItem),
-              avatarUrl: '',
-              avatarDriveId: '',
-              createdAt: Date.now(),
-              comics: []
-            };
-            libraryData.comics.unshift(appArtist);
-            importedToApp++;
-          } else if (!appArtist.driveFolderId) {
-            appArtist.driveFolderId = info.id;
-          }
-
-          if (!Array.isArray(appArtist.comics)) appArtist.comics = [];
-          const autoArtistTags = extractArtistNameTags(appArtist.name);
-          const comicFolders = await listDriveFolderDirectChildren(info.id);
-
-          for (const cFolder of comicFolders) {
-            const cInfo = resolveShortcutTarget(cFolder);
-            if (!cInfo.isFolder) continue;
-
-            let appComic = appArtist.comics.find(
-              c => c.driveFolderId === cInfo.id || sanitizeFolderName(c.title).toLowerCase() === sanitizeFolderName(cFolder.name).toLowerCase()
+          for (const dFolder of driveArtistFolders) {
+            let appArtist = (libraryData[section] || []).find(
+              a => a.driveFolderId === dFolder.id || a.name.toLowerCase() === dFolder.name.toLowerCase()
             );
-            const driveComicTags = extractDriveFileTags(cFolder);
 
-            if (!appComic) {
-              appComic = {
-                id: generateId('comic'),
-                title: cFolder.name,
-                driveFolderId: cInfo.id,
-                tags: normalizeTags([...autoArtistTags, ...driveComicTags]),
-                coverUrl: '',
-                coverDriveId: '',
+            if (!appArtist) {
+              appArtist = {
+                id: generateId('art'),
+                name: dFolder.name,
+                driveFolderId: dFolder.id,
+                tags: extractDriveFileTags(dFolder),
+                avatarUrl: '',
+                avatarDriveId: '',
                 createdAt: Date.now(),
-                pages: []
+                ...(section === 'historia' ? { items: [] } : section === 'comics' ? { comics: [] } : { folders: [], images: [] })
               };
-              appArtist.comics.unshift(appComic);
-              importedToApp++;
-            } else if (!appComic.driveFolderId) {
-              appComic.driveFolderId = cInfo.id;
+              libraryData[section].unshift(appArtist);
+              importedFromDrive++;
+            } else if (!appArtist.driveFolderId) {
+              appArtist.driveFolderId = dFolder.id;
             }
 
-            const pages = await fetchAllImagesInsideDriveFolder(cInfo.id);
-            for (const pg of pages) {
-              if (knownDriveIds.has(pg.id)) continue;
-              knownDriveIds.add(pg.id);
-              const mergedTags = normalizeTags([...autoArtistTags, ...(appComic.tags || []), ...extractDriveFileTags(pg)]);
-              appComic.pages.push({
-                id: generateId('page'),
-                title: (pg.name || 'Página').replace(/\.[^/.]+$/, ''),
-                driveId: pg.id,
-                url: '',
-                size: Number(pg.size) || 0,
-                tags: mergedTags,
-                createdAt: pg.createdTime ? new Date(pg.createdTime).getTime() : Date.now()
-              });
-              if (!appComic.coverDriveId && !appComic.coverUrl) {
-                appComic.coverDriveId = pg.id;
+            // Revisar subcarpetas y archivos dentro de la carpeta del artista en Drive
+            const subQ = encodeURIComponent(`'${dFolder.id}' in parents and trashed=false`);
+            const children = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${subQ}&fields=nextPageToken,files(id,name,mimeType,size,description,appProperties)`);
+            const knownIds = getAllKnownDriveIds();
+            const autoArtistTags = extractArtistNameTags(appArtist.name);
+
+            for (const ch of children) {
+              if (ch.mimeType === 'application/vnd.google-apps.folder') {
+                if (section === 'artistas') {
+                  let appSub = (appArtist.folders || []).find(
+                    f => f.driveFolderId === ch.id || f.name.toLowerCase() === ch.name.toLowerCase()
+                  );
+                  if (!appSub) {
+                    appSub = {
+                      id: generateId('afolder'),
+                      name: ch.name,
+                      driveFolderId: ch.id,
+                      tags: normalizeTags([...autoArtistTags, ...extractFolderNameTags(ch.name), ...extractDriveFileTags(ch)]),
+                      coverUrl: '',
+                      coverDriveId: '',
+                      createdAt: Date.now(),
+                      images: []
+                    };
+                    appArtist.folders.unshift(appSub);
+                    importedFromDrive++;
+                  } else if (!appSub.driveFolderId) {
+                    appSub.driveFolderId = ch.id;
+                  }
+
+                  const subImgs = await fetchAllImagesInsideDriveFolder(ch.id);
+                  for (const img of subImgs) {
+                    if (knownIds.has(img.id)) continue;
+                    const imgTags = normalizeTags([...autoArtistTags, ...extractFolderNameTags(appSub.name), ...(appSub.tags || []), ...extractDriveFileTags(img)]);
+                    appSub.images.unshift({
+                      id: generateId('img'),
+                      title: (img.name || 'Imagen').replace(/\.[^/.]+$/, ''),
+                      driveId: img.id,
+                      url: '',
+                      size: Number(img.size) || 0,
+                      tags: imgTags,
+                      createdAt: Date.now()
+                    });
+                    knownIds.add(img.id);
+                    if (!appSub.coverDriveId && !appSub.coverUrl) appSub.coverDriveId = img.id;
+                    importedFromDrive++;
+                  }
+                } else if (section === 'comics') {
+                  let appComic = (appArtist.comics || []).find(
+                    c => c.driveFolderId === ch.id || c.title.toLowerCase() === ch.name.toLowerCase()
+                  );
+                  if (!appComic) {
+                    appComic = {
+                      id: generateId('comic'),
+                      title: ch.name,
+                      driveFolderId: ch.id,
+                      tags: normalizeTags([...autoArtistTags, ...extractDriveFileTags(ch)]),
+                      coverUrl: '',
+                      coverDriveId: '',
+                      createdAt: Date.now(),
+                      pages: []
+                    };
+                    appArtist.comics.unshift(appComic);
+                    importedFromDrive++;
+                  } else if (!appComic.driveFolderId) {
+                    appComic.driveFolderId = ch.id;
+                  }
+
+                  const comicImgs = await fetchAllImagesInsideDriveFolder(ch.id);
+                  for (const pg of comicImgs) {
+                    if (knownIds.has(pg.id)) continue;
+                    const pgTags = normalizeTags([...autoArtistTags, ...(appComic.tags || []), ...extractDriveFileTags(pg)]);
+                    appComic.pages.push({
+                      id: generateId('page'),
+                      title: (pg.name || 'Página').replace(/\.[^/.]+$/, ''),
+                      driveId: pg.id,
+                      url: '',
+                      size: Number(pg.size) || 0,
+                      tags: pgTags,
+                      createdAt: Date.now()
+                    });
+                    knownIds.add(pg.id);
+                    if (!appComic.coverDriveId && !appComic.coverUrl) appComic.coverDriveId = pg.id;
+                    importedFromDrive++;
+                  }
+                }
+              } else if (!knownIds.has(ch.id)) {
+                if (section === 'artistas' && (ch.mimeType || '').startsWith('image/')) {
+                  appArtist.images.unshift({
+                    id: generateId('img'),
+                    title: (ch.name || 'Imagen').replace(/\.[^/.]+$/, ''),
+                    driveId: ch.id,
+                    url: '',
+                    size: Number(ch.size) || 0,
+                    tags: normalizeTags([...autoArtistTags, ...extractDriveFileTags(ch)]),
+                    createdAt: Date.now()
+                  });
+                  knownIds.add(ch.id);
+                  importedFromDrive++;
+                } else if (section === 'historia') {
+                  appArtist.items.unshift({
+                    id: generateId('story'),
+                    title: (ch.name || 'Documento').replace(/\.[^/.]+$/, ''),
+                    mimeType: ch.mimeType || 'application/octet-stream',
+                    driveId: ch.id,
+                    url: '',
+                    size: Number(ch.size) || 0,
+                    tags: normalizeTags([...autoArtistTags, ...extractDriveFileTags(ch)]),
+                    createdAt: Date.now()
+                  });
+                  knownIds.add(ch.id);
+                  importedFromDrive++;
+                }
               }
-              await updateDriveFileTagsMetadata(pg.id, mergedTags);
-              filesLinked++;
             }
           }
         }
 
-        // 2C. SECCIÓN HISTORIA EN DRIVE
-        const driveHistoriaFolders = await listDriveFolderDirectChildren(driveConfig.sectionFolderIds.historia);
-        for (const dArtItem of driveHistoriaFolders) {
-          const info = resolveShortcutTarget(dArtItem);
-          if (!info.isFolder) continue;
-
-          let appArtist = libraryData.historia.find(
-            a => a.driveFolderId === info.id || sanitizeFolderName(a.name).toLowerCase() === sanitizeFolderName(dArtItem.name).toLowerCase()
-          );
-
-          if (!appArtist) {
-            appArtist = {
-              id: generateId('art'),
-              name: dArtItem.name,
-              driveFolderId: info.id,
-              tags: extractDriveFileTags(dArtItem),
-              avatarUrl: '',
-              avatarDriveId: '',
-              createdAt: Date.now(),
-              items: []
-            };
-            libraryData.historia.unshift(appArtist);
-            importedToApp++;
-          } else if (!appArtist.driveFolderId) {
-            appArtist.driveFolderId = info.id;
-          }
-
-          if (!Array.isArray(appArtist.items)) appArtist.items = [];
-          const autoArtistTags = extractArtistNameTags(appArtist.name);
-          const storyFiles = await listDriveFolderDirectChildren(info.id);
-
-          for (const stFile of storyFiles) {
-            const sInfo = resolveShortcutTarget(stFile);
-            if (sInfo.isFolder) continue;
-            if (knownDriveIds.has(sInfo.id)) continue;
-            knownDriveIds.add(sInfo.id);
-
-            const mergedTags = normalizeTags([...autoArtistTags, ...extractDriveFileTags(stFile)]);
-            appArtist.items.unshift({
-              id: generateId('story'),
-              title: (stFile.name || 'Documento').replace(/\.[^/.]+$/, ''),
-              mimeType: sInfo.mimeType || 'application/octet-stream',
-              driveId: sInfo.id,
-              url: '',
-              size: Number(stFile.size) || 0,
-              tags: mergedTags,
-              createdAt: stFile.createdTime ? new Date(stFile.createdTime).getTime() : Date.now()
-            });
-            await updateDriveFileTagsMetadata(sInfo.id, mergedTags);
-            filesLinked++;
-          }
-        }
-
-        if (createdInDrive > 0 || importedToApp > 0 || filesLinked > 0) {
-          await persistLibrary(`Actualización carpetas App ↔ Drive (+${createdInDrive} en Drive, +${importedToApp} carpetas en App, +${filesLinked} archivos)`);
-        }
         await indexAndUnifyAllDriveTags();
+        await persistLibrary(`Sincronización App ↔ Drive (${createdInDrive} en Drive, ${importedFromDrive} en App)`);
         renderAll();
-
-        if (createdInDrive === 0 && importedToApp === 0 && filesLinked === 0) {
-          showToast('✅ Todas las carpetas entre App y Drive ya están al día');
-        } else {
-          showToast(`✅ Actualizado: ${importedToApp} carpeta(s) traídas, ${createdInDrive} creadas en Drive y ${filesLinked} archivo(s)`);
-        }
-      } catch (err) {
-        console.error('Error actualizando carpetas App ↔ Drive:', err);
-        showToast('⚠️ Error al actualizar las carpetas con Drive');
+        showToast(`🔄 Carpetas actualizadas (${createdInDrive} creadas en Drive • ${importedFromDrive} sincronizadas en App)`);
+      } catch (e) {
+        console.error('Error en actualización bidireccional de carpetas:', e);
+        showToast('⚠️ Error actualizando carpetas entre App y Drive');
       } finally {
-        driveConfig.isSyncingFolders = false;
         syncInd.classList.add('hidden');
-        if (topBtn) topBtn.disabled = false;
-      }
-    }
-
-    async function uploadFileToDrive(file, parentFolderId, tags = []) {
-      const cleanTags = autoCorrectKnownEnglishTypos(normalizeTags(tags));
-      const tokenList = cleanTags.map(t => `[#${t}]`).join(' ');
-      const metadata = {
-        name: file.name,
-        parents: parentFolderId ? [parentFolderId] : [],
-        description: cleanTags.length ? `Tags: ${cleanTags.map(t => '#' + t).join(' ')} | ${tokenList}` : '',
-        appProperties: cleanTags.length ? { tags: cleanTags.join(',') } : {}
-      };
-
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', file);
-
-      const res = await driveApiFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,mimeType,description,appProperties&supportsAllDrives=true', {
-        method: 'POST',
-        body: form
-      }, 120000);
-      if (!res.ok) throw new Error(`Error subiendo ${file.name}`);
-      const uploaded = await res.json();
-      if (uploaded.id) {
-        if (uploaded.size) {
-          driveConfig.driveSizeCache.set(uploaded.id, Number(uploaded.size));
-        }
-        if (cleanTags.length) {
-          driveConfig.driveTagsIndex.set(uploaded.id, cleanTags);
-          await updateDriveFileTagsMetadata(uploaded.id, cleanTags);
-        }
-      }
-      return uploaded;
-    }
-
-    async function uploadTextFileToDrive(filename, textContent, mimeType, parentFolderId) {
-      const metadata = {
-        name: filename,
-        parents: parentFolderId ? [parentFolderId] : []
-      };
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', new Blob([textContent], { type: mimeType }));
-
-      const res = await driveApiFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-        method: 'POST',
-        body: form
-      });
-      const data = await res.json();
-      return data.id;
-    }
-
-    async function updateDriveFileTagsMetadata(driveFileId, tags = []) {
-      if (!driveConfig.accessToken || !driveFileId) return;
-      const cleanTags = autoCorrectKnownEnglishTypos(normalizeTags(tags));
-      const tokenList = cleanTags.map(t => `[#${t}]`).join(' ');
-
-      if (cleanTags.length > 0) {
-        driveConfig.driveTagsIndex.set(driveFileId, cleanTags);
-      } else {
-        driveConfig.driveTagsIndex.delete(driveFileId);
-        driveConfig.driveAllTaggedFiles = driveConfig.driveAllTaggedFiles.filter(f => f.id !== driveFileId);
-      }
-
-      try {
-        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?supportsAllDrives=true`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            description: cleanTags.length ? `Tags: ${cleanTags.map(t => '#' + t).join(' ')} | ${tokenList}` : '',
-            appProperties: { tags: cleanTags.length ? cleanTags.join(',') : null }
-          })
-        });
-      } catch (e) {
-        console.warn('No se pudieron actualizar metadatos de tags en Drive:', e);
-      }
-    }
-
-    async function renameDriveItemById(driveId, newName, preserveExtension = false) {
-      if (!driveConfig.accessToken || !driveId || !newName) return;
-      try {
-        let finalName = sanitizeFolderName(newName);
-        if (preserveExtension) {
-          const metaRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?fields=name,mimeType&supportsAllDrives=true`);
-          if (metaRes.ok) {
-            const meta = await metaRes.json();
-            if (meta.mimeType !== 'application/vnd.google-apps.folder' && meta.name && meta.name.includes('.')) {
-              const extMatch = meta.name.match(/(\.[^./\\]+)$/);
-              if (extMatch && !finalName.toLowerCase().endsWith(extMatch[1].toLowerCase())) {
-                finalName += extMatch[1];
-              }
-            }
-          }
-        }
-        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${driveId}?supportsAllDrives=true`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: finalName })
-        });
-      } catch (e) {
-        console.warn('No se pudo renombrar elemento en Drive:', driveId, e);
-      }
-    }
-
-    function openDriveRenameModal(fileId, currentName) {
-      driveRenameContext = { fileId, currentName };
-      document.getElementById('drive-rename-input').value = currentName || '';
-      openModal('drive-rename-modal');
-    }
-
-    function renameSingleSelectedDriveBrowserItem() {
-      const ids = Array.from(driveBrowserState.selectedIds);
-      if (ids.length !== 1) {
-        showToast('Selecciona exactamente 1 archivo o carpeta para renombrarlo');
-        return;
-      }
-      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
-      const item = sourceList.find(f => f.id === ids[0]);
-      if (!item) return;
-      openDriveRenameModal(item.id, item.name);
-    }
-
-    async function executeDriveBrowserRename() {
-      if (!driveRenameContext) return;
-      const newName = document.getElementById('drive-rename-input').value.trim();
-      if (!newName) {
-        showToast('Escribe un nombre válido');
-        return;
-      }
-      const btn = document.getElementById('drive-rename-confirm-btn');
-      btn.disabled = true;
-      btn.textContent = 'Renombrando...';
-
-      try {
-        const { fileId } = driveRenameContext;
-        await renameDriveItemById(fileId, newName, false);
-
-        const cleanTitle = newName.replace(/\.[^/.]+$/, '');
-        for (const sec of ['artistas', 'comics', 'historia']) {
-          for (const a of (libraryData[sec] || [])) {
-            if (a.driveFolderId === fileId) a.name = cleanTitle;
-            for (const f of (a.folders || [])) {
-              if (f.driveFolderId === fileId) f.name = cleanTitle;
-              for (const img of (f.images || [])) {
-                if (img.driveId === fileId) img.title = cleanTitle;
-              }
-            }
-            for (const img of (a.images || [])) {
-              if (img.driveId === fileId) img.title = cleanTitle;
-            }
-            for (const c of (a.comics || [])) {
-              if (c.driveFolderId === fileId) c.title = cleanTitle;
-              for (const p of (c.pages || [])) {
-                if (p.driveId === fileId) p.title = cleanTitle;
-              }
-            }
-            for (const st of (a.items || [])) {
-              if (st.driveId === fileId) st.title = cleanTitle;
-            }
-          }
-        }
-
-        await persistLibrary(`Renombrado en Drive a "${newName}"`);
-        closeModal('drive-rename-modal');
-        showToast(`✏️ Renombrado a "${newName}"`);
-
-        if (state.activeTags.length > 0) {
-          await runDeepUnifiedTagSearch(state.activeTags);
-        } else {
-          await loadDriveBrowserFolder(driveBrowserState.path[driveBrowserState.path.length - 1].id);
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Guardar nombre';
       }
     }
 
     // =========================================================================
-    // MOVER IMÁGENES O CARPETAS DENTRO DE LA APP (SINCRONIZADO CON DRIVE)
+    // MOVER IMÁGENES, CARPETAS, CÓMICS O HISTORIAS DENTRO DE LA APP (Y EN DRIVE)
     // =========================================================================
+    function getAppMoveTargetSection() {
+      if (!appMoveContext) return 'artistas';
+      if (appMoveContext.mode === 'comic' || appMoveContext.mode === 'comic-page') return 'comics';
+      if (appMoveContext.mode === 'story-item') return 'historia';
+      return 'artistas';
+    }
+
     function openAppMoveModal(context) {
       appMoveContext = context;
+      const targetSection = getAppMoveTargetSection();
       const artistSel = document.getElementById('app-move-artist-select');
       const folderGroup = document.getElementById('app-move-folder-group');
+      const folderLabel = document.getElementById('app-move-folder-label');
+      const newFolderLabel = document.getElementById('app-move-new-folder-label');
       const summaryEl = document.getElementById('app-move-summary');
       const titleEl = document.getElementById('app-move-modal-title');
 
       document.getElementById('app-move-new-artist-input').value = '';
       document.getElementById('app-move-new-folder-input').value = '';
 
-      const artists = libraryData.artistas || [];
+      const artists = libraryData[targetSection] || [];
       artistSel.innerHTML =
         `<option value="__new__">+ Crear nuevo artista...</option>` +
         artists.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
@@ -2497,11 +2140,27 @@
         titleEl.textContent = '📁 Mover Carpeta a otro Artista';
         folderGroup.classList.add('hidden');
         summaryEl.textContent = `Mover la carpeta "${context.folderName || 'Carpeta'}" y todas sus imágenes al artista que elijas (actualizando tags y carpeta en Drive).`;
+      } else if (context.mode === 'comic') {
+        titleEl.textContent = '📁 Mover Cómic a otro Artista';
+        folderGroup.classList.add('hidden');
+        summaryEl.textContent = `Mover el cómic "${context.comicTitle || 'Cómic'}" y todas sus páginas al artista de cómics que elijas.`;
+      } else if (context.mode === 'comic-page') {
+        titleEl.textContent = '📁 Mover Página de Cómic';
+        folderGroup.classList.remove('hidden');
+        folderLabel.textContent = '2. Cómic destino';
+        newFolderLabel.textContent = 'Título del nuevo Cómic';
+        summaryEl.textContent = `Elige a qué artista y cómic quieres mover esta página.`;
+      } else if (context.mode === 'story-item') {
+        titleEl.textContent = '📁 Mover Documento / Historia';
+        folderGroup.classList.add('hidden');
+        summaryEl.textContent = `Mover "${context.itemTitle || 'Documento'}" a otro artista/colección de Historia.`;
       } else {
         const count = context.mode === 'bulk-artist-images' ? state.selectedImageIds.size : 1;
         if (!count) return;
         titleEl.textContent = `📁 Mover ${count} imagen(es)`;
         folderGroup.classList.remove('hidden');
+        folderLabel.textContent = '2. Carpeta destino dentro del Artista';
+        newFolderLabel.textContent = 'Nombre de la nueva carpeta';
         summaryEl.textContent = `Elige a qué artista o carpeta deseas mover ${count === 1 ? 'esta imagen' : `estas ${count} imágenes`}. Se actualizarán sus tags automáticos y su ubicación en Google Drive.`;
       }
 
@@ -2510,6 +2169,7 @@
     }
 
     function onAppMoveArtistChange() {
+      const targetSection = getAppMoveTargetSection();
       const artistId = document.getElementById('app-move-artist-select').value;
       const newArtistGroup = document.getElementById('app-move-new-artist-group');
       if (artistId === '__new__') {
@@ -2518,9 +2178,20 @@
         newArtistGroup.classList.add('hidden');
       }
 
-      if (appMoveContext && appMoveContext.mode === 'artist-folder') return;
+      if (!appMoveContext) return;
+      if (['artist-folder', 'comic', 'story-item'].includes(appMoveContext.mode)) return;
 
       const folderSel = document.getElementById('app-move-folder-select');
+      if (targetSection === 'comics') {
+        const artist = libraryData.comics.find(a => a.id === artistId);
+        const comics = artist ? (artist.comics || []) : [];
+        folderSel.innerHTML =
+          `<option value="__new_folder__">+ Crear nuevo Cómic aquí...</option>` +
+          comics.map(c => `<option value="${c.id}">💬 ${escapeHtml(c.title)}</option>`).join('');
+        onAppMoveFolderChange();
+        return;
+      }
+
       const artist = libraryData.artistas.find(a => a.id === artistId);
       const folders = artist ? (artist.folders || []) : [];
 
@@ -2562,6 +2233,7 @@
 
     async function executeAppMove() {
       if (!appMoveContext) return;
+      const targetSection = getAppMoveTargetSection();
       const targetArtistId = document.getElementById('app-move-artist-select').value;
       const newArtistName = document.getElementById('app-move-new-artist-input').value.trim();
 
@@ -2584,19 +2256,145 @@
             avatarUrl: '',
             avatarDriveId: '',
             createdAt: Date.now(),
-            folders: [],
-            images: []
+            ...(targetSection === 'historia' ? { items: [] } : targetSection === 'comics' ? { comics: [] } : { folders: [], images: [] })
           };
-          libraryData.artistas.unshift(destArtist);
+          libraryData[targetSection].unshift(destArtist);
         } else {
-          destArtist = libraryData.artistas.find(a => a.id === targetArtistId);
+          destArtist = (libraryData[targetSection] || []).find(a => a.id === targetArtistId);
         }
 
         if (!destArtist) return;
+        const newArtistAutoTags = extractArtistNameTags(destArtist.name);
+
+        // CASO 1: MOVER CÓMIC COMPLETO A OTRO ARTISTA
+        if (appMoveContext.mode === 'comic') {
+          const srcArtist = libraryData.comics.find(a => a.id === appMoveContext.artistId);
+          const comicIdx = srcArtist ? (srcArtist.comics || []).findIndex(c => c.id === appMoveContext.comicId) : -1;
+          if (comicIdx === -1) return;
+          if (srcArtist.id === destArtist.id) {
+            closeModal('app-move-modal');
+            showToast('El cómic ya pertenece a ese artista');
+            return;
+          }
+
+          const [comicObj] = srcArtist.comics.splice(comicIdx, 1);
+          const oldArtistTagsSet = new Set(extractArtistNameTags(srcArtist.name));
+          comicObj.tags = normalizeTags([...(comicObj.tags || []).filter(t => !oldArtistTagsSet.has(t)), ...newArtistAutoTags]);
+
+          if (driveConfig.accessToken) {
+            const destArtistFolder = await ensureTargetFolderForContext('comics', destArtist, null);
+            if (comicObj.driveFolderId && destArtistFolder) {
+              await moveDriveFileToTargetParent(comicObj.driveFolderId, destArtistFolder);
+            }
+          }
+
+          for (const p of (comicObj.pages || [])) {
+            p.tags = normalizeTags([...(p.tags || []).filter(t => !oldArtistTagsSet.has(t)), ...newArtistAutoTags]);
+            if (p.driveId) await updateDriveFileTagsMetadata(p.driveId, p.tags);
+          }
+
+          if (!Array.isArray(destArtist.comics)) destArtist.comics = [];
+          destArtist.comics.unshift(comicObj);
+          if (state.comicId === comicObj.id) state.artistId = destArtist.id;
+
+          await persistLibrary(`Movido cómic "${comicObj.title}" a ${destArtist.name}`);
+          closeModal('app-move-modal');
+          renderAll();
+          showToast(`📁 Cómic "${comicObj.title}" movido a ${destArtist.name}`);
+          return;
+        }
+
+        // CASO 2: MOVER PÁGINA DE CÓMIC A OTRO CÓMIC O ARTISTA
+        if (appMoveContext.mode === 'comic-page') {
+          const srcArtist = libraryData.comics.find(a => a.id === appMoveContext.artistId);
+          const srcComic = srcArtist ? (srcArtist.comics || []).find(c => c.id === appMoveContext.comicId) : null;
+          const pageIdx = srcComic ? (srcComic.pages || []).findIndex(p => p.id === appMoveContext.itemId) : -1;
+          if (pageIdx === -1) return;
+
+          const destComicChoice = document.getElementById('app-move-folder-select').value;
+          const newComicTitle = document.getElementById('app-move-new-folder-input').value.trim();
+          if (destComicChoice === '__new_folder__' && !newComicTitle) {
+            showToast('Escribe el título del nuevo cómic');
+            return;
+          }
+
+          if (!Array.isArray(destArtist.comics)) destArtist.comics = [];
+          let destComic = null;
+          if (destComicChoice === '__new_folder__') {
+            destComic = {
+              id: generateId('comic'),
+              title: newComicTitle,
+              tags: [...newArtistAutoTags],
+              coverUrl: '',
+              coverDriveId: '',
+              createdAt: Date.now(),
+              pages: []
+            };
+            destArtist.comics.unshift(destComic);
+          } else {
+            destComic = destArtist.comics.find(c => c.id === destComicChoice);
+          }
+          if (!destComic || destComic.id === srcComic.id) {
+            closeModal('app-move-modal');
+            return;
+          }
+
+          const [pageObj] = srcComic.pages.splice(pageIdx, 1);
+          const oldArtistTagsSet = new Set(extractArtistNameTags(srcArtist.name));
+          pageObj.tags = normalizeTags([...(pageObj.tags || []).filter(t => !oldArtistTagsSet.has(t)), ...newArtistAutoTags, ...(destComic.tags || [])]);
+
+          if (driveConfig.accessToken && pageObj.driveId) {
+            await updateDriveFileTagsMetadata(pageObj.driveId, pageObj.tags);
+            const destComicFolder = await ensureTargetFolderForContext('comics', destArtist, destComic);
+            if (destComicFolder) await moveDriveFileToTargetParent(pageObj.driveId, destComicFolder);
+          }
+
+          if (!destComic.coverDriveId && !destComic.coverUrl) {
+            destComic.coverDriveId = pageObj.driveId || '';
+            destComic.coverUrl = pageObj.url || '';
+          }
+          destComic.pages.push(pageObj);
+
+          await persistLibrary(`Movida página "${pageObj.title}" a cómic "${destComic.title}"`);
+          closeModal('app-move-modal');
+          renderAll();
+          showToast(`📁 Página movida a "${destComic.title}"`);
+          return;
+        }
+
+        // CASO 3: MOVER DOCUMENTO DE HISTORIA A OTRO ARTISTA
+        if (appMoveContext.mode === 'story-item') {
+          const srcArtist = libraryData.historia.find(a => a.id === appMoveContext.artistId);
+          const stIdx = srcArtist ? (srcArtist.items || []).findIndex(i => i.id === appMoveContext.itemId) : -1;
+          if (stIdx === -1) return;
+          if (srcArtist.id === destArtist.id) {
+            closeModal('app-move-modal');
+            showToast('El documento ya pertenece a ese artista');
+            return;
+          }
+
+          const [storyObj] = srcArtist.items.splice(stIdx, 1);
+          const oldArtistTagsSet = new Set(extractArtistNameTags(srcArtist.name));
+          storyObj.tags = normalizeTags([...(storyObj.tags || []).filter(t => !oldArtistTagsSet.has(t)), ...newArtistAutoTags]);
+
+          if (driveConfig.accessToken && storyObj.driveId) {
+            await updateDriveFileTagsMetadata(storyObj.driveId, storyObj.tags);
+            const destHistFolder = await ensureTargetFolderForContext('historia', destArtist, null);
+            if (destHistFolder) await moveDriveFileToTargetParent(storyObj.driveId, destHistFolder);
+          }
+
+          if (!Array.isArray(destArtist.items)) destArtist.items = [];
+          destArtist.items.unshift(storyObj);
+
+          await persistLibrary(`Movido documento "${storyObj.title}" a ${destArtist.name}`);
+          closeModal('app-move-modal');
+          renderAll();
+          showToast(`📁 Documento movido a ${destArtist.name}`);
+          return;
+        }
+
         if (!Array.isArray(destArtist.folders)) destArtist.folders = [];
         if (!Array.isArray(destArtist.images)) destArtist.images = [];
-
-        const newArtistAutoTags = extractArtistNameTags(destArtist.name);
 
         // CASO A: MOVER CARPETA COMPLETA DE UN ARTISTA A OTRO ARTISTA
         if (appMoveContext.mode === 'artist-folder') {
@@ -2650,7 +2448,7 @@
           return;
         }
 
-        // CASO B: MOVER 1 O VARIAS IMÁGENES
+        // CASO B: MOVER 1 O VARIAS IMÁGENES DE ARTISTA
         const srcArtist = libraryData.artistas.find(a => a.id === (appMoveContext.artistId || state.artistId));
         if (!srcArtist) return;
 
@@ -6802,6 +6600,9 @@
                   <button onclick="toggleFavorite('comic', '${artist.id}', '${comic.id}')" class="w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-sm flex items-center justify-center">
                     ${comic.favorite ? '⭐' : '☆'}
                   </button>
+                  <button onclick='openAppMoveModal(${JSON.stringify({ mode: 'comic', artistId: artist.id, comicId: comic.id, comicTitle: comic.title })})' title="Mover cómic a otro artista" class="w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-xs text-amber-300 flex items-center justify-center">
+                    📁
+                  </button>
                   <button onclick='openEditTagsModal(${JSON.stringify({ type: 'comic', artistId: artist.id, comicId: comic.id, currentTitle: comic.title, currentTags: comic.tags || [] })})' class="w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-xs flex items-center justify-center">
                     🏷️
                   </button>
@@ -6881,6 +6682,9 @@
                   <button onclick="toggleFavorite('comic-page', '${artist.id}', '${comic.id}', '${p.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                     ${p.favorite ? '⭐' : '☆'}
                   </button>
+                  <button onclick='openAppMoveModal(${JSON.stringify({ mode: 'comic-page', artistId: artist.id, comicId: comic.id, itemId: p.id })})' title="Mover página a otro cómic" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-amber-300 flex items-center justify-center">
+                    📁
+                  </button>
                   <button onclick='openEditTagsModal(${JSON.stringify({ type: 'comic-page', artistId: artist.id, comicId: comic.id, itemId: p.id, currentTitle: p.title, currentTags: p.tags || [] })})' class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                     🏷️
                   </button>
@@ -6929,9 +6733,9 @@
           `;
           actions.innerHTML = `
             <button onclick="toggleBulkSelectMode()" class="px-3 py-2 rounded-xl ${state.bulkSelectMode ? 'bg-indigo-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'} text-xs font-semibold">
-              ☑️ Seleccionar varias
+              ☑️ Seleccionar / 📁 Mover varias
             </button>
-            <button onclick="openArtistFolderModal('${artist.id}', '${activeFolder.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-amber-300">✏️ Carpeta</button>
+            <button onclick="openArtistFolderModal('${artist.id}', '${activeFolder.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-amber-300">✏️ Renombrar carpeta</button>
             <button onclick="openUploadModal('artist-images', '${artist.id}', '${activeFolder.id}')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow">+ Subir Imágenes</button>
           `;
 
@@ -7003,9 +6807,9 @@
         `;
         actions.innerHTML = `
           <button onclick="toggleBulkSelectMode()" class="px-3 py-2 rounded-xl ${state.bulkSelectMode ? 'bg-indigo-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'} text-xs font-semibold">
-            ☑️ Seleccionar varias
+            ☑️ Seleccionar / 📁 Mover varias
           </button>
-          <button onclick="openArtistModal('artistas', '${artist.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">✏️ Artista</button>
+          <button onclick="openArtistModal('artistas', '${artist.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">✏️ Renombrar artista</button>
           <button onclick="openArtistFolderModal('${artist.id}')" class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs sm:text-sm font-bold shadow">+ Nueva Carpeta</button>
           <button onclick="openUploadModal('artist-images', '${artist.id}', null)" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow">+ Subir Imágenes</button>
         `;
@@ -7159,6 +6963,9 @@
                 <div class="flex items-center gap-1" onclick="event.stopPropagation()">
                   <button onclick="toggleFavorite('story-item', '${artist.id}', null, '${st.id}')" class="w-7 h-7 rounded-lg bg-slate-800 text-xs flex items-center justify-center">
                     ${st.favorite ? '⭐' : '☆'}
+                  </button>
+                  <button onclick='openAppMoveModal(${JSON.stringify({ mode: 'story-item', artistId: artist.id, itemId: st.id, itemTitle: st.title })})' title="Mover documento a otro artista" class="w-7 h-7 rounded-lg bg-slate-800 text-xs text-amber-300 flex items-center justify-center">
+                    📁
                   </button>
                   <button onclick='openEditTagsModal(${JSON.stringify({ type: 'story-item', artistId: artist.id, itemId: st.id, currentTitle: st.title, currentTags: st.tags || [] })})' class="w-7 h-7 rounded-lg bg-slate-800 text-xs flex items-center justify-center">
                     🏷️
