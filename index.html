@@ -152,7 +152,7 @@
             id="search-input"
             type="text"
             oninput="handleSearch(this.value)"
-            placeholder="Buscar artista, título o #tag..."
+            placeholder="Buscar artista, carpeta, título o #tag..."
             class="w-full pl-9 pr-8 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
           />
           <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded bg-slate-800">✕</button>
@@ -189,7 +189,7 @@
         </button>
       </div>
 
-      <!-- BARRA DE SELECCIÓN MÚLTIPLE EN GALERÍA DE ARTISTA -->
+      <!-- BARRA DE SELECCIÓN MÚLTIPLE EN GALERÍA DE ARTISTA O CARPETA DE ARTISTA -->
       <div id="bulk-select-bar" class="hidden items-center justify-between gap-2 flex-wrap px-3.5 py-2.5 rounded-xl bg-indigo-950/90 border border-indigo-500/50 text-sm">
         <div class="flex items-center gap-2">
           <span class="font-semibold text-indigo-200"><span id="bulk-selected-count">0</span> seleccionada(s)</span>
@@ -349,11 +349,11 @@
         </div>
         <div>
           <label class="block text-[11px] font-semibold text-slate-400 mb-1">2. Artista (o crear nuevo)</label>
-          <select id="import-target-artist" onchange="populateImportComicDropdown()" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"></select>
+          <select id="import-target-artist" onchange="populateImportSubDropdown()" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"></select>
         </div>
-        <div id="import-comic-wrapper" class="hidden">
-          <label class="block text-[11px] font-semibold text-slate-400 mb-1">3. Cómic destino</label>
-          <select id="import-target-comic" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"></select>
+        <div id="import-sub-wrapper" class="hidden">
+          <label id="import-sub-label" class="block text-[11px] font-semibold text-slate-400 mb-1">3. Destino</label>
+          <select id="import-target-sub" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"></select>
         </div>
       </div>
 
@@ -386,7 +386,7 @@
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">Nombre(s) o Seudónimos (separa varios con coma)</label>
           <input id="artist-name-input" type="text" placeholder="Ej: Kaelen Studio, KaelArt" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
-          <p class="text-[11px] text-slate-400 mt-1">El nombre del artista (y sus seudónimos) se añadirá como tag automático en sus imágenes, cómics o historias.</p>
+          <p class="text-[11px] text-slate-400 mt-1">El nombre del artista (y sus seudónimos) se añadirá como tag automático en sus imágenes, carpetas, cómics o historias.</p>
         </div>
 
         <div>
@@ -404,6 +404,38 @@
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
         <button onclick="closeModal('artist-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
         <button id="save-artist-btn" onclick="saveArtistForm()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm">Guardar Artista</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 3B: CREAR / EDITAR CARPETA DENTRO DE UN ARTISTA                 -->
+  <!-- ===================================================================== -->
+  <div id="artist-folder-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 id="artist-folder-modal-title" class="text-lg font-bold text-white">📁 Nueva Carpeta en Artista</h2>
+        <button onclick="closeModal('artist-folder-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Nombre de la Carpeta</label>
+          <input id="artist-folder-name-input" type="text" placeholder="Ej: Sketches, Comisiones 2026, Personajes..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <p id="artist-folder-auto-tag-hint" class="text-[11px] text-emerald-300 mt-1">Tanto el nombre del artista como el nombre de esta carpeta se pondrán en automático como tags en todas sus imágenes.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags extra de la Carpeta (opcional, escribe o elige de las filas rápidas)</label>
+          <input id="artist-folder-tags-input" type="text" oninput="onQuickTagManualInputChange('artist-folder-tags-input', 'folder-quick-tag-picker', 'folder-tags-spell-box')" placeholder="ej: male, anthro, canine, wolf..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <div id="folder-tags-spell-box" class="hidden mt-1.5"></div>
+          <div id="folder-quick-tag-picker" class="mt-2"></div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeModal('artist-folder-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
+        <button id="save-artist-folder-btn" onclick="saveArtistFolderForm()" class="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm">Guardar Carpeta</button>
       </div>
     </div>
   </div>
@@ -594,14 +626,14 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (CON FILAS TAGS) -->
+  <!-- MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (CON CARPETAS EN ARTISTA) -->
   <!-- ===================================================================== -->
   <div id="drive-to-app-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
           <h2 class="text-lg font-bold text-white">📥 Pasar a Mi App (<span id="drive-to-app-count">0</span>)</h2>
-          <p class="text-xs text-slate-400">Conserva los tags de Drive y añade automáticamente el nombre del artista.</p>
+          <p class="text-xs text-slate-400">Conserva los tags de Drive y añade automáticamente el nombre del artista (y de la carpeta si aplica).</p>
         </div>
         <button onclick="closeModal('drive-to-app-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
       </div>
@@ -612,7 +644,7 @@
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">1. ¿A qué sección de la app lo quieres pasar?</label>
           <select id="d2a-section-select" onchange="onDriveToAppSectionChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white">
-            <option value="artistas">🎨 Artistas (Galería de imágenes)</option>
+            <option value="artistas">🎨 Artistas (Imágenes sueltas o carpetas dentro del artista)</option>
             <option value="comics">💬 Comics (Carpeta como cómic o páginas)</option>
             <option value="historia">📚 Historia (PDF, texto, video, audio)</option>
           </select>
@@ -628,6 +660,19 @@
           <input id="d2a-new-artist-input" type="text" placeholder="Ej: Kaelen Studio, KaelArt" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
         </div>
 
+        <!-- DESTINO DENTRO DE ARTISTAS (SUELTAS O CARPETA) -->
+        <div id="d2a-artist-folder-group" class="hidden space-y-2.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">3. ¿Dónde guardarlo dentro del Artista?</label>
+            <select id="d2a-artist-folder-select" onchange="onDriveToAppArtistFolderChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white"></select>
+          </div>
+          <div id="d2a-new-artist-folder-title-group" class="hidden">
+            <label class="block text-xs font-semibold text-amber-300 mb-1">Nombre de la Carpeta (si elegiste carpeta en Drive, usa su nombre)</label>
+            <input id="d2a-new-artist-folder-title" type="text" placeholder="Ej: Comisiones, Sketches..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          </div>
+        </div>
+
+        <!-- DESTINO DENTRO DE COMICS -->
         <div id="d2a-comic-group" class="hidden space-y-2.5">
           <div>
             <label class="block text-xs font-semibold text-slate-400 mb-1">3. Cómic destino</label>
@@ -640,7 +685,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags extra (escribe o toca en las filas rápidas — se suman al nombre del artista y tags de Drive)</label>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags extra (escribe o toca en las filas rápidas — se suman al nombre del artista, carpeta y tags de Drive)</label>
           <input id="d2a-extra-tags" type="text" oninput="onQuickTagManualInputChange('d2a-extra-tags', 'd2a-quick-tag-picker', 'd2a-spell-box')" placeholder="Opcional: male, anthro, tf, canine, wolf..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
           <div id="d2a-spell-box" class="hidden mt-1.5"></div>
           <div id="d2a-quick-tag-picker" class="mt-2"></div>
@@ -975,7 +1020,8 @@
       'edit-quick-tag-picker': { activeFamily: null },
       'bulk-quick-tag-picker': { activeFamily: null },
       'drive-quick-tag-picker': { activeFamily: null },
-      'd2a-quick-tag-picker': { activeFamily: null }
+      'd2a-quick-tag-picker': { activeFamily: null },
+      'folder-quick-tag-picker': { activeFamily: null }
     };
 
     function levenshteinDistance(a, b) {
@@ -1230,6 +1276,7 @@
     let state = {
       section: 'artistas',
       artistId: null,
+      artistFolderId: null,
       comicId: null,
       search: '',
       tagQuickSearch: '',
@@ -1283,6 +1330,7 @@
     };
 
     let editingArtistContext = null;
+    let editingArtistFolderContext = null;
     let uploadContext = null;
     let editingTagsContext = null;
     let bulkTagChipsState = { activeTags: [], removedTags: new Set() };
@@ -1377,6 +1425,11 @@
       return normalizeTags(String(artistName).split(','));
     }
 
+    function extractFolderNameTags(folderName) {
+      if (!folderName) return [];
+      return normalizeTags([String(folderName).trim()]);
+    }
+
     function sanitizeFolderName(name) {
       return String(name || 'Sin_Nombre').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Sin_Nombre';
     }
@@ -1465,6 +1518,17 @@
       }
     }
 
+    function ensureArtistCollectionsNormalized() {
+      for (const a of (libraryData.artistas || [])) {
+        if (!Array.isArray(a.images)) a.images = [];
+        if (!Array.isArray(a.folders)) a.folders = [];
+        for (const f of a.folders) {
+          if (!Array.isArray(f.images)) f.images = [];
+          if (!Array.isArray(f.tags)) f.tags = [];
+        }
+      }
+    }
+
     function loadLocalData() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -1475,6 +1539,7 @@
             comics: Array.isArray(parsed.comics) ? parsed.comics : [],
             artistas: Array.isArray(parsed.artistas) ? parsed.artistas : []
           };
+          ensureArtistCollectionsNormalized();
           return;
         }
       } catch (e) {}
@@ -1531,6 +1596,7 @@
             avatarUrl: '',
             avatarDriveId: '',
             createdAt: now - 100000,
+            folders: [],
             images: []
           }
         ]
@@ -1604,6 +1670,7 @@
             comics: parsed.comics || [],
             artistas: parsed.artistas || []
           };
+          ensureArtistCollectionsNormalized();
           await persistLibrary('Importación desde archivo respaldo .json local');
           renderAll();
           showToast('✅ Biblioteca restaurada desde .json');
@@ -1874,7 +1941,7 @@
       }
     }
 
-    async function ensureTargetFolderForContext(section, artist, comic = null) {
+    async function ensureTargetFolderForContext(section, artist, subItem = null) {
       if (!driveConfig.accessToken) return null;
       await ensureDriveStructure();
       const secFolderId = driveConfig.sectionFolderIds[section] || driveConfig.rootFolderId;
@@ -1883,11 +1950,17 @@
       if (!artist.driveFolderId) {
         artist.driveFolderId = await findOrCreateFolder(artist.name, secFolderId);
       }
-      if (section === 'comics' && comic) {
-        if (!comic.driveFolderId) {
-          comic.driveFolderId = await findOrCreateFolder(comic.title, artist.driveFolderId);
+      if (section === 'comics' && subItem) {
+        if (!subItem.driveFolderId) {
+          subItem.driveFolderId = await findOrCreateFolder(subItem.title, artist.driveFolderId);
         }
-        return comic.driveFolderId;
+        return subItem.driveFolderId;
+      }
+      if (section === 'artistas' && subItem) {
+        if (!subItem.driveFolderId) {
+          subItem.driveFolderId = await findOrCreateFolder(subItem.name, artist.driveFolderId);
+        }
+        return subItem.driveFolderId;
       }
       return artist.driveFolderId;
     }
@@ -1976,6 +2049,18 @@
             img.tags = normalizeTags((img.tags || []).filter(t => !removedSet.has(t)));
           }
         }
+        for (const f of (a.folders || [])) {
+          let touchedFolder = false;
+          for (const img of (f.images || [])) {
+            if (img.driveId === driveId) {
+              img.tags = normalizeTags((img.tags || []).filter(t => !removedSet.has(t)));
+              touchedFolder = true;
+            }
+          }
+          if (touchedFolder) {
+            f.tags = normalizeTags((f.tags || []).filter(t => !removedSet.has(t)));
+          }
+        }
       }
       for (const a of libraryData.comics) {
         for (const c of (a.comics || [])) {
@@ -2039,6 +2124,9 @@
 
         for (const a of libraryData.artistas) {
           for (const img of (a.images || [])) mergeIntoCatalogItem(img);
+          for (const f of (a.folders || [])) {
+            for (const img of (f.images || [])) mergeIntoCatalogItem(img);
+          }
         }
         for (const a of libraryData.comics) {
           for (const c of (a.comics || [])) {
@@ -2059,7 +2147,7 @@
 
     async function syncAllCatalogTagsToDriveMetadata() {
       if (!driveConfig.accessToken) return;
-      const syncKey = 'mi_boveda_tags_synced_v2';
+      const syncKey = 'mi_boveda_tags_synced_v3';
       if (sessionStorage.getItem(syncKey) === '1') return;
       sessionStorage.setItem(syncKey, '1');
 
@@ -2070,6 +2158,15 @@
           const tags = normalizeTags([...autoArtistTags, ...(img.tags || [])]);
           if (img.driveId && tags.length > 0) {
             tasks.push({ driveId: img.driveId, tags });
+          }
+        }
+        for (const f of (a.folders || [])) {
+          const autoFolderTags = extractFolderNameTags(f.name);
+          for (const img of (f.images || [])) {
+            const tags = normalizeTags([...autoArtistTags, ...autoFolderTags, ...(f.tags || []), ...(img.tags || [])]);
+            if (img.driveId && tags.length > 0) {
+              tasks.push({ driveId: img.driveId, tags });
+            }
           }
         }
       }
@@ -2111,6 +2208,11 @@
         for (const img of (a.images || [])) {
           add(img.driveId, img.tags || []);
         }
+        for (const f of (a.folders || [])) {
+          for (const img of (f.images || [])) {
+            add(img.driveId, [...(f.tags || []), ...(img.tags || [])]);
+          }
+        }
       }
       for (const a of libraryData.comics) {
         for (const c of (a.comics || [])) {
@@ -2143,6 +2245,7 @@
             comics: Array.isArray(remoteData.comics) ? remoteData.comics : [],
             artistas: Array.isArray(remoteData.artistas) ? remoteData.artistas : []
           };
+          ensureArtistCollectionsNormalized();
           saveLocalOnly();
         }
       } else {
@@ -2152,34 +2255,20 @@
 
     async function hydrateMissingCatalogFileSizes() {
       if (!driveConfig.accessToken) return;
-      const missingIds = new Set();
-
-      for (const a of libraryData.artistas) {
-        for (const img of (a.images || [])) {
-          if (img.driveId && !img.size) missingIds.add(img.driveId);
-        }
-      }
-      for (const a of libraryData.comics) {
-        for (const c of (a.comics || [])) {
-          for (const p of (c.pages || [])) {
-            if (p.driveId && !p.size) missingIds.add(p.driveId);
-          }
-        }
-      }
-      for (const a of libraryData.historia) {
-        for (const st of (a.items || [])) {
-          if (st.driveId && !st.size) missingIds.add(st.driveId);
-        }
-      }
-
-      if (missingIds.size === 0) return;
-
       let updated = false;
       for (const a of libraryData.artistas) {
         for (const img of (a.images || [])) {
           if (img.driveId && !img.size && driveConfig.driveSizeCache.has(img.driveId)) {
             img.size = driveConfig.driveSizeCache.get(img.driveId);
             updated = true;
+          }
+        }
+        for (const f of (a.folders || [])) {
+          for (const img of (f.images || [])) {
+            if (img.driveId && !img.size && driveConfig.driveSizeCache.has(img.driveId)) {
+              img.size = driveConfig.driveSizeCache.get(img.driveId);
+              updated = true;
+            }
           }
         }
       }
@@ -2312,6 +2401,7 @@
           comics: restored.comics || [],
           artistas: restored.artistas || []
         };
+        ensureArtistCollectionsNormalized();
         await persistLibrary(`Restaurado desde respaldo ${fileName}`);
         closeModal('drive-modal');
         renderAll();
@@ -2379,6 +2469,12 @@
         if (a.avatarDriveId) ids.add(a.avatarDriveId);
         for (const img of (a.images || [])) {
           if (img.driveId) ids.add(img.driveId);
+        }
+        for (const f of (a.folders || [])) {
+          if (f.coverDriveId) ids.add(f.coverDriveId);
+          for (const img of (f.images || [])) {
+            if (img.driveId) ids.add(img.driveId);
+          }
         }
       }
       return ids;
@@ -2480,7 +2576,7 @@
     function populateImportArtistDropdown() {
       const section = document.getElementById('import-target-section').value;
       const artistSel = document.getElementById('import-target-artist');
-      const comicWrap = document.getElementById('import-comic-wrapper');
+      const subWrap = document.getElementById('import-sub-wrapper');
 
       const artists = libraryData[section] || [];
       artistSel.innerHTML =
@@ -2489,26 +2585,37 @@
 
       if (artists.length > 0) artistSel.value = artists[0].id;
 
-      if (section === 'comics') {
-        comicWrap.classList.remove('hidden');
-        populateImportComicDropdown();
+      if (section === 'comics' || section === 'artistas') {
+        subWrap.classList.remove('hidden');
+        populateImportSubDropdown();
       } else {
-        comicWrap.classList.add('hidden');
+        subWrap.classList.add('hidden');
       }
     }
 
-    function populateImportComicDropdown() {
+    function populateImportSubDropdown() {
       const section = document.getElementById('import-target-section').value;
-      const comicSel = document.getElementById('import-target-comic');
-      if (section !== 'comics') return;
+      const subSel = document.getElementById('import-target-sub');
+      const subLabel = document.getElementById('import-sub-label');
 
-      const artistId = document.getElementById('import-target-artist').value;
-      const artist = libraryData.comics.find(a => a.id === artistId);
-      const comics = artist ? (artist.comics || []) : [];
-      comicSel.innerHTML =
-        `<option value="__new__">+ Nuevo cómic ("Importados")</option>` +
-        comics.map(c => `<option value="${c.id}">${escapeHtml(c.title)}</option>`).join('');
-      if (comics.length > 0) comicSel.value = comics[0].id;
+      if (section === 'comics') {
+        subLabel.textContent = '3. Cómic destino';
+        const artistId = document.getElementById('import-target-artist').value;
+        const artist = libraryData.comics.find(a => a.id === artistId);
+        const comics = artist ? (artist.comics || []) : [];
+        subSel.innerHTML =
+          `<option value="__new__">+ Nuevo cómic ("Importados")</option>` +
+          comics.map(c => `<option value="${c.id}">${escapeHtml(c.title)}</option>`).join('');
+        if (comics.length > 0) subSel.value = comics[0].id;
+      } else if (section === 'artistas') {
+        subLabel.textContent = '3. Carpeta dentro del Artista';
+        const artistId = document.getElementById('import-target-artist').value;
+        const artist = libraryData.artistas.find(a => a.id === artistId);
+        const folders = artist ? (artist.folders || []) : [];
+        subSel.innerHTML =
+          `<option value="__loose__">🖼️ Galería general (sin carpeta)</option>` +
+          folders.map(f => `<option value="${f.id}">📁 Carpeta: ${escapeHtml(f.name)}</option>`).join('');
+      }
     }
 
     async function importSelectedUntrackedFiles() {
@@ -2533,7 +2640,7 @@
           avatarUrl: '',
           avatarDriveId: '',
           createdAt: Date.now(),
-          ...(section === 'historia' ? { items: [] } : section === 'comics' ? { comics: [] } : { images: [] })
+          ...(section === 'historia' ? { items: [] } : section === 'comics' ? { comics: [] } : { folders: [], images: [] })
         };
         libraryData[section].unshift(artist);
       } else {
@@ -2549,11 +2656,16 @@
       const now = Date.now();
 
       if (section === 'artistas') {
+        const subId = document.getElementById('import-target-sub').value;
+        const targetFolder = subId && subId !== '__loose__' ? (artist.folders || []).find(f => f.id === subId) : null;
+        const folderAutoTags = targetFolder ? [...extractFolderNameTags(targetFolder.name), ...(targetFolder.tags || [])] : [];
+        const targetList = targetFolder ? targetFolder.images : artist.images;
+
         for (let i = 0; i < selected.length; i++) {
           const f = selected[i];
           const nativeTags = extractDriveFileTags(f);
-          const mergedTags = normalizeTags([...autoArtistTags, ...nativeTags, ...extraTags]);
-          artist.images.unshift({
+          const mergedTags = normalizeTags([...autoArtistTags, ...folderAutoTags, ...nativeTags, ...extraTags]);
+          targetList.unshift({
             id: generateId('img'),
             title: f.name.replace(/\.[^/.]+$/, ''),
             driveId: f.id,
@@ -2565,7 +2677,7 @@
           await updateDriveFileTagsMetadata(f.id, mergedTags);
         }
       } else if (section === 'comics') {
-        const comicId = document.getElementById('import-target-comic').value;
+        const comicId = document.getElementById('import-target-sub').value;
         let comic = (artist.comics || []).find(c => c.id === comicId);
         if (!comic) {
           comic = {
@@ -2703,7 +2815,7 @@
         }
       }
 
-      // 2. ARTISTAS
+      // 2. ARTISTAS (Artistas, carpetas dentro de artistas e imágenes)
       for (const artist of (libraryData.artistas || [])) {
         const artistTags = normalizeTags([...(artist.tags || []), ...extractArtistNameTags(artist.name)]);
         if (matchesAllSelectedTags(artistTags)) {
@@ -2711,6 +2823,27 @@
             kind: 'artist',
             artist
           });
+        }
+        for (const folder of (artist.folders || [])) {
+          const folderTags = normalizeTags([...artistTags, ...extractFolderNameTags(folder.name), ...(folder.tags || [])]);
+          if (matchesAllSelectedTags(folderTags)) {
+            unifiedTagResults.artistas.push({
+              kind: 'folder',
+              artist,
+              folder
+            });
+          }
+          for (const img of (folder.images || [])) {
+            if (matchesAllSelectedTags([...folderTags, ...(img.tags || [])])) {
+              if (img.driveId) seenDriveIdsInCatalog.add(img.driveId);
+              unifiedTagResults.artistas.push({
+                kind: 'folder-image',
+                artist,
+                folder,
+                image: img
+              });
+            }
+          }
         }
         for (const img of (artist.images || [])) {
           if (matchesAllSelectedTags([...artistTags, ...(img.tags || [])])) {
@@ -2906,7 +3039,6 @@
       return collected;
     }
 
-    // Huella perceptual de 144 bits (aHash + dHash 12x12) independiente del peso y tamaño de archivo
     async function computeDuplicateVisualSignatureFromUrl(url) {
       return new Promise((resolve) => {
         if (!url) return resolve(null);
@@ -3027,7 +3159,6 @@
           }));
         }
 
-        // Ordenar por mayor peso primero para que el original quede al inicio de cada fila
         analyzed.sort((a, b) => b.size - a.size);
 
         const maxDist = Number(duplicateFinderState.sensitivity) || 12;
@@ -3183,7 +3314,6 @@
         return;
       }
 
-      // EN COLUMNA CADA GRUPO DE IMÁGENES REPETIDAS Y EN FILA TODAS SUS COPIAS
       html += `
         <div class="col-span-full space-y-4">
           ${duplicateFinderState.groups.map((group, gIdx) => `
@@ -3526,6 +3656,10 @@
       if (!driveId) return;
       for (const a of libraryData.artistas) {
         a.images = (a.images || []).filter(img => img.driveId !== driveId);
+        for (const f of (a.folders || [])) {
+          f.images = (f.images || []).filter(img => img.driveId !== driveId);
+          if (f.coverDriveId === driveId) f.coverDriveId = '';
+        }
       }
       for (const a of libraryData.comics) {
         for (const c of (a.comics || [])) {
@@ -3654,7 +3788,7 @@
     }
 
     // =========================================================================
-    // MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (CON FILAS TAGS + ARTISTA AUTO)
+    // MODAL 9: PASAR ARCHIVOS O CARPETAS DE DRIVE A MI APP (SOPORTA CARPETAS EN ARTISTA)
     // =========================================================================
     function getSelectedDriveBrowserObjects() {
       const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
@@ -3685,9 +3819,7 @@
       );
 
       const sectionSel = document.getElementById('d2a-section-select');
-      if (folders.length > 0) {
-        sectionSel.value = 'comics';
-      } else if (pdfOrDocs.length > 0 && pdfOrDocs.length === selectedItems.length) {
+      if (pdfOrDocs.length > 0 && pdfOrDocs.length === selectedItems.length) {
         sectionSel.value = 'historia';
       } else {
         sectionSel.value = 'artistas';
@@ -3697,7 +3829,7 @@
       selectedItems.forEach(item => extractDriveFileTags(item).forEach(t => detectedTagsSet.add(t)));
       const tagsPreview = detectedTagsSet.size
         ? `Tags detectados en Drive que se respetarán: ${Array.from(detectedTagsSet).slice(0, 8).map(t => '#' + escapeHtml(t)).join(', ')}${detectedTagsSet.size > 8 ? '...' : ''}`
-        : 'Se conservarán los tags de Drive y se añadirá automáticamente el nombre del artista.';
+        : 'Se conservarán los tags de Drive y se añadirá automáticamente el nombre del artista y de la carpeta.';
 
       document.getElementById('drive-to-app-summary').innerHTML = `
         <div>Seleccionados: <strong>${selectedItems.length}</strong> elemento(s) (${folders.length} carpeta(s), ${selectedItems.length - folders.length} archivo(s)).</div>
@@ -3708,10 +3840,11 @@
       openModal('drive-to-app-modal');
     }
 
-    function onDriveToAppSectionChange(suggestedComicTitle = '') {
+    function onDriveToAppSectionChange(suggestedTitle = '') {
       const section = document.getElementById('d2a-section-select').value;
       const artistSel = document.getElementById('d2a-artist-select');
       const comicGroup = document.getElementById('d2a-comic-group');
+      const artistFolderGroup = document.getElementById('d2a-artist-folder-group');
 
       const artists = libraryData[section] || [];
       artistSel.innerHTML =
@@ -3724,13 +3857,19 @@
 
       onDriveToAppArtistChange();
 
+      comicGroup.classList.add('hidden');
+      artistFolderGroup.classList.add('hidden');
+
       if (section === 'comics') {
         comicGroup.classList.remove('hidden');
-        if (suggestedComicTitle) {
-          document.getElementById('d2a-new-comic-title').value = suggestedComicTitle;
+        if (suggestedTitle) {
+          document.getElementById('d2a-new-comic-title').value = suggestedTitle;
         }
-      } else {
-        comicGroup.classList.add('hidden');
+      } else if (section === 'artistas') {
+        artistFolderGroup.classList.remove('hidden');
+        if (suggestedTitle) {
+          document.getElementById('d2a-new-artist-folder-title').value = suggestedTitle;
+        }
       }
     }
 
@@ -3753,6 +3892,16 @@
           `<option value="__folder_as_comic__">📁 Crear Cómic nuevo (o 1 cómic por cada carpeta)</option>` +
           comics.map(c => `<option value="${c.id}">➕ Añadir páginas a: ${escapeHtml(c.title)}</option>`).join('');
         onDriveToAppComicChange();
+      } else if (section === 'artistas') {
+        const folderSel = document.getElementById('d2a-artist-folder-select');
+        const artist = libraryData.artistas.find(a => a.id === artistId);
+        const folders = artist ? (artist.folders || []) : [];
+        folderSel.innerHTML =
+          `<option value="__auto__">📁 Automático (Carpetas como carpeta + sueltas en galería)</option>` +
+          `<option value="__new_folder__">➕ Meter todo en una Carpeta nueva...</option>` +
+          `<option value="__loose__">🖼️ Meter todo suelto en la galería del artista</option>` +
+          folders.map(f => `<option value="${f.id}">📂 Añadir a carpeta: ${escapeHtml(f.name)}</option>`).join('');
+        onDriveToAppArtistFolderChange();
       }
     }
 
@@ -3760,6 +3909,16 @@
       const comicVal = document.getElementById('d2a-comic-select').value;
       const titleGroup = document.getElementById('d2a-new-comic-title-group');
       if (comicVal === '__folder_as_comic__') {
+        titleGroup.classList.remove('hidden');
+      } else {
+        titleGroup.classList.add('hidden');
+      }
+    }
+
+    function onDriveToAppArtistFolderChange() {
+      const val = document.getElementById('d2a-artist-folder-select').value;
+      const titleGroup = document.getElementById('d2a-new-artist-folder-title-group');
+      if (val === '__new_folder__') {
         titleGroup.classList.remove('hidden');
       } else {
         titleGroup.classList.add('hidden');
@@ -3838,7 +3997,7 @@
             avatarUrl: '',
             avatarDriveId: '',
             createdAt: Date.now(),
-            ...(section === 'historia' ? { items: [] } : section === 'comics' ? { comics: [] } : { images: [] })
+            ...(section === 'historia' ? { items: [] } : section === 'comics' ? { comics: [] } : { folders: [], images: [] })
           };
           libraryData[section].unshift(artist);
         } else {
@@ -3853,43 +4012,163 @@
         const autoArtistTags = extractArtistNameTags(artist.name);
         const now = Date.now();
         let importedCount = 0;
+        let openFolderIdAfter = null;
 
         if (section === 'artistas') {
           if (!Array.isArray(artist.images)) artist.images = [];
-          const targetDriveFolder = alsoMoveInDrive ? await ensureTargetFolderForContext('artistas', artist, null) : null;
+          if (!Array.isArray(artist.folders)) artist.folders = [];
 
-          const filesToImport = [];
-          for (const item of selectedItems) {
-            const isShortcut = item.mimeType === 'application/vnd.google-apps.shortcut' && item.shortcutDetails;
-            const targetId = isShortcut ? item.shortcutDetails.targetId : item.id;
-            const effectiveMime = isShortcut ? (item.shortcutDetails.targetMimeType || '') : (item.mimeType || '');
+          const folderMode = document.getElementById('d2a-artist-folder-select').value;
+          const customNewFolderTitle = document.getElementById('d2a-new-artist-folder-title').value.trim();
 
-            if (effectiveMime === 'application/vnd.google-apps.folder') {
-              const folderImgs = await fetchAllImagesInsideDriveFolder(targetId);
-              filesToImport.push(...folderImgs);
-            } else if (effectiveMime.startsWith('image/')) {
-              filesToImport.push({ ...item, id: targetId, mimeType: effectiveMime });
+          const folderItems = selectedItems.filter(f =>
+            f.mimeType === 'application/vnd.google-apps.folder' ||
+            (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails?.targetMimeType === 'application/vnd.google-apps.folder')
+          );
+          const looseImageItems = selectedItems.filter(f => {
+            const eff = (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails)
+              ? (f.shortcutDetails.targetMimeType || '')
+              : (f.mimeType || '');
+            return eff.startsWith('image/');
+          });
+
+          const artistDriveFolder = alsoMoveInDrive ? await ensureTargetFolderForContext('artistas', artist, null) : null;
+
+          // 1. Procesar carpetas seleccionadas
+          for (let fIdx = 0; fIdx < folderItems.length; fIdx++) {
+            const folder = folderItems[fIdx];
+            const targetDriveFolderId = (folder.mimeType === 'application/vnd.google-apps.shortcut' && folder.shortcutDetails)
+              ? folder.shortcutDetails.targetId
+              : folder.id;
+
+            const folderImgs = await fetchAllImagesInsideDriveFolder(targetDriveFolderId);
+            if (!folderImgs.length) continue;
+
+            const folderOwnTags = extractDriveFileTags(folder);
+
+            if (folderMode === '__loose__') {
+              const autoFolderTags = extractFolderNameTags(folder.name);
+              for (let i = 0; i < folderImgs.length; i++) {
+                const img = folderImgs[i];
+                const finalTags = normalizeTags([...autoArtistTags, ...autoFolderTags, ...folderOwnTags, ...extractDriveFileTags(img), ...extraTags]);
+                artist.images.unshift({
+                  id: generateId('img'),
+                  title: (img.name || 'Imagen').replace(/\.[^/.]+$/, ''),
+                  driveId: img.id,
+                  url: '',
+                  size: Number(img.size) || 0,
+                  tags: finalTags,
+                  createdAt: now + i
+                });
+                await updateDriveFileTagsMetadata(img.id, finalTags);
+                if (artistDriveFolder) await moveDriveFileIntoFolderIfNeeded(img, artistDriveFolder);
+                importedCount++;
+              }
+            } else {
+              let targetAppFolder = null;
+              if (folderMode !== '__auto__' && folderMode !== '__new_folder__') {
+                targetAppFolder = artist.folders.find(f => f.id === folderMode);
+              }
+              if (!targetAppFolder) {
+                const folderName = (folderMode === '__new_folder__' && customNewFolderTitle)
+                  ? customNewFolderTitle
+                  : (folderItems.length === 1 && customNewFolderTitle ? customNewFolderTitle : folder.name);
+                const autoFolderTags = extractFolderNameTags(folderName);
+                targetAppFolder = {
+                  id: generateId('afolder'),
+                  name: folderName,
+                  driveFolderId: targetDriveFolderId,
+                  tags: normalizeTags([...autoArtistTags, ...autoFolderTags, ...folderOwnTags, ...extraTags]),
+                  coverUrl: '',
+                  coverDriveId: folderImgs[0].id,
+                  createdAt: now + fIdx,
+                  images: []
+                };
+                artist.folders.unshift(targetAppFolder);
+              }
+
+              if (folderItems.length === 1) openFolderIdAfter = targetAppFolder.id;
+
+              const autoFolderTags = extractFolderNameTags(targetAppFolder.name);
+              if (artistDriveFolder && targetAppFolder.driveFolderId === targetDriveFolderId) {
+                await moveDriveFileIntoFolderIfNeeded({ ...folder, id: targetDriveFolderId }, artistDriveFolder);
+              }
+
+              for (let i = 0; i < folderImgs.length; i++) {
+                const img = folderImgs[i];
+                const finalTags = normalizeTags([...autoArtistTags, ...autoFolderTags, ...(targetAppFolder.tags || []), ...extractDriveFileTags(img), ...extraTags]);
+                targetAppFolder.images.unshift({
+                  id: generateId('img'),
+                  title: (img.name || 'Imagen').replace(/\.[^/.]+$/, ''),
+                  driveId: img.id,
+                  url: '',
+                  size: Number(img.size) || 0,
+                  tags: finalTags,
+                  createdAt: now + i
+                });
+                await updateDriveFileTagsMetadata(img.id, finalTags);
+                importedCount++;
+              }
             }
           }
 
-          for (let i = 0; i < filesToImport.length; i++) {
-            const f = filesToImport[i];
-            const driveTags = extractDriveFileTags(f);
-            const finalTags = normalizeTags([...autoArtistTags, ...driveTags, ...extraTags]);
+          // 2. Procesar imágenes sueltas seleccionadas
+          if (looseImageItems.length > 0) {
+            let targetAppFolder = null;
+            if (folderMode === '__new_folder__') {
+              const newFolderName = customNewFolderTitle || 'Carpeta Nueva';
+              const autoFolderTags = extractFolderNameTags(newFolderName);
+              targetAppFolder = {
+                id: generateId('afolder'),
+                name: newFolderName,
+                driveFolderId: '',
+                tags: normalizeTags([...autoArtistTags, ...autoFolderTags, ...extraTags]),
+                coverUrl: '',
+                coverDriveId: looseImageItems[0].id,
+                createdAt: now,
+                images: []
+              };
+              artist.folders.unshift(targetAppFolder);
+              openFolderIdAfter = targetAppFolder.id;
+            } else if (folderMode !== '__auto__' && folderMode !== '__loose__') {
+              targetAppFolder = artist.folders.find(f => f.id === folderMode);
+              if (targetAppFolder) openFolderIdAfter = targetAppFolder.id;
+            }
 
-            artist.images.unshift({
-              id: generateId('img'),
-              title: (f.name || 'Imagen').replace(/\.[^/.]+$/, ''),
-              driveId: f.id,
-              url: '',
-              size: Number(f.size) || 0,
-              tags: finalTags,
-              createdAt: now + i
-            });
+            const folderAutoTags = targetAppFolder ? [...extractFolderNameTags(targetAppFolder.name), ...(targetAppFolder.tags || [])] : [];
+            const targetDriveFolder = alsoMoveInDrive
+              ? await ensureTargetFolderForContext('artistas', artist, targetAppFolder)
+              : null;
 
-            await updateDriveFileTagsMetadata(f.id, finalTags);
-            if (targetDriveFolder) await moveDriveFileIntoFolderIfNeeded(f, targetDriveFolder);
-            importedCount++;
+            for (let i = 0; i < looseImageItems.length; i++) {
+              const img = looseImageItems[i];
+              const targetId = (img.mimeType === 'application/vnd.google-apps.shortcut' && img.shortcutDetails)
+                ? img.shortcutDetails.targetId
+                : img.id;
+              const finalTags = normalizeTags([...autoArtistTags, ...folderAutoTags, ...extractDriveFileTags(img), ...extraTags]);
+              const newImgObj = {
+                id: generateId('img'),
+                title: (img.name || 'Imagen').replace(/\.[^/.]+$/, ''),
+                driveId: targetId,
+                url: '',
+                size: Number(img.size) || 0,
+                tags: finalTags,
+                createdAt: now + i
+              };
+
+              if (targetAppFolder) {
+                targetAppFolder.images.unshift(newImgObj);
+                if (!targetAppFolder.coverDriveId && !targetAppFolder.coverUrl) {
+                  targetAppFolder.coverDriveId = targetId;
+                }
+              } else {
+                artist.images.unshift(newImgObj);
+              }
+
+              await updateDriveFileTagsMetadata(targetId, finalTags);
+              if (targetDriveFolder) await moveDriveFileIntoFolderIfNeeded({ ...img, id: targetId }, targetDriveFolder);
+              importedCount++;
+            }
           }
 
         } else if (section === 'historia') {
@@ -4050,6 +4329,7 @@
 
         state.section = section;
         state.artistId = artist.id;
+        state.artistFolderId = openFolderIdAfter;
         state.comicId = null;
         state.page = 1;
         state.activeTags = [];
@@ -4057,7 +4337,7 @@
         driveBrowserState.isGlobalTagSearch = false;
 
         renderAll();
-        showToast(`✅ ${importedCount} elemento(s) ya visibles en "${artist.name}" con tag #${autoArtistTags[0] || ''}`);
+        showToast(`✅ ${importedCount} elemento(s) ya visibles en "${artist.name}"`);
       } catch (e) {
         console.error('Error pasando de Drive a Mi App:', e);
         showToast('⚠️ Error al pasar los elementos a la app');
@@ -4178,6 +4458,13 @@
             for (const img of (a.images || [])) {
               if (img.driveId === id) {
                 img.tags = normalizeTags([...(img.tags || []).filter(t => !removeSet.has(t)), ...addTags]);
+              }
+            }
+            for (const f of (a.folders || [])) {
+              for (const img of (f.images || [])) {
+                if (img.driveId === id) {
+                  img.tags = normalizeTags([...(img.tags || []).filter(t => !removeSet.has(t)), ...addTags]);
+                }
               }
             }
           }
@@ -4312,7 +4599,7 @@
     }
 
     // =========================================================================
-    // CRUD: ARTISTAS, CÓMICS, IMÁGENES E HISTORIAS (CON TAG ARTISTA AUTOMÁTICO)
+    // CRUD: ARTISTAS, CARPETAS DENTRO DE ARTISTAS, CÓMICS, IMÁGENES E HISTORIAS
     // =========================================================================
     function openArtistModal(section, artistId = null) {
       editingArtistContext = { section, artistId };
@@ -4360,11 +4647,20 @@
           const newAutoTags = extractArtistNameTags(name);
           const removedAliasSet = new Set(oldAutoTags.filter(t => !newAutoTags.includes(t)));
 
-          if (section === 'artistas' && Array.isArray(targetArtist.images)) {
-            for (const img of targetArtist.images) {
+          if (section === 'artistas') {
+            for (const img of (targetArtist.images || [])) {
               const filtered = (img.tags || []).filter(t => !removedAliasSet.has(t));
               img.tags = normalizeTags([...newAutoTags, ...filtered]);
               if (img.driveId) updateDriveFileTagsMetadata(img.driveId, img.tags);
+            }
+            for (const f of (targetArtist.folders || [])) {
+              const fFiltered = (f.tags || []).filter(t => !removedAliasSet.has(t));
+              f.tags = normalizeTags([...newAutoTags, ...fFiltered]);
+              for (const img of (f.images || [])) {
+                const imgFiltered = (img.tags || []).filter(t => !removedAliasSet.has(t));
+                img.tags = normalizeTags([...newAutoTags, ...imgFiltered]);
+                if (img.driveId) updateDriveFileTagsMetadata(img.driveId, img.tags);
+              }
             }
           } else if (section === 'comics' && Array.isArray(targetArtist.comics)) {
             for (const c of targetArtist.comics) {
@@ -4392,7 +4688,7 @@
           avatarUrl: '',
           avatarDriveId: '',
           createdAt: Date.now(),
-          ...(section === 'historia' ? { items: [] } : section === 'comics' ? { comics: [] } : { images: [] })
+          ...(section === 'historia' ? { items: [] } : section === 'comics' ? { comics: [] } : { folders: [], images: [] })
         };
         libraryData[section].unshift(targetArtist);
       }
@@ -4419,6 +4715,131 @@
       })();
     }
 
+    // CREAR / EDITAR / ELIMINAR CARPETA DENTRO DE UN ARTISTA
+    function openArtistFolderModal(artistId, folderId = null) {
+      const artist = libraryData.artistas.find(a => a.id === artistId);
+      if (!artist) return;
+      if (!Array.isArray(artist.folders)) artist.folders = [];
+
+      editingArtistFolderContext = { artistId, folderId };
+      const titleEl = document.getElementById('artist-folder-modal-title');
+      const nameInput = document.getElementById('artist-folder-name-input');
+      const tagsInput = document.getElementById('artist-folder-tags-input');
+      document.getElementById('folder-tags-spell-box').classList.add('hidden');
+      quickTagPickerState['folder-quick-tag-picker'] = { activeFamily: null };
+
+      if (folderId) {
+        const folder = artist.folders.find(f => f.id === folderId);
+        titleEl.textContent = '✏️ Editar Carpeta del Artista';
+        nameInput.value = folder ? folder.name : '';
+        tagsInput.value = folder ? (folder.tags || []).join(', ') : '';
+      } else {
+        titleEl.textContent = `📁 Nueva Carpeta en ${artist.name}`;
+        nameInput.value = '';
+        tagsInput.value = '';
+      }
+
+      renderQuickTagPicker('folder-quick-tag-picker', 'artist-folder-tags-input', 'folder-tags-spell-box');
+      openModal('artist-folder-modal');
+    }
+
+    async function saveArtistFolderForm() {
+      if (!editingArtistFolderContext) return;
+      const { artistId, folderId } = editingArtistFolderContext;
+      const artist = libraryData.artistas.find(a => a.id === artistId);
+      if (!artist) return;
+      if (!Array.isArray(artist.folders)) artist.folders = [];
+
+      const name = document.getElementById('artist-folder-name-input').value.trim();
+      if (!name) {
+        showToast('Escribe un nombre para la carpeta');
+        return;
+      }
+
+      const autoArtistTags = extractArtistNameTags(artist.name);
+      const autoFolderTags = extractFolderNameTags(name);
+      const extraTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('artist-folder-tags-input').value));
+      const mergedFolderTags = normalizeTags([...autoArtistTags, ...autoFolderTags, ...extraTags]);
+
+      let targetFolder = null;
+      if (folderId) {
+        targetFolder = artist.folders.find(f => f.id === folderId);
+        if (targetFolder) {
+          const oldFolderAutoTags = extractFolderNameTags(targetFolder.name);
+          const removedOldFolderTag = new Set(oldFolderAutoTags.filter(t => !autoFolderTags.includes(t)));
+          targetFolder.name = name;
+          targetFolder.tags = mergedFolderTags;
+
+          for (const img of (targetFolder.images || [])) {
+            const kept = (img.tags || []).filter(t => !removedOldFolderTag.has(t));
+            img.tags = normalizeTags([...kept, ...mergedFolderTags]);
+            if (img.driveId) {
+              await updateDriveFileTagsMetadata(img.driveId, img.tags);
+            }
+          }
+        }
+      } else {
+        targetFolder = {
+          id: generateId('afolder'),
+          name,
+          driveFolderId: '',
+          tags: mergedFolderTags,
+          coverUrl: '',
+          coverDriveId: '',
+          createdAt: Date.now(),
+          images: []
+        };
+        artist.folders.unshift(targetFolder);
+      }
+
+      closeModal('artist-folder-modal');
+      saveLocalOnly();
+      renderAll();
+      showToast(`📁 Carpeta "${name}" guardada (tags automáticos: ${autoArtistTags.concat(autoFolderTags).map(t => '#' + t).join(', ')})`);
+
+      (async () => {
+        try {
+          if (targetFolder && driveConfig.accessToken) {
+            await ensureTargetFolderForContext('artistas', artist, targetFolder);
+          }
+          await persistLibrary(folderId ? `Editada carpeta "${name}" en ${artist.name}` : `Creada carpeta "${name}" en ${artist.name}`);
+        } catch (e) {}
+      })();
+    }
+
+    async function deleteArtistFolder(artistId, folderId) {
+      const artist = libraryData.artistas.find(a => a.id === artistId);
+      const folder = artist ? (artist.folders || []).find(f => f.id === folderId) : null;
+      if (!folder) return;
+
+      const confirmed = await askYesNoConfirm({
+        title: 'Eliminar carpeta y sus imágenes',
+        message: `¿Deseas eliminar la carpeta "${folder.name}" y todas sus ${(folder.images || []).length} imágenes tanto de la app como de Google Drive?`,
+        doubleStep: true,
+        icon: '🗑️',
+        yesLabel: 'Sí, eliminar carpeta',
+        noLabel: 'No'
+      });
+      if (!confirmed) return;
+
+      if (driveConfig.accessToken) {
+        if (folder.driveFolderId) await trashDriveItemById(folder.driveFolderId);
+        if (folder.coverDriveId) await trashDriveItemById(folder.coverDriveId);
+        for (const img of (folder.images || [])) {
+          if (img.driveId) await trashDriveItemById(img.driveId);
+        }
+      }
+
+      artist.folders = artist.folders.filter(f => f.id !== folderId);
+      if (state.artistFolderId === folderId) {
+        state.artistFolderId = null;
+      }
+      driveBrowserState.folderCoverCache.clear();
+      await persistLibrary(`Eliminada carpeta "${folder.name}" de ${artist.name}`);
+      renderAll();
+      showToast(`🗑️ Carpeta "${folder.name}" eliminada`);
+    }
+
     async function deleteArtist(section, artistId) {
       const artist = (libraryData[section] || []).find(a => a.id === artistId);
       if (!artist) return;
@@ -4443,6 +4864,12 @@
         for (const img of (artist.images || [])) {
           if (img.driveId) await trashDriveItemById(img.driveId);
         }
+        for (const f of (artist.folders || [])) {
+          if (f.driveFolderId) await trashDriveItemById(f.driveFolderId);
+          for (const img of (f.images || [])) {
+            if (img.driveId) await trashDriveItemById(img.driveId);
+          }
+        }
         for (const c of (artist.comics || [])) {
           if (c.driveFolderId) await trashDriveItemById(c.driveFolderId);
           if (c.coverDriveId) await trashDriveItemById(c.coverDriveId);
@@ -4458,6 +4885,7 @@
       libraryData[section] = libraryData[section].filter(a => a.id !== artistId);
       if (state.artistId === artistId) {
         state.artistId = null;
+        state.artistFolderId = null;
         state.comicId = null;
       }
       driveBrowserState.folderCoverCache.clear();
@@ -4466,8 +4894,8 @@
       showToast('🗑️ Artista y carpeta eliminados de Drive');
     }
 
-    function openUploadModal(mode, artistId, comicId = null) {
-      uploadContext = { mode, artistId, comicId };
+    function openUploadModal(mode, artistId, subId = null) {
+      uploadContext = { mode, artistId, subId };
       pickedFileSystemEntries = [];
       const badge = document.getElementById('picked-deletable-files-badge');
       if (badge) badge.classList.add('hidden');
@@ -4501,7 +4929,7 @@
         tagsHint.classList.remove('hidden');
       } else if (mode === 'comic-pages') {
         const artist = libraryData.comics.find(a => a.id === artistId);
-        const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
+        const comic = artist ? artist.comics.find(c => c.id === subId) : null;
         const autoNames = artist ? extractArtistNameTags(artist.name) : [];
         titleEl.textContent = 'Añadir Páginas al Cómic';
         comicTitleGroup.classList.add('hidden');
@@ -4514,13 +4942,17 @@
         }
       } else if (mode === 'artist-images') {
         const artist = libraryData.artistas.find(a => a.id === artistId);
+        const folder = (artist && subId) ? (artist.folders || []).find(f => f.id === subId) : null;
         const autoNames = artist ? extractArtistNameTags(artist.name) : [];
-        titleEl.textContent = 'Subir Imágenes a Galería';
+        const folderTags = folder ? [...extractFolderNameTags(folder.name), ...(folder.tags || [])] : [];
+        const combinedAuto = normalizeTags([...autoNames, ...folderTags]);
+
+        titleEl.textContent = folder ? `Subir Imágenes a "${folder.name}"` : 'Subir Imágenes a Galería';
         comicTitleGroup.classList.add('hidden');
         coverGroup.classList.add('hidden');
         filesInput.accept = 'image/*';
-        if (autoNames.length) {
-          tagsHint.textContent = `Tags automáticos (también en Drive): ${autoNames.map(t => '#' + t).join(', ')}`;
+        if (combinedAuto.length) {
+          tagsHint.textContent = `Tags automáticos (artista + carpeta, también en Drive): ${combinedAuto.map(t => '#' + t).join(', ')}`;
           tagsHint.classList.remove('hidden');
         }
       } else if (mode === 'story-files') {
@@ -4541,7 +4973,7 @@
 
     async function processUploadForm() {
       if (!uploadContext) return;
-      const { mode, artistId, comicId } = uploadContext;
+      const { mode, artistId, subId } = uploadContext;
 
       const standardFiles = Array.from(document.getElementById('upload-files-input').files || []);
       const files = pickedFileSystemEntries.length > 0
@@ -4625,7 +5057,7 @@
 
         } else if (mode === 'comic-pages') {
           const artist = libraryData.comics.find(a => a.id === artistId);
-          const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
+          const comic = artist ? artist.comics.find(c => c.id === subId) : null;
           if (!comic) return;
 
           const autoArtistTags = extractArtistNameTags(artist.name);
@@ -4663,10 +5095,12 @@
         } else if (mode === 'artist-images') {
           const artist = libraryData.artistas.find(a => a.id === artistId);
           if (!artist) return;
+          const folder = subId ? (artist.folders || []).find(f => f.id === subId) : null;
 
           const autoArtistTags = extractArtistNameTags(artist.name);
-          const mergedTags = normalizeTags([...autoArtistTags, ...rawTags]);
-          const targetFolderId = await ensureTargetFolderForContext('artistas', artist, null);
+          const folderAutoTags = folder ? [...extractFolderNameTags(folder.name), ...(folder.tags || [])] : [];
+          const mergedTags = normalizeTags([...autoArtistTags, ...folderAutoTags, ...rawTags]);
+          const targetFolderId = await ensureTargetFolderForContext('artistas', artist, folder);
 
           for (let i = 0; i < files.length; i++) {
             statusBox.textContent = `Subiendo imagen ${i + 1} de ${files.length} y guardando tags en Drive...`;
@@ -4679,7 +5113,7 @@
             } else {
               blobUrl = URL.createObjectURL(f);
             }
-            artist.images.unshift({
+            const newImgObj = {
               id: generateId('img'),
               title: f.name.replace(/\.[^/.]+$/, ''),
               driveId,
@@ -4687,10 +5121,22 @@
               size: f.size || 0,
               tags: [...mergedTags],
               createdAt: now + i
-            });
+            };
+
+            if (folder) {
+              folder.images.unshift(newImgObj);
+              if (!folder.coverDriveId && !folder.coverUrl) {
+                folder.coverDriveId = driveId;
+                folder.coverUrl = blobUrl;
+              }
+            } else {
+              artist.images.unshift(newImgObj);
+            }
           }
 
-          await persistLibrary(`Subidas ${files.length} imagen(es) a ${artist.name}`);
+          await persistLibrary(folder
+            ? `Subidas ${files.length} imagen(es) a ${artist.name} / ${folder.name}`
+            : `Subidas ${files.length} imagen(es) a ${artist.name}`);
 
         } else if (mode === 'story-files') {
           const artist = libraryData.historia.find(a => a.id === artistId);
@@ -4802,7 +5248,7 @@
 
     async function saveEditedTags() {
       if (!editingTagsContext) return;
-      const { type, artistId, comicId, itemId, activeTags, removedTags } = editingTagsContext;
+      const { type, artistId, folderId, comicId, itemId, activeTags, removedTags } = editingTagsContext;
       const newTitle = document.getElementById('edit-item-title-input').value.trim();
       const addedTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('edit-tags-input').value));
       const finalTags = normalizeTags([
@@ -4842,12 +5288,15 @@
         }
       } else if (type === 'artist-image') {
         const artist = libraryData.artistas.find(a => a.id === artistId);
-        const img = artist ? artist.images.find(i => i.id === itemId) : null;
+        const folder = (artist && folderId) ? (artist.folders || []).find(f => f.id === folderId) : null;
+        const imgList = folder ? (folder.images || []) : (artist ? (artist.images || []) : []);
+        const img = imgList.find(i => i.id === itemId);
         if (img) {
           if (newTitle) img.title = newTitle;
           img.tags = finalTags;
-          if (removedTags.size > 0 && artist) {
-            artist.tags = normalizeTags((artist.tags || []).filter(t => !removedTags.has(t)));
+          if (removedTags.size > 0) {
+            if (folder) folder.tags = normalizeTags((folder.tags || []).filter(t => !removedTags.has(t)));
+            if (artist) artist.tags = normalizeTags((artist.tags || []).filter(t => !removedTags.has(t)));
           }
           if (img.driveId) {
             await updateDriveFileTagsMetadata(img.driveId, finalTags);
@@ -4896,6 +5345,15 @@
         state.bulkSelectMode = true;
       }
       renderAll();
+    }
+
+    function getCurrentArtistImagesContainer(artist) {
+      if (!artist) return null;
+      if (state.artistFolderId) {
+        const folder = (artist.folders || []).find(f => f.id === state.artistFolderId);
+        return folder ? folder : null;
+      }
+      return artist;
     }
 
     function selectAllArtistImages(selectAll) {
@@ -4949,9 +5407,10 @@
       renderQuickTagPicker('bulk-quick-tag-picker', 'bulk-add-tags-input', 'bulk-tags-spell-box');
 
       const artist = libraryData.artistas.find(a => a.id === state.artistId);
+      const container = getCurrentArtistImagesContainer(artist);
       const unionSet = new Set();
-      if (artist) {
-        for (const img of (artist.images || [])) {
+      if (container) {
+        for (const img of (container.images || [])) {
           if (state.selectedImageIds.has(img.id)) {
             normalizeTags(img.tags || []).forEach(t => unionSet.add(t));
           }
@@ -4974,26 +5433,21 @@
       openModal('bulk-tag-modal');
     }
 
-    function appendTagToInput(inputId, tag) {
-      const input = document.getElementById(inputId);
-      const current = normalizeTags(input.value);
-      if (!current.includes(tag)) current.push(tag);
-      input.value = current.join(', ');
-    }
-
     async function applyBulkTags() {
       const artist = libraryData.artistas.find(a => a.id === state.artistId);
-      if (!artist) return;
+      const container = getCurrentArtistImagesContainer(artist);
+      if (!artist || !container) return;
 
       const addTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('bulk-add-tags-input').value));
       const removeTagsSet = bulkTagChipsState.removedTags;
       let modified = 0;
 
       if (removeTagsSet.size > 0) {
+        container.tags = normalizeTags((container.tags || []).filter(t => !removeTagsSet.has(t)));
         artist.tags = normalizeTags((artist.tags || []).filter(t => !removeTagsSet.has(t)));
       }
 
-      for (const img of artist.images) {
+      for (const img of (container.images || [])) {
         if (state.selectedImageIds.has(img.id)) {
           const kept = (img.tags || []).filter(t => !removeTagsSet.has(t));
           img.tags = normalizeTags([...kept, ...addTags]);
@@ -5008,14 +5462,15 @@
       }
 
       closeModal('bulk-tag-modal');
-      await persistLibrary(`Etiquetadas/actualizadas en bloque ${modified} imagen(es) de ${artist.name}`);
+      await persistLibrary(`Etiquetadas/actualizadas en bloque ${modified} imagen(es)`);
       renderAll();
       showToast(`🏷️ Tags actualizados en app y Drive en ${modified} imagen(es)`);
     }
 
     async function deleteSelectedArtistImages() {
       const artist = libraryData.artistas.find(a => a.id === state.artistId);
-      if (!artist) return;
+      const container = getCurrentArtistImagesContainer(artist);
+      if (!artist || !container) return;
       const count = state.selectedImageIds.size;
       if (!count) return;
 
@@ -5029,18 +5484,18 @@
       });
       if (!confirmed) return;
 
-      const toDelete = (artist.images || []).filter(img => state.selectedImageIds.has(img.id));
+      const toDelete = (container.images || []).filter(img => state.selectedImageIds.has(img.id));
       if (driveConfig.accessToken) {
         for (const img of toDelete) {
           if (img.driveId) await trashDriveItemById(img.driveId);
         }
       }
 
-      artist.images = (artist.images || []).filter(img => !state.selectedImageIds.has(img.id));
+      container.images = (container.images || []).filter(img => !state.selectedImageIds.has(img.id));
       state.selectedImageIds.clear();
       state.bulkSelectMode = false;
 
-      await persistLibrary(`Eliminadas ${count} imagen(es) de ${artist.name} en app y Drive`);
+      await persistLibrary(`Eliminadas ${count} imagen(es) en app y Drive`);
       renderAll();
       showToast(`🗑️ ${count} imagen(es) eliminadas de la app y de Drive`);
     }
@@ -5048,22 +5503,28 @@
     // =========================================================================
     // FAVORITOS, ELIMINACIÓN DE ELEMENTOS (CON BORRADO EN DRIVE) Y NAVEGACIÓN
     // =========================================================================
-    async function toggleFavorite(type, artistId, comicId = null, itemId = null) {
+    async function toggleFavorite(type, artistId, subId = null, itemId = null) {
       if (type === 'artist') {
         const artist = (libraryData[state.section] || []).find(a => a.id === artistId);
         if (artist) artist.favorite = !artist.favorite;
+      } else if (type === 'artist-folder') {
+        const artist = libraryData.artistas.find(a => a.id === artistId);
+        const folder = artist ? (artist.folders || []).find(f => f.id === subId) : null;
+        if (folder) folder.favorite = !folder.favorite;
       } else if (type === 'comic') {
         const artist = libraryData.comics.find(a => a.id === artistId);
-        const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
+        const comic = artist ? artist.comics.find(c => c.id === subId) : null;
         if (comic) comic.favorite = !comic.favorite;
       } else if (type === 'comic-page') {
         const artist = libraryData.comics.find(a => a.id === artistId);
-        const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
+        const comic = artist ? artist.comics.find(c => c.id === subId) : null;
         const page = comic ? comic.pages.find(p => p.id === itemId) : null;
         if (page) page.favorite = !page.favorite;
       } else if (type === 'artist-image') {
         const artist = libraryData.artistas.find(a => a.id === artistId);
-        const img = artist ? artist.images.find(i => i.id === itemId) : null;
+        const folder = (artist && subId) ? (artist.folders || []).find(f => f.id === subId) : null;
+        const list = folder ? (folder.images || []) : (artist ? (artist.images || []) : []);
+        const img = list.find(i => i.id === itemId);
         if (img) img.favorite = !img.favorite;
       } else if (type === 'story-item') {
         const artist = libraryData.historia.find(a => a.id === artistId);
@@ -5074,7 +5535,7 @@
       renderAll();
     }
 
-    async function deleteSubItem(type, artistId, comicId, itemId) {
+    async function deleteSubItem(type, artistId, subId, itemId) {
       const confirmed = await askYesNoConfirm({
         title: 'Eliminar de la app y de Google Drive',
         message: '¿Deseas eliminar este elemento tanto de tu biblioteca como de Google Drive?',
@@ -5087,7 +5548,7 @@
 
       if (type === 'comic') {
         const artist = libraryData.comics.find(a => a.id === artistId);
-        const comic = artist ? (artist.comics || []).find(c => c.id === comicId) : null;
+        const comic = artist ? (artist.comics || []).find(c => c.id === subId) : null;
         if (comic && driveConfig.accessToken) {
           if (comic.driveFolderId) await trashDriveItemById(comic.driveFolderId);
           if (comic.coverDriveId) await trashDriveItemById(comic.coverDriveId);
@@ -5095,11 +5556,11 @@
             if (p.driveId) await trashDriveItemById(p.driveId);
           }
         }
-        if (artist) artist.comics = artist.comics.filter(c => c.id !== comicId);
-        if (state.comicId === comicId) state.comicId = null;
+        if (artist) artist.comics = artist.comics.filter(c => c.id !== subId);
+        if (state.comicId === subId) state.comicId = null;
       } else if (type === 'comic-page') {
         const artist = libraryData.comics.find(a => a.id === artistId);
-        const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
+        const comic = artist ? artist.comics.find(c => c.id === subId) : null;
         const page = comic ? (comic.pages || []).find(p => p.id === itemId) : null;
         if (page && page.driveId && driveConfig.accessToken) {
           await trashDriveItemById(page.driveId);
@@ -5107,11 +5568,20 @@
         if (comic) comic.pages = comic.pages.filter(p => p.id !== itemId);
       } else if (type === 'artist-image') {
         const artist = libraryData.artistas.find(a => a.id === artistId);
-        const img = artist ? (artist.images || []).find(i => i.id === itemId) : null;
-        if (img && img.driveId && driveConfig.accessToken) {
-          await trashDriveItemById(img.driveId);
+        const folder = (artist && subId) ? (artist.folders || []).find(f => f.id === subId) : null;
+        if (folder) {
+          const img = (folder.images || []).find(i => i.id === itemId);
+          if (img && img.driveId && driveConfig.accessToken) {
+            await trashDriveItemById(img.driveId);
+          }
+          folder.images = folder.images.filter(i => i.id !== itemId);
+        } else if (artist) {
+          const img = (artist.images || []).find(i => i.id === itemId);
+          if (img && img.driveId && driveConfig.accessToken) {
+            await trashDriveItemById(img.driveId);
+          }
+          artist.images = artist.images.filter(i => i.id !== itemId);
         }
-        if (artist) artist.images = artist.images.filter(i => i.id !== itemId);
       } else if (type === 'story-item') {
         const artist = libraryData.historia.find(a => a.id === artistId);
         const st = artist ? (artist.items || []).find(i => i.id === itemId) : null;
@@ -5134,6 +5604,7 @@
     function selectSection(section) {
       state.section = section;
       state.artistId = null;
+      state.artistFolderId = null;
       state.comicId = null;
       state.page = 1;
       state.bulkSelectMode = false;
@@ -5153,6 +5624,20 @@
     function openArtist(section, artistId) {
       state.section = section;
       state.artistId = artistId;
+      state.artistFolderId = null;
+      state.comicId = null;
+      state.page = 1;
+      state.bulkSelectMode = false;
+      state.selectedImageIds.clear();
+      state.activeTags = [];
+      unifiedTagResults.tags = [];
+      renderAll();
+    }
+
+    function openArtistFolder(artistId, folderId) {
+      state.section = 'artistas';
+      state.artistId = artistId;
+      state.artistFolderId = folderId;
       state.comicId = null;
       state.page = 1;
       state.bulkSelectMode = false;
@@ -5165,6 +5650,7 @@
     function openComic(artistId, comicId) {
       state.section = 'comics';
       state.artistId = artistId;
+      state.artistFolderId = null;
       state.comicId = comicId;
       state.page = 1;
       state.activeTags = [];
@@ -5307,7 +5793,8 @@
       }
       if (state.section === 'artistas' && state.artistId) {
         const artist = libraryData.artistas.find(a => a.id === state.artistId);
-        return artist ? (artist.images || []) : [];
+        const container = getCurrentArtistImagesContainer(artist);
+        return container ? (container.images || []) : [];
       }
       if (state.section === 'comics' && state.artistId && state.comicId) {
         const artist = libraryData.comics.find(a => a.id === state.artistId);
@@ -5422,19 +5909,23 @@
       if (item.id && driveConfig.driveSizeCache.has(item.id)) {
         return driveConfig.driveSizeCache.get(item.id);
       }
+      let total = 0;
       if (Array.isArray(item.images)) {
-        return item.images.reduce((acc, im) => acc + getItemEffectiveSize(im), 0);
+        total += item.images.reduce((acc, im) => acc + getItemEffectiveSize(im), 0);
+      }
+      if (Array.isArray(item.folders)) {
+        total += item.folders.reduce((acc, f) => acc + getItemEffectiveSize(f), 0);
       }
       if (Array.isArray(item.pages)) {
-        return item.pages.reduce((acc, p) => acc + getItemEffectiveSize(p), 0);
+        total += item.pages.reduce((acc, p) => acc + getItemEffectiveSize(p), 0);
       }
       if (Array.isArray(item.comics)) {
-        return item.comics.reduce((acc, c) => acc + getItemEffectiveSize(c), 0);
+        total += item.comics.reduce((acc, c) => acc + getItemEffectiveSize(c), 0);
       }
       if (Array.isArray(item.items)) {
-        return item.items.reduce((acc, st) => acc + getItemEffectiveSize(st), 0);
+        total += item.items.reduce((acc, st) => acc + getItemEffectiveSize(st), 0);
       }
-      return 0;
+      return total;
     }
 
     function matchesSearchAndTag(nameOrTitle, tags = [], extraText = '') {
@@ -5512,6 +6003,13 @@
           if (img.driveId) seenDriveIds.add(img.driveId);
           addTags(img.tags);
         }
+        for (const f of (a.folders || [])) {
+          addTags(f.tags);
+          for (const img of (f.images || [])) {
+            if (img.driveId) seenDriveIds.add(img.driveId);
+            addTags(img.tags);
+          }
+        }
       }
 
       for (const [dId, dTags] of driveConfig.driveTagsIndex.entries()) {
@@ -5532,7 +6030,9 @@
     }
 
     function getFilteredArtistImages(artist) {
-      const filtered = (artist.images || []).filter(img => matchesSearchAndTag(img.title, img.tags));
+      const container = getCurrentArtistImagesContainer(artist);
+      if (!container) return [];
+      const filtered = (container.images || []).filter(img => matchesSearchAndTag(img.title, img.tags));
       return sortItems(filtered, 'title');
     }
 
@@ -5549,6 +6049,10 @@
       for (const sec of ['historia', 'comics', 'artistas']) {
         for (const a of libraryData[sec]) {
           if (a.favorite) favCount++;
+          for (const f of (a.folders || [])) {
+            if (f.favorite) favCount++;
+            for (const img of (f.images || [])) if (img.favorite) favCount++;
+          }
           for (const c of (a.comics || [])) {
             if (c.favorite) favCount++;
             for (const p of (c.pages || [])) if (p.favorite) favCount++;
@@ -5712,12 +6216,20 @@
         `;
 
         cardsHtml += artists.map(artist => {
-          const count = state.section === 'historia'
-            ? (artist.items || []).length
-            : state.section === 'comics'
-              ? (artist.comics || []).length
-              : (artist.images || []).length;
-          const unit = state.section === 'historia' ? 'archivos' : state.section === 'comics' ? 'cómics' : 'imágenes';
+          let countLabel = '';
+          if (state.section === 'historia') {
+            countLabel = `${(artist.items || []).length} archivos`;
+          } else if (state.section === 'comics') {
+            countLabel = `${(artist.comics || []).length} cómics`;
+          } else {
+            const foldersCount = (artist.folders || []).length;
+            const looseCount = (artist.images || []).length;
+            const folderImgsCount = (artist.folders || []).reduce((acc, f) => acc + (f.images || []).length, 0);
+            const totalImgs = looseCount + folderImgsCount;
+            countLabel = foldersCount > 0
+              ? `${foldersCount} carpeta(s) • ${totalImgs} imgs`
+              : `${totalImgs} imágenes`;
+          }
           const fallbackCover = getArtistPreviewCover(state.section, artist);
           const totalSizeLabel = formatFileSize(getItemEffectiveSize(artist));
 
@@ -5742,8 +6254,8 @@
                 <div class="absolute bottom-2.5 left-3 right-3">
                   <div class="font-bold text-sm sm:text-base text-white truncate">${escapeHtml(artist.name)}</div>
                   <div class="text-[11px] text-slate-300 flex items-center justify-between gap-1">
-                    <span>${count} ${unit}</span>
-                    ${totalSizeLabel ? `<span class="text-indigo-300 font-semibold">${totalSizeLabel}</span>` : ''}
+                    <span class="truncate">${countLabel}</span>
+                    ${totalSizeLabel ? `<span class="text-indigo-300 font-semibold shrink-0">${totalSizeLabel}</span>` : ''}
                   </div>
                   <div class="flex flex-wrap gap-1 mt-1.5">
                     ${(artist.tags || []).slice(0, 3).map(t => `<span onclick="event.stopPropagation(); toggleTagFilter('${escapeHtml(t)}')" class="px-1.5 py-0.5 rounded bg-indigo-500/25 hover:bg-indigo-500/50 text-indigo-200 text-[10px]">#${escapeHtml(t)}</span>`).join('')}
@@ -5763,6 +6275,7 @@
       const artist = (libraryData[state.section] || []).find(a => a.id === state.artistId);
       if (!artist) {
         state.artistId = null;
+        state.artistFolderId = null;
         renderAll();
         return;
       }
@@ -5912,8 +6425,93 @@
         return;
       }
 
-      // SUBCASO 2B: GALERÍA DE IMÁGENES DE UN ARTISTA
+      // SUBCASO 2B: GALERÍA DE UN ARTISTA (CON CARPETAS + IMÁGENES SUELTAS, O DENTRO DE UNA CARPETA)
       if (state.section === 'artistas') {
+        const activeFolder = state.artistFolderId
+          ? (artist.folders || []).find(f => f.id === state.artistFolderId)
+          : null;
+
+        if (state.artistFolderId && !activeFolder) {
+          state.artistFolderId = null;
+          renderAll();
+          return;
+        }
+
+        if (activeFolder) {
+          // DENTRO DE UNA CARPETA DEL ARTISTA
+          breadcrumb.innerHTML = `
+            <button onclick="selectSection('artistas')" class="hover:text-indigo-400">${sectionNames.artistas}</button>
+            <span class="text-slate-600">/</span>
+            <button onclick="openArtist('artistas', '${artist.id}')" class="hover:text-indigo-400">${escapeHtml(artist.name)}</button>
+            <span class="text-slate-600">/</span>
+            <span class="font-bold text-amber-300">📁 ${escapeHtml(activeFolder.name)}</span>
+          `;
+          actions.innerHTML = `
+            <button onclick="toggleBulkSelectMode()" class="px-3 py-2 rounded-xl ${state.bulkSelectMode ? 'bg-indigo-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'} text-xs font-semibold">
+              ☑️ Seleccionar varias
+            </button>
+            <button onclick="openArtistFolderModal('${artist.id}', '${activeFolder.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-amber-300">✏️ Carpeta</button>
+            <button onclick="openUploadModal('artist-images', '${artist.id}', '${activeFolder.id}')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow">+ Subir Imágenes</button>
+          `;
+
+          const filteredImages = getFilteredArtistImages(artist);
+          const totalPages = Math.max(1, Math.ceil(filteredImages.length / ITEMS_PER_PAGE));
+          if (state.page > totalPages) state.page = totalPages;
+          const pageSlice = filteredImages.slice((state.page - 1) * ITEMS_PER_PAGE, state.page * ITEMS_PER_PAGE);
+
+          let html = `
+            <button onclick="openUploadModal('artist-images', '${artist.id}', '${activeFolder.id}')" class="card-hover aspect-[3/4] rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500 bg-slate-900/40 flex flex-col items-center justify-center p-4 text-center gap-2">
+              <span class="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-2xl font-bold">+</span>
+              <span class="text-sm font-bold text-slate-200">Subir a esta Carpeta</span>
+            </button>
+          `;
+
+          html += pageSlice.map((img, idx) => {
+            const globalIndex = (state.page - 1) * ITEMS_PER_PAGE + idx;
+            const isSelected = state.selectedImageIds.has(img.id);
+            const sizeLabel = formatFileSize(getItemEffectiveSize(img));
+            return `
+              <div onclick="${state.bulkSelectMode ? `toggleImageSelection('${img.id}')` : `openLightboxFromContext('artist', '${artist.id}', '${activeFolder.id}', ${globalIndex})`}" class="card-hover group relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border ${isSelected ? 'border-indigo-400 ring-2 ring-indigo-500' : 'border-slate-800 hover:border-indigo-500/60'} cursor-pointer flex flex-col">
+                <div class="relative flex-1 bg-slate-800/80 overflow-hidden">
+                  ${renderCoverMediaHtml(img, '🖼️')}
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent"></div>
+
+                  <button onclick="event.stopPropagation(); toggleImageSelection('${img.id}')" class="absolute top-2 left-2 w-7 h-7 rounded-lg ${isSelected ? 'bg-indigo-600 text-white' : 'bg-black/60 text-slate-200'} text-xs font-bold flex items-center justify-center border border-white/20">
+                    ${isSelected ? '✓' : '☐'}
+                  </button>
+
+                  ${sizeLabel ? `<span class="absolute bottom-11 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] font-semibold text-indigo-200">${sizeLabel}</span>` : ''}
+
+                  <div class="absolute top-2 right-2 flex items-center gap-1" onclick="event.stopPropagation()">
+                    <button onclick="toggleFavorite('artist-image', '${artist.id}', '${activeFolder.id}', '${img.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
+                      ${img.favorite ? '⭐' : '☆'}
+                    </button>
+                    <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, folderId: activeFolder.id, itemId: img.id, currentTitle: img.title, currentTags: img.tags || [] })})' class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
+                      🏷️
+                    </button>
+                    <button onclick="deleteSubItem('artist-image', '${artist.id}', '${activeFolder.id}', '${img.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-rose-300 flex items-center justify-center">
+                      🗑️
+                    </button>
+                  </div>
+
+                  <div class="absolute bottom-2 left-2.5 right-2.5">
+                    <div class="text-xs font-semibold text-white truncate">${escapeHtml(img.title)}</div>
+                    <div class="flex flex-wrap gap-1 mt-1">
+                      ${(img.tags || []).slice(0, 3).map(t => `<span onclick="event.stopPropagation(); toggleTagFilter('${escapeHtml(t)}')" class="px-1.5 py-0.5 rounded bg-indigo-500/25 hover:bg-indigo-500/50 text-indigo-200 text-[9px]">#${escapeHtml(t)}</span>`).join('')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          grid.innerHTML = html;
+          renderPagination(pagination, totalPages, paginationTop);
+          hydrateDriveImages();
+          return;
+        }
+
+        // NIVEL RAÍZ DEL ARTISTA: CARPETAS DEL ARTISTA + IMÁGENES SUELTAS
         breadcrumb.innerHTML = `
           <button onclick="selectSection('artistas')" class="hover:text-indigo-400">${sectionNames.artistas}</button>
           <span class="text-slate-600">/</span>
@@ -5924,21 +6522,74 @@
             ☑️ Seleccionar varias
           </button>
           <button onclick="openArtistModal('artistas', '${artist.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">✏️ Artista</button>
-          <button onclick="openUploadModal('artist-images', '${artist.id}')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow">+ Subir Imágenes</button>
+          <button onclick="openArtistFolderModal('${artist.id}')" class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs sm:text-sm font-bold shadow">+ Nueva Carpeta</button>
+          <button onclick="openUploadModal('artist-images', '${artist.id}', null)" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow">+ Subir Imágenes</button>
         `;
 
+        const filteredFolders = sortItems(
+          (artist.folders || []).filter(f => matchesSearchAndTag(f.name, f.tags)),
+          'name'
+        );
         const filteredImages = getFilteredArtistImages(artist);
         const totalPages = Math.max(1, Math.ceil(filteredImages.length / ITEMS_PER_PAGE));
         if (state.page > totalPages) state.page = totalPages;
         const pageSlice = filteredImages.slice((state.page - 1) * ITEMS_PER_PAGE, state.page * ITEMS_PER_PAGE);
 
         let html = `
-          <button onclick="openUploadModal('artist-images', '${artist.id}')" class="card-hover aspect-[3/4] rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500 bg-slate-900/40 flex flex-col items-center justify-center p-4 text-center gap-2">
+          <button onclick="openUploadModal('artist-images', '${artist.id}', null)" class="card-hover aspect-[3/4] rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500 bg-slate-900/40 flex flex-col items-center justify-center p-4 text-center gap-2">
             <span class="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-2xl font-bold">+</span>
             <span class="text-sm font-bold text-slate-200">Subir Imágenes</span>
           </button>
         `;
 
+        // TARJETAS DE CARPETAS DEL ARTISTA (SOLO EN PÁGINA 1 PARA NO REPETIRLAS)
+        if (state.page === 1 && filteredFolders.length > 0) {
+          html += filteredFolders.map(folder => {
+            const firstImg = (folder.images || [])[0] || {};
+            const cover = {
+              driveId: folder.coverDriveId || firstImg.driveId || '',
+              url: folder.coverUrl || firstImg.url || ''
+            };
+            const folderSize = formatFileSize(getItemEffectiveSize(folder));
+            return `
+              <div onclick="openArtistFolder('${artist.id}', '${folder.id}')" class="card-hover group relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-amber-500/40 hover:border-amber-400 cursor-pointer flex flex-col">
+                <div class="relative flex-1 bg-slate-800/80 overflow-hidden">
+                  ${renderCoverMediaHtml(cover, '📁')}
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent"></div>
+
+                  <span class="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-amber-600/90 text-[10px] font-bold text-white shadow">
+                    📁 Carpeta
+                  </span>
+
+                  <div class="absolute top-2 right-2 flex items-center gap-1" onclick="event.stopPropagation()">
+                    <button onclick="toggleFavorite('artist-folder', '${artist.id}', '${folder.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
+                      ${folder.favorite ? '⭐' : '☆'}
+                    </button>
+                    <button onclick="openArtistFolderModal('${artist.id}', '${folder.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
+                      ✏️
+                    </button>
+                    <button onclick="deleteArtistFolder('${artist.id}', '${folder.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-rose-300 flex items-center justify-center">
+                      🗑️
+                    </button>
+                  </div>
+
+                  <div class="absolute bottom-2.5 left-3 right-3">
+                    <div class="font-bold text-sm text-amber-200 truncate">📁 ${escapeHtml(folder.name)}</div>
+                    <div class="text-[11px] text-slate-300 flex items-center justify-between gap-1">
+                      <span>${(folder.images || []).length} imágenes</span>
+                      ${folderSize ? `<span class="text-indigo-300 font-semibold">${folderSize}</span>` : ''}
+                    </div>
+                    <div class="flex flex-wrap gap-1 mt-1">
+                      ${(folder.tags || []).slice(0, 3).map(t => `<span onclick="event.stopPropagation(); toggleTagFilter('${escapeHtml(t)}')" class="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/40 text-amber-200 text-[9px]">#${escapeHtml(t)}</span>`).join('')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // IMÁGENES SUELTAS DEL ARTISTA
         html += pageSlice.map((img, idx) => {
           const globalIndex = (state.page - 1) * ITEMS_PER_PAGE + idx;
           const isSelected = state.selectedImageIds.has(img.id);
@@ -5959,7 +6610,7 @@
                   <button onclick="toggleFavorite('artist-image', '${artist.id}', null, '${img.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                     ${img.favorite ? '⭐' : '☆'}
                   </button>
-                  <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, itemId: img.id, currentTitle: img.title, currentTags: img.tags || [] })})' class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
+                  <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, folderId: null, itemId: img.id, currentTitle: img.title, currentTags: img.tags || [] })})' class="w-7 h-7 rounded-lg bg-black/60 text-xs flex items-center justify-center">
                     🏷️
                   </button>
                   <button onclick="deleteSubItem('artist-image', '${artist.id}', null, '${img.id}')" class="w-7 h-7 rounded-lg bg-black/60 text-xs text-rose-300 flex items-center justify-center">
@@ -6141,13 +6792,30 @@
                   <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-purple-600/90 text-[10px] font-bold text-white">Artista</span>
                   <div class="absolute bottom-2.5 left-3 right-3">
                     <div class="font-bold text-sm text-white truncate">${escapeHtml(artist.name)}</div>
-                    <div class="text-[11px] text-slate-300">${(artist.images || []).length} imágenes</div>
+                    <div class="text-[11px] text-slate-300">${(artist.folders || []).length} carpetas • ${(artist.images || []).length} sueltas</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          } else if (entry.kind === 'folder') {
+            const { artist, folder } = entry;
+            const firstImg = (folder.images || [])[0] || {};
+            const cover = { driveId: folder.coverDriveId || firstImg.driveId || '', url: folder.coverUrl || firstImg.url || '' };
+            return `
+              <div onclick="openArtistFolder('${artist.id}', '${folder.id}')" class="card-hover relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-amber-500/40 hover:border-amber-400 cursor-pointer flex flex-col">
+                <div class="relative flex-1 bg-slate-800/80 overflow-hidden">
+                  ${renderCoverMediaHtml(cover, '📁')}
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent"></div>
+                  <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-amber-600/90 text-[10px] font-bold text-white">📁 Carpeta</span>
+                  <div class="absolute bottom-2.5 left-3 right-3">
+                    <div class="font-bold text-sm text-amber-200 truncate">📁 ${escapeHtml(folder.name)}</div>
+                    <div class="text-[11px] text-slate-300 truncate">${escapeHtml(artist.name)} • ${(folder.images || []).length} imgs</div>
                   </div>
                 </div>
               </div>
             `;
           } else {
-            const { artist, image } = entry;
+            const { artist, folder, image } = entry;
             const sizeLabel = formatFileSize(getItemEffectiveSize(image));
             return `
               <div onclick='openLightbox([${JSON.stringify(image).replace(/'/g, '&#39;')}], 0)' class="card-hover relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-purple-500/60 cursor-pointer flex flex-col">
@@ -6155,12 +6823,12 @@
                   ${renderCoverMediaHtml(image, '🖼️')}
                   <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
                   <div class="absolute top-2 right-2" onclick="event.stopPropagation()">
-                    <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, itemId: image.id, currentTitle: image.title, currentTags: image.tags || [] })})' class="w-7 h-7 rounded-lg bg-black/65 text-xs flex items-center justify-center">🏷️</button>
+                    <button onclick='openEditTagsModal(${JSON.stringify({ type: 'artist-image', artistId: artist.id, folderId: folder ? folder.id : null, itemId: image.id, currentTitle: image.title, currentTags: image.tags || [] })})' class="w-7 h-7 rounded-lg bg-black/65 text-xs flex items-center justify-center">🏷️</button>
                   </div>
                   ${sizeLabel ? `<span class="absolute bottom-11 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] font-semibold text-indigo-200">${sizeLabel}</span>` : ''}
                   <div class="absolute bottom-2 left-2.5 right-2.5">
                     <div class="text-xs font-semibold text-white truncate">${escapeHtml(image.title)}</div>
-                    <div class="text-[10px] text-purple-300 truncate">🎨 ${escapeHtml(artist.name)}</div>
+                    <div class="text-[10px] text-purple-300 truncate">🎨 ${escapeHtml(artist.name)}${folder ? ` / 📁 ${escapeHtml(folder.name)}` : ''}</div>
                   </div>
                 </div>
               </div>
@@ -6417,9 +7085,19 @@
       const favCards = [];
 
       for (const a of libraryData.artistas) {
+        for (const f of (a.folders || [])) {
+          if (f.favorite && matchesSearchAndTag(f.name, f.tags)) {
+            favCards.push({ kind: 'artist-folder', item: f, artist: a });
+          }
+          for (const img of (f.images || [])) {
+            if (img.favorite && matchesSearchAndTag(img.title, img.tags)) {
+              favCards.push({ kind: 'image', item: img, artist: a, folder: f });
+            }
+          }
+        }
         for (const img of (a.images || [])) {
           if (img.favorite && matchesSearchAndTag(img.title, img.tags)) {
-            favCards.push({ kind: 'image', item: img, artist: a });
+            favCards.push({ kind: 'image', item: img, artist: a, folder: null });
           }
         }
       }
@@ -6449,8 +7127,22 @@
       }
 
       grid.innerHTML = favCards.map(entry => {
-        const { kind, item, artist, comic } = entry;
+        const { kind, item, artist, comic, folder } = entry;
         const sizeLabel = formatFileSize(getItemEffectiveSize(item));
+        if (kind === 'artist-folder') {
+          const firstImg = (item.images || [])[0] || {};
+          const cover = { driveId: item.coverDriveId || firstImg.driveId || '', url: item.coverUrl || firstImg.url || '' };
+          return `
+            <div onclick="openArtistFolder('${artist.id}', '${item.id}')" class="card-hover relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-amber-500/40 cursor-pointer">
+              ${renderCoverMediaHtml(cover, '📁')}
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+              <div class="absolute bottom-2.5 left-3 right-3">
+                <div class="text-[10px] text-amber-300 font-bold">⭐ Carpeta • ${escapeHtml(artist.name)}</div>
+                <div class="text-sm font-bold text-white truncate">📁 ${escapeHtml(item.name)}</div>
+              </div>
+            </div>
+          `;
+        }
         if (kind === 'comic') {
           const firstPage = (item.pages || [])[0] || {};
           const cover = { driveId: item.coverDriveId || firstPage.driveId || '', url: item.coverUrl || firstPage.url || '' };
@@ -6483,7 +7175,7 @@
             <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
             ${sizeLabel ? `<span class="absolute bottom-11 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] font-semibold text-indigo-200">${sizeLabel}</span>` : ''}
             <div class="absolute bottom-2.5 left-3 right-3">
-              <div class="text-[10px] text-amber-300 font-bold">⭐ ${kind === 'page' ? escapeHtml(comic.title) : escapeHtml(artist.name)}</div>
+              <div class="text-[10px] text-amber-300 font-bold">⭐ ${kind === 'page' ? escapeHtml(comic.title) : `${escapeHtml(artist.name)}${folder ? ' / ' + escapeHtml(folder.name) : ''}`}</div>
               <div class="text-xs font-bold text-white truncate">${escapeHtml(item.title)}</div>
             </div>
           </div>
@@ -6495,8 +7187,15 @@
       if (artist.avatarDriveId || artist.avatarUrl) {
         return { driveId: artist.avatarDriveId || '', url: artist.avatarUrl || '' };
       }
-      if (section === 'artistas' && artist.images && artist.images.length > 0) {
-        return artist.images[0];
+      if (section === 'artistas') {
+        if (artist.images && artist.images.length > 0) {
+          return artist.images[0];
+        }
+        if (artist.folders && artist.folders.length > 0) {
+          const f = artist.folders[0];
+          const firstImg = (f.images || [])[0] || {};
+          return { driveId: f.coverDriveId || firstImg.driveId || '', url: f.coverUrl || firstImg.url || '' };
+        }
       }
       if (section === 'comics' && artist.comics && artist.comics.length > 0) {
         const c = artist.comics[0];
@@ -6544,17 +7243,19 @@
     // =========================================================================
     // VISOR TÁCTIL DE IMÁGENES / CÓMICS (MITAD IZQUIERDA AVANZA, DERECHA ATRÁS)
     // =========================================================================
-    function openLightboxFromContext(mode, artistId, comicId, index) {
+    function openLightboxFromContext(mode, artistId, subId, index) {
       if (mode === 'comic') {
         const artist = libraryData.comics.find(a => a.id === artistId);
-        const comic = artist ? artist.comics.find(c => c.id === comicId) : null;
+        const comic = artist ? artist.comics.find(c => c.id === subId) : null;
         if (!comic) return;
         const items = sortItems((comic.pages || []).filter(p => matchesSearchAndTag(p.title, p.tags)), 'title');
         openLightbox(items, index);
       } else if (mode === 'artist') {
         const artist = libraryData.artistas.find(a => a.id === artistId);
         if (!artist) return;
-        const items = getFilteredArtistImages(artist);
+        const container = subId ? (artist.folders || []).find(f => f.id === subId) : artist;
+        if (!container) return;
+        const items = sortItems((container.images || []).filter(img => matchesSearchAndTag(img.title, img.tags)), 'title');
         openLightbox(items, index);
       }
     }
