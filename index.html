@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
   <title>Mi Biblioteca Multimedia — Tablet &amp; Google Drive</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <style>
@@ -852,6 +858,7 @@
       activityLogFileId: '',
       driveBlobCache: new Map(),
       driveSizeCache: new Map(),
+      pdfCoverCache: new Map(),
       driveTagsIndex: new Map(),
       driveAllTaggedFiles: [],
       imageHashCache: new Map()
@@ -2949,763 +2956,60 @@
           img.classList.remove('opacity-0');
         }
       });
+      hydratePdfFirstPageCovers();
     }
 
-    function getAllKnownDriveIds() {
-      const ids = new Set();
-      if (driveConfig.metadataFileId) ids.add(driveConfig.metadataFileId);
-      if (driveConfig.activityLogFileId) ids.add(driveConfig.activityLogFileId);
-
-      for (const a of libraryData.historia) {
-        if (a.avatarDriveId) ids.add(a.avatarDriveId);
-        for (const it of (a.items || [])) {
-          if (it.driveId) ids.add(it.driveId);
-        }
-      }
-      for (const a of libraryData.comics) {
-        if (a.avatarDriveId) ids.add(a.avatarDriveId);
-        for (const c of (a.comics || [])) {
-          if (c.coverDriveId) ids.add(c.coverDriveId);
-          for (const p of (c.pages || [])) {
-            if (p.driveId) ids.add(p.driveId);
-          }
-        }
-      }
-      for (const a of libraryData.artistas) {
-        if (a.avatarDriveId) ids.add(a.avatarDriveId);
-        for (const img of (a.images || [])) {
-          if (img.driveId) ids.add(img.driveId);
-        }
-        for (const f of (a.folders || [])) {
-          if (f.coverDriveId) ids.add(f.coverDriveId);
-          for (const img of (f.images || [])) {
-            if (img.driveId) ids.add(img.driveId);
-          }
-        }
-      }
-      return ids;
-    }
-
-    // =========================================================================
-    // EXTRACCIÓN UNIFICADA DE TAGS Y BÚSQUEDA PROFUNDA POR SECCIONES
-    // =========================================================================
-    function extractRawDriveMetadataTags(file) {
-      if (!file) return [];
-      const fromProps = file.appProperties && file.appProperties.tags ? file.appProperties.tags.split(',') : [];
-      const fromDesc = [];
-      if (file.description) {
-        const bracketMatches = file.description.match(/\[#([^\]]+)\]/g);
-        if (bracketMatches) {
-          bracketMatches.forEach(m => fromDesc.push(m.replace(/^\[#|\]$/g, '')));
-        }
-        const cleanedDesc = file.description.replace(/\[#[^\]]+\]/g, '');
-        const hashMatches = cleanedDesc.match(/#([^\s#,|]+)/g);
-        if (hashMatches) {
-          hashMatches.forEach(m => fromDesc.push(m.replace(/^#+/, '')));
-        }
-      }
-      return normalizeTags([...fromProps, ...fromDesc]);
-    }
-
-    function extractDriveFileTags(file) {
-      if (!file) return [];
-      const rawDriveTags = extractRawDriveMetadataTags(file);
-      const targetId = (file.mimeType === 'application/vnd.google-apps.shortcut' && file.shortcutDetails)
-        ? file.shortcutDetails.targetId
-        : file.id;
-      const fromIndex = driveConfig.driveTagsIndex.get(file.id) || driveConfig.driveTagsIndex.get(targetId) || [];
-      const catalogMap = getCatalogTagsByDriveIdMap();
-      const fromCatalog = catalogMap.get(file.id) || catalogMap.get(targetId) || [];
-      return normalizeTags([...rawDriveTags, ...fromIndex, ...fromCatalog]);
-    }
-
-    async function runDeepUnifiedTagSearch(tagsList) {
-      const cleanTags = normalizeTags(tagsList);
-      if (!cleanTags.length) {
-        unifiedTagResults.tags = [];
-        return;
-      }
-
-      const matchesAllSelectedTags = (itemTags) => {
-        const norm = normalizeTags(itemTags);
-        return cleanTags.every(req => norm.includes(req));
-      };
-
-      unifiedTagResults = {
-        tags: cleanTags,
-        loading: true,
-        comics: [],
-        artistas: [],
-        historia: [],
-        drive: [],
-        expandedSections: { comics: false, artistas: false, historia: false, drive: false }
-      };
-
-      const seenDriveIdsInCatalog = new Set();
-
-      // 1. COMICS (solo tarjeta/portada del cómic)
-      for (const artist of (libraryData.comics || [])) {
-        const artistTags = normalizeTags([...(artist.tags || []), ...extractArtistNameTags(artist.name)]);
-        for (const comic of (artist.comics || [])) {
-          const combinedComicTags = normalizeTags([...artistTags, ...(comic.tags || [])]);
-          const anyPageMatches = (comic.pages || []).some(p =>
-            matchesAllSelectedTags([...combinedComicTags, ...(p.tags || [])])
-          );
-
-          if (matchesAllSelectedTags(combinedComicTags) || anyPageMatches) {
-            if (comic.coverDriveId) seenDriveIdsInCatalog.add(comic.coverDriveId);
-            for (const p of (comic.pages || [])) {
-              if (p.driveId) seenDriveIdsInCatalog.add(p.driveId);
-            }
-            unifiedTagResults.comics.push({
-              kind: 'comic',
-              artist,
-              comic
-            });
-          }
-        }
-      }
-
-      // 2. ARTISTAS (Artistas, carpetas dentro de artistas e imágenes)
-      for (const artist of (libraryData.artistas || [])) {
-        const artistTags = normalizeTags([...(artist.tags || []), ...extractArtistNameTags(artist.name)]);
-        if (matchesAllSelectedTags(artistTags)) {
-          unifiedTagResults.artistas.push({
-            kind: 'artist',
-            artist
-          });
-        }
-        for (const folder of (artist.folders || [])) {
-          const folderTags = normalizeTags([...artistTags, ...extractFolderNameTags(folder.name), ...(folder.tags || [])]);
-          if (matchesAllSelectedTags(folderTags)) {
-            unifiedTagResults.artistas.push({
-              kind: 'folder',
-              artist,
-              folder
-            });
-          }
-          for (const img of (folder.images || [])) {
-            if (matchesAllSelectedTags([...folderTags, ...(img.tags || [])])) {
-              if (img.driveId) seenDriveIdsInCatalog.add(img.driveId);
-              unifiedTagResults.artistas.push({
-                kind: 'folder-image',
-                artist,
-                folder,
-                image: img
-              });
-            }
-          }
-        }
-        for (const img of (artist.images || [])) {
-          if (matchesAllSelectedTags([...artistTags, ...(img.tags || [])])) {
-            if (img.driveId) seenDriveIdsInCatalog.add(img.driveId);
-            unifiedTagResults.artistas.push({
-              kind: 'image',
-              artist,
-              image: img
-            });
-          }
-        }
-      }
-
-      // 3. HISTORIA
-      for (const artist of (libraryData.historia || [])) {
-        const artistTags = normalizeTags([...(artist.tags || []), ...extractArtistNameTags(artist.name)]);
-        if (matchesAllSelectedTags(artistTags)) {
-          unifiedTagResults.historia.push({
-            kind: 'artist',
-            artist
-          });
-        }
-        for (const st of (artist.items || [])) {
-          if (matchesAllSelectedTags([...artistTags, ...(st.tags || [])])) {
-            if (st.driveId) seenDriveIdsInCatalog.add(st.driveId);
-            unifiedTagResults.historia.push({
-              kind: 'story',
-              artist,
-              story: st
-            });
-          }
-        }
-      }
-
-      // 4. GOOGLE DRIVE
-      const driveFoundMap = new Map();
-      for (const f of (driveConfig.driveAllTaggedFiles || [])) {
-        if (matchesAllSelectedTags(extractDriveFileTags(f))) {
-          driveFoundMap.set(f.id, f);
-        }
-      }
-
-      renderAll();
-
-      if (driveConfig.accessToken) {
-        try {
-          const primaryTag = cleanTags[0].replace(/'/g, "\\'");
-          const q = encodeURIComponent(`trashed=false and (description contains '${primaryTag}' or appProperties has { key='tags' and value='${primaryTag}' })`);
-          const baseUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
-          const liveFiles = await driveFetchAllPages(baseUrl);
-          for (const f of liveFiles) {
-            const fTags = extractDriveFileTags(f);
-            if (matchesAllSelectedTags(fTags)) {
-              driveFoundMap.set(f.id, f);
-              driveConfig.driveTagsIndex.set(f.id, fTags);
-            }
-          }
-        } catch (e) {
-          console.warn('Error en consulta en vivo de Drive para tags:', cleanTags, e);
-        }
-      }
-
-      unifiedTagResults.drive = Array.from(driveFoundMap.values()).map(f => ({
-        ...f,
-        inCatalog: seenDriveIdsInCatalog.has(f.id)
-      }));
-      unifiedTagResults.loading = false;
-      renderAll();
-    }
-
-    function clearUnifiedTagSearch() {
-      state.activeTags = [];
-      unifiedTagResults.tags = [];
-      driveBrowserState.isGlobalTagSearch = false;
-      renderAll();
-    }
-
-    // =========================================================================
-    // DETECTOR DE IMÁGENES DUPLICADAS (EN COLUMNA POR GRUPO / EN FILA COPIAS)
-    // =========================================================================
-    function openDuplicateFolderPickerModal() {
-      if (!driveConfig.accessToken) {
-        openDriveModal();
-        showToast('Conecta Google Drive primero para analizar carpetas');
-        return;
-      }
-      duplicateFinderState.pickerPath = [{ id: 'root', name: 'Mi Unidad' }];
-      openModal('dup-folder-picker-modal');
-      loadDupPickerFolders('root');
-    }
-
-    async function loadDupPickerFolders(folderId) {
-      const listEl = document.getElementById('dup-picker-folders-list');
-      const nameEl = document.getElementById('dup-picker-current-name');
-      const upBtn = document.getElementById('dup-picker-up-btn');
-
-      const current = duplicateFinderState.pickerPath[duplicateFinderState.pickerPath.length - 1];
-      nameEl.textContent = current.name;
-      if (duplicateFinderState.pickerPath.length > 1) upBtn.classList.remove('hidden');
-      else upBtn.classList.add('hidden');
-
-      listEl.innerHTML = '<div class="text-xs text-indigo-300 py-4 text-center">Cargando carpetas...</div>';
+    async function renderPdfFirstPageCoverDataUrl(sourceUrl) {
+      if (!sourceUrl || !window.pdfjsLib) return '';
       try {
-        const q = encodeURIComponent(`'${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-        const folders = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=name&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name)`);
+        const loadingTask = window.pdfjsLib.getDocument(sourceUrl);
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(1.2, 420 / Math.max(1, baseViewport.width));
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        return canvas.toDataURL('image/jpeg', 0.82);
+      } catch (e) {
+        console.warn('No se pudo generar portada de la 1ª hoja del PDF:', e);
+        return '';
+      }
+    }
 
-        if (!folders.length) {
-          listEl.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center">No hay más subcarpetas aquí. Pulsa "Analizar esta carpeta".</div>';
+    function hydratePdfFirstPageCovers() {
+      const pdfImgs = document.querySelectorAll('img[data-pdf-cover-drive-id], img[data-pdf-cover-url]');
+      pdfImgs.forEach(async (img) => {
+        if (img.dataset.pdfHydrated === '1') return;
+        img.dataset.pdfHydrated = '1';
+
+        const driveId = img.getAttribute('data-pdf-cover-drive-id') || '';
+        const directUrl = img.getAttribute('data-pdf-cover-url') || '';
+        const cacheKey = driveId || directUrl;
+        if (!cacheKey) return;
+
+        if (driveConfig.pdfCoverCache.has(cacheKey)) {
+          const cached = driveConfig.pdfCoverCache.get(cacheKey);
+          if (cached && img.isConnected) {
+            img.src = cached;
+            img.classList.remove('opacity-0');
+          }
           return;
         }
 
-        listEl.innerHTML = folders.map(f => `
-          <button type="button" onclick="enterDupPickerFolder('${f.id}', '${escapeHtml(f.name)}')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left text-xs text-slate-200">
-            <span class="flex items-center gap-2 truncate"><span>📁</span> <span class="truncate">${escapeHtml(f.name)}</span></span>
-            <span class="text-slate-500">→</span>
-          </button>
-        `).join('');
-      } catch (e) {
-        listEl.innerHTML = '<div class="text-xs text-rose-400 py-4 text-center">Error cargando carpetas.</div>';
-      }
-    }
+        const pdfUrl = directUrl || (driveId ? await resolveDriveBlobUrl(driveId) : '');
+        if (!pdfUrl) return;
 
-    function enterDupPickerFolder(folderId, folderName) {
-      duplicateFinderState.pickerPath.push({ id: folderId, name: folderName });
-      loadDupPickerFolders(folderId);
-    }
-
-    function navigateDupPickerUp() {
-      if (duplicateFinderState.pickerPath.length <= 1) return;
-      duplicateFinderState.pickerPath.pop();
-      const prev = duplicateFinderState.pickerPath[duplicateFinderState.pickerPath.length - 1];
-      loadDupPickerFolders(prev.id);
-    }
-
-    function confirmDupFolderSelection() {
-      const chosen = duplicateFinderState.pickerPath[duplicateFinderState.pickerPath.length - 1];
-      duplicateFinderState.targetFolderId = chosen.id;
-      duplicateFinderState.targetFolderName = chosen.name;
-      closeModal('dup-folder-picker-modal');
-      runDuplicateScanInFolder();
-    }
-
-    function useCurrentExplorerFolderForDuplicates() {
-      const current = driveBrowserState.path[driveBrowserState.path.length - 1];
-      if (!current) return;
-      duplicateFinderState.targetFolderId = current.id;
-      duplicateFinderState.targetFolderName = current.name;
-      selectSection('duplicates');
-      runDuplicateScanInFolder();
-    }
-
-    async function collectAllImagesForDuplicateScan(rootFolderId, includeSubfolders, maxDepth = 4) {
-      const collected = [];
-      const queue = [{ id: rootFolderId, folderPath: duplicateFinderState.targetFolderName, depth: 0 }];
-      const visitedFolders = new Set();
-
-      while (queue.length > 0) {
-        const { id, folderPath, depth } = queue.shift();
-        if (visitedFolders.has(id)) continue;
-        visitedFolders.add(id);
-
-        duplicateFinderState.progressText = `Listando imágenes en "${folderPath}"...`;
-        renderAll();
-
-        const q = encodeURIComponent(`'${id}' in parents and trashed=false`);
-        const children = await driveFetchAllPages(`https://www.googleapis.com/drive/v3/files?q=${q}&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,thumbnailLink,shortcutDetails)`);
-
-        for (const ch of children) {
-          const isShortcut = ch.mimeType === 'application/vnd.google-apps.shortcut' && ch.shortcutDetails;
-          const targetId = isShortcut ? ch.shortcutDetails.targetId : ch.id;
-          const effectiveMime = isShortcut ? (ch.shortcutDetails.targetMimeType || '') : (ch.mimeType || '');
-
-          if (effectiveMime.startsWith('image/')) {
-            collected.push({
-              id: targetId,
-              rawId: ch.id,
-              name: ch.name,
-              mimeType: effectiveMime,
-              size: Number(ch.size) || 0,
-              folderPath,
-              thumbnailLink: ch.thumbnailLink || ''
-            });
-          } else if (effectiveMime === 'application/vnd.google-apps.folder' && includeSubfolders && depth < maxDepth) {
-            queue.push({
-              id: targetId,
-              folderPath: `${folderPath} / ${ch.name}`,
-              depth: depth + 1
-            });
+        const coverDataUrl = await renderPdfFirstPageCoverDataUrl(pdfUrl);
+        if (coverDataUrl) {
+          driveConfig.pdfCoverCache.set(cacheKey, coverDataUrl);
+          if (img.isConnected) {
+            img.src = coverDataUrl;
+            img.classList.remove('opacity-0');
           }
-        }
-      }
-
-      return collected;
-    }
-
-    async function computeDuplicateVisualSignatureFromUrl(url) {
-      return new Promise((resolve) => {
-        if (!url) return resolve(null);
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          try {
-            const w = 13;
-            const h = 12;
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, h);
-            const data = ctx.getImageData(0, 0, w, h).data;
-
-            const gray = new Float32Array(w * h);
-            let sum = 0;
-            let sumR = 0, sumG = 0, sumB = 0;
-
-            for (let i = 0; i < w * h; i++) {
-              const r = data[i * 4];
-              const g = data[i * 4 + 1];
-              const b = data[i * 4 + 2];
-              sumR += r; sumG += g; sumB += b;
-              const lum = r * 0.299 + g * 0.587 + b * 0.114;
-              gray[i] = lum;
-              sum += lum;
-            }
-            const mean = sum / (w * h);
-
-            let bits = '';
-            for (let y = 0; y < h; y++) {
-              for (let x = 0; x < h; x++) {
-                const left = gray[y * w + x];
-                const right = gray[y * w + x + 1];
-                bits += left > right ? '1' : '0';
-                bits += left > mean ? '1' : '0';
-              }
-            }
-
-            const totalPx = w * h;
-            resolve({
-              bits,
-              r: Math.round(sumR / totalPx),
-              g: Math.round(sumG / totalPx),
-              b: Math.round(sumB / totalPx),
-              aspect: img.naturalHeight ? (img.naturalWidth / img.naturalHeight) : 1
-            });
-          } catch (e) {
-            resolve(null);
-          }
-        };
-        img.onerror = () => resolve(null);
-        img.src = url;
-      });
-    }
-
-    function getDuplicateSignatureDistance(sigA, sigB) {
-      if (!sigA || !sigB) return 9999;
-      if (Math.abs(sigA.aspect - sigB.aspect) > 0.18) return 9999;
-
-      let hamming = 0;
-      const len = Math.min(sigA.bits.length, sigB.bits.length);
-      for (let i = 0; i < len; i++) {
-        if (sigA.bits[i] !== sigB.bits[i]) hamming++;
-      }
-      const colorDiff = (Math.abs(sigA.r - sigB.r) + Math.abs(sigA.g - sigB.g) + Math.abs(sigA.b - sigB.b)) / 3;
-      return hamming + colorDiff * 0.35;
-    }
-
-    async function runDuplicateScanInFolder() {
-      if (!driveConfig.accessToken) {
-        openDriveModal();
-        showToast('Conecta Google Drive primero');
-        return;
-      }
-
-      duplicateFinderState.scanning = true;
-      duplicateFinderState.groups = [];
-      duplicateFinderState.totalScanned = 0;
-      duplicateFinderState.progressText = 'Buscando imágenes en la carpeta seleccionada...';
-      renderAll();
-
-      try {
-        const images = await collectAllImagesForDuplicateScan(
-          duplicateFinderState.targetFolderId,
-          duplicateFinderState.includeSubfolders
-        );
-        duplicateFinderState.totalScanned = images.length;
-
-        if (images.length < 2) {
-          duplicateFinderState.scanning = false;
-          duplicateFinderState.progressText = `Solo se encontró ${images.length} imagen en esta carpeta.`;
-          renderAll();
-          return;
-        }
-
-        const analyzed = [];
-        const batchSize = 8;
-
-        for (let i = 0; i < images.length; i += batchSize) {
-          duplicateFinderState.progressText = `Comparando imagen ${Math.min(i + batchSize, images.length)} de ${images.length}...`;
-          renderAll();
-
-          const batch = images.slice(i, i + batchSize);
-          await Promise.all(batch.map(async (item) => {
-            const cacheKey = `dup_sig_${item.id}`;
-            let sig = driveConfig.imageHashCache.get(cacheKey);
-            if (!sig) {
-              const url = await resolveDriveBlobUrl(item.id);
-              sig = await computeDuplicateVisualSignatureFromUrl(url);
-              if (sig) driveConfig.imageHashCache.set(cacheKey, sig);
-            }
-            if (sig) {
-              analyzed.push({ ...item, sig });
-            }
-          }));
-        }
-
-        analyzed.sort((a, b) => b.size - a.size);
-
-        const maxDist = Number(duplicateFinderState.sensitivity) || 12;
-        const visited = new Array(analyzed.length).fill(false);
-        const groups = [];
-
-        for (let i = 0; i < analyzed.length; i++) {
-          if (visited[i]) continue;
-          const group = [analyzed[i]];
-          visited[i] = true;
-
-          for (let j = i + 1; j < analyzed.length; j++) {
-            if (visited[j]) continue;
-            const dist = getDuplicateSignatureDistance(analyzed[i].sig, analyzed[j].sig);
-            if (dist <= maxDist) {
-              visited[j] = true;
-              group.push(analyzed[j]);
-            }
-          }
-
-          if (group.length >= 2) {
-            groups.push(group);
-          }
-        }
-
-        duplicateFinderState.groups = groups;
-        document.getElementById('count-duplicates-badge').textContent = groups.length > 0 ? `${groups.length} grupos` : 'Visual';
-        showToast(groups.length > 0
-          ? `👯 Se encontraron ${groups.length} grupo(s) de imágenes repetidas`
-          : '✅ No se encontraron imágenes repetidas en esta carpeta');
-      } catch (e) {
-        console.error('Error en detector de duplicados:', e);
-        showToast('⚠️ Error analizando imágenes duplicadas');
-      } finally {
-        duplicateFinderState.scanning = false;
-        duplicateFinderState.progressText = '';
-        renderAll();
-      }
-    }
-
-    async function deleteDuplicateItemFromGroup(groupIndex, driveId, fileName) {
-      const confirmed = await askYesNoConfirm({
-        title: 'Borrar copia duplicada',
-        message: `¿Enviar "${fileName}" a la papelera de Google Drive (y quitarla de tu biblioteca si estaba vinculada)?`,
-        doubleStep: true,
-        icon: '🗑️',
-        yesLabel: 'Sí, borrar copia',
-        noLabel: 'No'
-      });
-      if (!confirmed) return;
-
-      await trashDriveItemById(driveId);
-      removeDriveIdFromCatalog(driveId);
-      await persistLibrary(`Eliminada copia duplicada "${fileName}"`);
-
-      const grp = duplicateFinderState.groups[groupIndex];
-      if (grp) {
-        duplicateFinderState.groups[groupIndex] = grp.filter(item => item.id !== driveId);
-        if (duplicateFinderState.groups[groupIndex].length < 2) {
-          duplicateFinderState.groups.splice(groupIndex, 1);
-        }
-      }
-      document.getElementById('count-duplicates-badge').textContent = duplicateFinderState.groups.length > 0
-        ? `${duplicateFinderState.groups.length} grupos`
-        : 'Visual';
-      renderAll();
-      showToast(`🗑️ Copia "${fileName}" eliminada`);
-    }
-
-    function openDuplicateGroupLightbox(groupIndex, itemIndex) {
-      const grp = duplicateFinderState.groups[groupIndex];
-      if (!grp || !grp.length) return;
-      const items = grp.map(it => ({
-        id: it.id,
-        title: `${it.name} (${formatFileSize(it.size)})`,
-        driveId: it.id,
-        url: '',
-        tags: extractDriveFileTags(it)
-      }));
-      openLightbox(items, itemIndex);
-    }
-
-    function renderDuplicatesView(breadcrumb, actions, grid) {
-      breadcrumb.innerHTML = `
-        <span class="font-bold text-white">👯 Detector de Imágenes Duplicadas</span>
-        <span class="text-xs text-slate-400">(En columna cada grupo • En fila sus copias repetidas)</span>
-      `;
-
-      actions.innerHTML = `
-        <button onclick="openDuplicateFolderPickerModal()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow">
-          📂 Elegir carpeta de Drive
-        </button>
-        <button onclick="runDuplicateScanInFolder()" ${duplicateFinderState.scanning ? 'disabled' : ''} class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow">
-          🔍 Analizar ahora
-        </button>
-      `;
-
-      let html = `
-        <div class="col-span-full p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div class="text-xs text-slate-400">Carpeta seleccionada en Google Drive:</div>
-              <div class="text-sm sm:text-base font-bold text-indigo-300 flex items-center gap-2">
-                <span>📁 ${escapeHtml(duplicateFinderState.targetFolderName)}</span>
-                ${duplicateFinderState.totalScanned > 0 ? `<span class="text-xs text-slate-400 font-normal">(${duplicateFinderState.totalScanned} imágenes revisadas)</span>` : ''}
-              </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-4 text-xs">
-              <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
-                <input type="checkbox" ${duplicateFinderState.includeSubfolders ? 'checked' : ''} onchange="duplicateFinderState.includeSubfolders = this.checked" class="w-4 h-4 accent-indigo-500" />
-                <span>Incluir subcarpetas</span>
-              </label>
-
-              <div class="flex items-center gap-2">
-                <span class="text-slate-400">Tolerancia:</span>
-                <select onchange="duplicateFinderState.sensitivity = Number(this.value)" class="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white">
-                  <option value="6" ${duplicateFinderState.sensitivity === 6 ? 'selected' : ''}>Estricta (Idénticas)</option>
-                  <option value="10" ${duplicateFinderState.sensitivity === 10 ? 'selected' : ''}>Normal (Distinto peso / resolución)</option>
-                  <option value="18" ${duplicateFinderState.sensitivity === 18 ? 'selected' : ''}>Amplia (Recortes o ediciones leves)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          ${duplicateFinderState.scanning ? `
-            <div class="p-3 rounded-xl bg-indigo-950/70 border border-indigo-500/40 text-xs text-indigo-200 flex items-center gap-2.5">
-              <svg class="animate-spin h-4 w-4 text-indigo-400 shrink-0" viewBox="0 0 24 24" fill="none">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-              </svg>
-              <span>${escapeHtml(duplicateFinderState.progressText || 'Analizando imágenes...')}</span>
-            </div>
-          ` : ''}
-        </div>
-      `;
-
-      if (!duplicateFinderState.scanning && duplicateFinderState.groups.length === 0) {
-        html += `
-          <div class="col-span-full py-14 text-center space-y-2 bg-slate-900/40 rounded-2xl border border-slate-800/80">
-            <div class="text-4xl">👯</div>
-            <div class="text-sm font-bold text-slate-200">
-              ${duplicateFinderState.totalScanned > 0
-                ? 'No se encontraron imágenes duplicadas en esta carpeta.'
-                : 'Pulsa "Elegir carpeta de Drive" y luego "Analizar ahora" para detectar imágenes repetidas.'}
-            </div>
-            <p class="text-xs text-slate-400 max-w-md mx-auto">
-              Detecta imágenes idénticas aunque una pese 3 MB y la copia pese 600 KB o tenga otro nombre.
-            </p>
-          </div>
-        `;
-        grid.innerHTML = html;
-        return;
-      }
-
-      html += `
-        <div class="col-span-full space-y-4">
-          ${duplicateFinderState.groups.map((group, gIdx) => `
-            <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
-              <div class="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
-                <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-0.5 rounded-full bg-rose-600/30 border border-rose-500/40 text-rose-200 text-xs font-bold">
-                    Grupo #${gIdx + 1}
-                  </span>
-                  <span class="text-xs font-semibold text-slate-300">${group.length} copias repetidas de la misma imagen</span>
-                </div>
-                <span class="text-[11px] text-slate-400">Ordenadas de mayor a menor peso</span>
-              </div>
-
-              <div class="flex items-stretch gap-3 overflow-x-auto pb-2">
-                ${group.map((item, itemIdx) => {
-                  const isLargest = itemIdx === 0;
-                  const sizeLabel = formatFileSize(item.size) || 'Peso desconocido';
-                  return `
-                    <div class="w-44 sm:w-52 shrink-0 rounded-xl overflow-hidden bg-slate-950 border ${isLargest ? 'border-emerald-500/60' : 'border-slate-800'} flex flex-col">
-                      <div onclick="openDuplicateGroupLightbox(${gIdx}, ${itemIdx})" class="relative aspect-[3/4] bg-slate-800/80 overflow-hidden cursor-pointer">
-                        <img data-drive-id="${item.id}" src="" alt="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
-
-                        <span class="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold ${isLargest ? 'bg-emerald-600 text-white' : 'bg-amber-600/90 text-white'}">
-                          ${isLargest ? '⭐ Mayor peso' : `Copia #${itemIdx + 1}`}
-                        </span>
-
-                        <span class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/80 text-xs font-bold text-indigo-200 border border-indigo-500/30">
-                          ${sizeLabel}
-                        </span>
-                      </div>
-
-                      <div class="p-2.5 flex-1 flex flex-col justify-between gap-2">
-                        <div>
-                          <div class="text-xs font-semibold text-white truncate" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-                          <div class="text-[10px] text-slate-400 truncate" title="${escapeHtml(item.folderPath)}">📁 ${escapeHtml(item.folderPath)}</div>
-                        </div>
-
-                        <button onclick="deleteDuplicateItemFromGroup(${gIdx}, '${item.id}', '${escapeHtml(item.name)}')" class="w-full py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 border border-rose-500/40 text-rose-200 hover:text-white font-bold text-xs transition">
-                          🗑️ Borrar esta copia
-                        </button>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-
-      grid.innerHTML = html;
-    }
-
-    // =========================================================================
-    // EXPLORADOR DIRECTO DE GOOGLE DRIVE
-    // =========================================================================
-    async function loadDriveBrowserFolder(folderId = 'root') {
-      if (!driveConfig.accessToken) return;
-      driveBrowserState.isGlobalTagSearch = false;
-      driveBrowserState.loading = true;
-      driveBrowserState.selectedIds.clear();
-      renderAll();
-
-      try {
-        const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-        const baseUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=folder,name&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=nextPageToken,files(id,name,mimeType,size,parents,createdTime,description,appProperties,shortcutDetails)`;
-        driveBrowserState.items = await driveFetchAllPages(baseUrl);
-
-        for (const f of driveBrowserState.items) {
-          if (f.id && f.size) {
-            driveConfig.driveSizeCache.set(f.id, Number(f.size));
-          }
-          const rawTags = extractRawDriveMetadataTags(f);
-          if (rawTags.length) {
-            const prev = driveConfig.driveTagsIndex.get(f.id) || [];
-            driveConfig.driveTagsIndex.set(f.id, normalizeTags([...prev, ...rawTags]));
-          }
-        }
-      } catch (e) {
-        console.error('Error cargando carpeta de Drive:', e);
-        showToast('⚠️ Error al leer esa carpeta de Google Drive');
-        driveBrowserState.items = [];
-      } finally {
-        driveBrowserState.loading = false;
-        state.page = 1;
-        renderAll();
-        hydrateDriveFolderCovers();
-      }
-    }
-
-    async function findRandomImageInNearestFolder(folderId, depth = 0) {
-      if (!driveConfig.accessToken || !folderId || depth > 3) return null;
-      if (driveBrowserState.folderCoverCache.has(folderId)) {
-        return driveBrowserState.folderCoverCache.get(folderId);
-      }
-
-      try {
-        const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-        const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=60&includeItemsFromAllDrives=true&supportsAllDrives=true&fields=files(id,mimeType,shortcutDetails)`);
-        const data = await res.json();
-        const files = data.files || [];
-
-        const directImages = files.filter(f => (f.mimeType || '').startsWith('image/'));
-        if (directImages.length > 0) {
-          const picked = directImages[Math.floor(Math.random() * directImages.length)];
-          driveBrowserState.folderCoverCache.set(folderId, picked.id);
-          return picked.id;
-        }
-
-        const subFolders = files.filter(f =>
-          f.mimeType === 'application/vnd.google-apps.folder' ||
-          (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails && f.shortcutDetails.targetMimeType === 'application/vnd.google-apps.folder')
-        );
-        const shuffled = [...subFolders].sort(() => Math.random() - 0.5);
-        for (const sub of shuffled) {
-          const targetSubId = sub.mimeType === 'application/vnd.google-apps.shortcut' ? sub.shortcutDetails.targetId : sub.id;
-          const nestedId = await findRandomImageInNearestFolder(targetSubId, depth + 1);
-          if (nestedId) {
-            driveBrowserState.folderCoverCache.set(folderId, nestedId);
-            return nestedId;
-          }
-        }
-      } catch (e) {}
-
-      driveBrowserState.folderCoverCache.set(folderId, null);
-      return null;
-    }
-
-    function hydrateDriveFolderCovers() {
-      const folderImgs = document.querySelectorAll('img[data-folder-cover-id]');
-      folderImgs.forEach(async (img) => {
-        const folderId = img.getAttribute('data-folder-cover-id');
-        if (!folderId) return;
-        const coverImageId = await findRandomImageInNearestFolder(folderId);
-        if (!coverImageId || !img.isConnected) return;
-        const url = await resolveDriveBlobUrl(coverImageId);
-        if (url && img.isConnected) {
-          img.src = url;
-          img.classList.remove('opacity-0');
         }
       });
     }
@@ -6956,34 +6260,42 @@
         html += items.map(st => {
           const icon = getMimeIcon(st.mimeType);
           const sizeLabel = formatFileSize(getItemEffectiveSize(st));
+          const isPdf = (st.mimeType || '').includes('pdf');
           return `
             <div onclick='openStoryViewerById("${artist.id}", "${st.id}")' class="card-hover relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-indigo-500/60 cursor-pointer flex flex-col justify-between p-4">
-              <div class="flex items-start justify-between">
-                <span class="text-3xl">${icon}</span>
+              ${isPdf ? `
+                <div class="absolute inset-0 bg-slate-800/90 flex items-center justify-center">
+                  <span class="text-5xl opacity-40">📕</span>
+                  <img ${st.driveId ? `data-pdf-cover-drive-id="${st.driveId}"` : `data-pdf-cover-url="${st.url || ''}"`} src="" alt="" class="opacity-0 transition-opacity duration-300 absolute inset-0 w-full h-full object-cover object-top" />
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-black/30"></div>
+                </div>
+              ` : ''}
+              <div class="relative z-10 flex items-start justify-between">
+                <span class="${isPdf ? 'px-2 py-0.5 rounded-md bg-rose-600/90 text-[10px] font-bold text-white shadow' : 'text-3xl'}">${isPdf ? '📕 PDF' : icon}</span>
                 <div class="flex items-center gap-1" onclick="event.stopPropagation()">
-                  <button onclick="toggleFavorite('story-item', '${artist.id}', null, '${st.id}')" class="w-7 h-7 rounded-lg bg-slate-800 text-xs flex items-center justify-center">
+                  <button onclick="toggleFavorite('story-item', '${artist.id}', null, '${st.id}')" class="w-7 h-7 rounded-lg bg-slate-800/90 text-xs flex items-center justify-center">
                     ${st.favorite ? '⭐' : '☆'}
                   </button>
-                  <button onclick='openAppMoveModal(${JSON.stringify({ mode: 'story-item', artistId: artist.id, itemId: st.id, itemTitle: st.title })})' title="Mover documento a otro artista" class="w-7 h-7 rounded-lg bg-slate-800 text-xs text-amber-300 flex items-center justify-center">
+                  <button onclick='openAppMoveModal(${JSON.stringify({ mode: 'story-item', artistId: artist.id, itemId: st.id, itemTitle: st.title })})' title="Mover documento a otro artista" class="w-7 h-7 rounded-lg bg-slate-800/90 text-xs text-amber-300 flex items-center justify-center">
                     📁
                   </button>
-                  <button onclick='openEditTagsModal(${JSON.stringify({ type: 'story-item', artistId: artist.id, itemId: st.id, currentTitle: st.title, currentTags: st.tags || [] })})' class="w-7 h-7 rounded-lg bg-slate-800 text-xs flex items-center justify-center">
+                  <button onclick='openEditTagsModal(${JSON.stringify({ type: 'story-item', artistId: artist.id, itemId: st.id, currentTitle: st.title, currentTags: st.tags || [] })})' class="w-7 h-7 rounded-lg bg-slate-800/90 text-xs flex items-center justify-center">
                     🏷️
                   </button>
-                  <button onclick="deleteSubItem('story-item', '${artist.id}', null, '${st.id}')" class="w-7 h-7 rounded-lg bg-slate-800 text-xs text-rose-300 flex items-center justify-center">
+                  <button onclick="deleteSubItem('story-item', '${artist.id}', null, '${st.id}')" class="w-7 h-7 rounded-lg bg-slate-800/90 text-xs text-rose-300 flex items-center justify-center">
                     🗑️
                   </button>
                 </div>
               </div>
 
-              <div>
+              <div class="relative z-10">
                 <div class="text-sm font-bold text-white line-clamp-2">${escapeHtml(st.title)}</div>
-                <div class="text-[10px] text-slate-400 mt-1 flex items-center justify-between gap-1">
+                <div class="text-[10px] text-slate-300 mt-1 flex items-center justify-between gap-1">
                   <span class="truncate">${escapeHtml(st.mimeType || 'Documento')}</span>
                   ${sizeLabel ? `<span class="text-indigo-300 font-semibold shrink-0">${sizeLabel}</span>` : ''}
                 </div>
                 <div class="flex flex-wrap gap-1 mt-2">
-                  ${(st.tags || []).slice(0, 3).map(t => `<span onclick="event.stopPropagation(); toggleTagFilter('${escapeHtml(t)}')" class="px-1.5 py-0.5 rounded bg-indigo-500/25 hover:bg-indigo-500/50 text-indigo-200 text-[9px]">#${escapeHtml(t)}</span>`).join('')}
+                  ${(st.tags || []).slice(0, 3).map(t => `<span onclick="event.stopPropagation(); toggleTagFilter('${escapeHtml(t)}')" class="px-1.5 py-0.5 rounded bg-indigo-500/35 hover:bg-indigo-500/60 text-indigo-100 text-[9px]">#${escapeHtml(t)}</span>`).join('')}
                 </div>
               </div>
             </div>
@@ -7159,15 +6471,23 @@
           } else {
             const { artist, story } = entry;
             const sizeLabel = formatFileSize(getItemEffectiveSize(story));
+            const isPdf = (story.mimeType || '').includes('pdf');
             return `
-              <div onclick='openStoryViewerById("${artist.id}", "${story.id}")' class="card-hover relative aspect-[3/4] rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/60 p-4 flex flex-col justify-between cursor-pointer">
-                <div class="flex items-start justify-between">
-                  <span class="text-3xl">${getMimeIcon(story.mimeType)}</span>
+              <div onclick='openStoryViewerById("${artist.id}", "${story.id}")' class="card-hover relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-amber-500/60 p-4 flex flex-col justify-between cursor-pointer">
+                ${isPdf ? `
+                  <div class="absolute inset-0 bg-slate-800/90 flex items-center justify-center">
+                    <span class="text-5xl opacity-40">📕</span>
+                    <img ${story.driveId ? `data-pdf-cover-drive-id="${story.driveId}"` : `data-pdf-cover-url="${story.url || ''}"`} src="" alt="" class="opacity-0 transition-opacity duration-300 absolute inset-0 w-full h-full object-cover object-top" />
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-black/30"></div>
+                  </div>
+                ` : ''}
+                <div class="relative z-10 flex items-start justify-between">
+                  <span class="${isPdf ? 'px-2 py-0.5 rounded-md bg-rose-600/90 text-[10px] font-bold text-white shadow' : 'text-3xl'}">${isPdf ? '📕 PDF' : getMimeIcon(story.mimeType)}</span>
                   <div onclick="event.stopPropagation()">
-                    <button onclick='openEditTagsModal(${JSON.stringify({ type: 'story-item', artistId: artist.id, itemId: story.id, currentTitle: story.title, currentTags: story.tags || [] })})' class="w-7 h-7 rounded-lg bg-slate-800 text-xs flex items-center justify-center">🏷️</button>
+                    <button onclick='openEditTagsModal(${JSON.stringify({ type: 'story-item', artistId: artist.id, itemId: story.id, currentTitle: story.title, currentTags: story.tags || [] })})' class="w-7 h-7 rounded-lg bg-slate-800/90 text-xs flex items-center justify-center">🏷️</button>
                   </div>
                 </div>
-                <div>
+                <div class="relative z-10">
                   <div class="text-[10px] text-amber-300 font-bold truncate">${escapeHtml(artist.name)}</div>
                   <div class="text-sm font-bold text-white line-clamp-2">${escapeHtml(story.title)}</div>
                   ${sizeLabel ? `<div class="text-[10px] text-indigo-300 mt-1">${sizeLabel}</div>` : ''}
@@ -7195,6 +6515,7 @@
           const targetId = isShortcut ? f.shortcutDetails.targetId : f.id;
           const effectiveMime = isShortcut ? (f.shortcutDetails.targetMimeType || '') : (f.mimeType || '');
           const isImage = effectiveMime.startsWith('image/');
+          const isPdf = effectiveMime.includes('pdf');
           const isSelected = driveBrowserState.selectedIds.has(f.id);
           const tags = extractDriveFileTags(f);
           const sizeLabel = formatFileSize(f.size);
@@ -7204,7 +6525,10 @@
               <div class="relative flex-1 bg-slate-800/80 overflow-hidden flex items-center justify-center">
                 ${isImage
                   ? `<img data-drive-id="${targetId}" src="" alt="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" />`
-                  : `<span class="text-5xl">${getMimeIcon(effectiveMime)}</span>`
+                  : isPdf
+                    ? `<span class="text-5xl opacity-40">📕</span>
+                       <img data-pdf-cover-drive-id="${targetId}" src="" alt="" class="opacity-0 transition-opacity duration-300 absolute inset-0 w-full h-full object-cover object-top" />`
+                    : `<span class="text-5xl">${getMimeIcon(effectiveMime)}</span>`
                 }
                 <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent"></div>
 
@@ -7311,6 +6635,7 @@
         const effectiveMime = isShortcut ? (f.shortcutDetails.targetMimeType || '') : (f.mimeType || '');
         const isFolder = effectiveMime === 'application/vnd.google-apps.folder';
         const isImage = effectiveMime.startsWith('image/');
+        const isPdf = effectiveMime.includes('pdf');
         const isSelected = driveBrowserState.selectedIds.has(f.id);
         const tags = extractDriveFileTags(f);
         const sizeLabel = isFolder ? '' : formatFileSize(f.size);
@@ -7323,7 +6648,10 @@
                    <img data-folder-cover-id="${targetId}" src="" alt="" class="opacity-0 transition-opacity duration-300 absolute inset-0 w-full h-full object-cover" />`
                 : isImage
                   ? `<img data-drive-id="${targetId}" src="" alt="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" />`
-                  : `<span class="text-5xl">${getMimeIcon(effectiveMime)}</span>`
+                  : isPdf
+                    ? `<span class="text-5xl opacity-40">📕</span>
+                       <img data-pdf-cover-drive-id="${targetId}" src="" alt="" class="opacity-0 transition-opacity duration-300 absolute inset-0 w-full h-full object-cover object-top" />`
+                    : `<span class="text-5xl">${getMimeIcon(effectiveMime)}</span>`
               }
               <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent"></div>
 
@@ -7458,10 +6786,18 @@
           `;
         }
         if (kind === 'story') {
+          const isPdf = (item.mimeType || '').includes('pdf');
           return `
-            <div onclick='openStoryViewerById("${artist.id}", "${item.id}")' class="card-hover relative aspect-[3/4] rounded-2xl bg-slate-900 border border-slate-800 p-4 flex flex-col justify-between cursor-pointer">
-              <span class="text-3xl">${getMimeIcon(item.mimeType)}</span>
-              <div>
+            <div onclick='openStoryViewerById("${artist.id}", "${item.id}")' class="card-hover relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 p-4 flex flex-col justify-between cursor-pointer">
+              ${isPdf ? `
+                <div class="absolute inset-0 bg-slate-800/90 flex items-center justify-center">
+                  <span class="text-5xl opacity-40">📕</span>
+                  <img ${item.driveId ? `data-pdf-cover-drive-id="${item.driveId}"` : `data-pdf-cover-url="${item.url || ''}"`} src="" alt="" class="opacity-0 transition-opacity duration-300 absolute inset-0 w-full h-full object-cover object-top" />
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-black/30"></div>
+                </div>
+              ` : ''}
+              <span class="relative z-10 text-3xl">${getMimeIcon(item.mimeType)}</span>
+              <div class="relative z-10">
                 <div class="text-[10px] text-amber-300 font-bold">⭐ Historia • ${escapeHtml(artist.name)}</div>
                 <div class="text-sm font-bold text-white line-clamp-2">${escapeHtml(item.title)}</div>
                 ${sizeLabel ? `<div class="text-[10px] text-indigo-300 mt-1">${sizeLabel}</div>` : ''}
@@ -7492,20 +6828,38 @@
           return artist.images[0];
         }
         if (artist.folders && artist.folders.length > 0) {
-          const f = artist.folders[0];
-          const firstImg = (f.images || [])[0] || {};
-          return { driveId: f.coverDriveId || firstImg.driveId || '', url: f.coverUrl || firstImg.url || '' };
+          const folderWithImg = artist.folders.find(f => f.coverDriveId || f.coverUrl || (f.images && f.images.length > 0));
+          if (folderWithImg) {
+            const firstImg = (folderWithImg.images || [])[0] || {};
+            return {
+              driveId: folderWithImg.coverDriveId || firstImg.driveId || '',
+              url: folderWithImg.coverUrl || firstImg.url || ''
+            };
+          }
         }
       }
       if (section === 'comics' && artist.comics && artist.comics.length > 0) {
-        const c = artist.comics[0];
-        const p = (c.pages || [])[0] || {};
-        return { driveId: c.coverDriveId || p.driveId || '', url: c.coverUrl || p.url || '' };
+        const firstComic = artist.comics[0];
+        const firstPage = (firstComic.pages || [])[0] || {};
+        return {
+          driveId: firstComic.coverDriveId || firstPage.driveId || '',
+          url: firstComic.coverUrl || firstPage.url || ''
+        };
+      }
+      if (section === 'historia' && artist.items && artist.items.length > 0) {
+        const firstPdf = artist.items.find(it => (it.mimeType || '').includes('pdf'));
+        if (firstPdf) {
+          return { pdfDriveId: firstPdf.driveId || '', pdfUrl: firstPdf.url || '' };
+        }
       }
       return { driveId: '', url: '' };
     }
 
     function renderCoverMediaHtml(mediaObj, fallbackEmoji = '🖼️') {
+      if (mediaObj && (mediaObj.pdfDriveId || mediaObj.pdfUrl)) {
+        return `<div class="w-full h-full flex items-center justify-center text-4xl text-slate-500">📕</div>
+                <img ${mediaObj.pdfDriveId ? `data-pdf-cover-drive-id="${mediaObj.pdfDriveId}"` : `data-pdf-cover-url="${mediaObj.pdfUrl}"`} src="" alt="" class="opacity-0 transition-opacity duration-300 absolute inset-0 w-full h-full object-cover object-top" />`;
+      }
       if (mediaObj && mediaObj.driveId) {
         return `<img data-drive-id="${mediaObj.driveId}" src="" alt="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" />`;
       }
@@ -7541,217 +6895,95 @@
     }
 
     // =========================================================================
-    // VISOR TÁCTIL DE IMÁGENES / CÓMICS (MITAD IZQUIERDA AVANZA, DERECHA ATRÁS)
+    // VISOR DE HISTORIAS Y LECTOR INTEGRADO DE PDF (PDF.JS PARA TABLET)
     // =========================================================================
-    function openLightboxFromContext(mode, artistId, subId, index) {
-      if (mode === 'comic') {
-        const artist = libraryData.comics.find(a => a.id === artistId);
-        const comic = artist ? artist.comics.find(c => c.id === subId) : null;
-        if (!comic) return;
-        const items = sortItems((comic.pages || []).filter(p => matchesSearchAndTag(p.title, p.tags)), 'title');
-        openLightbox(items, index);
-      } else if (mode === 'artist') {
-        const artist = libraryData.artistas.find(a => a.id === artistId);
-        if (!artist) return;
-        const container = subId ? (artist.folders || []).find(f => f.id === subId) : artist;
-        if (!container) return;
-        const items = sortItems((container.images || []).filter(img => matchesSearchAndTag(img.title, img.tags)), 'title');
-        openLightbox(items, index);
-      }
-    }
+    const pdfReaderState = {
+      pdfDoc: null,
+      pageNum: 1,
+      totalPages: 0,
+      scale: 1.35,
+      rendering: false,
+      pendingPage: null,
+      blobUrl: ''
+    };
 
-    function openLightbox(items, startIndex = 0) {
-      if (!items || !items.length) return;
-      lightboxState.items = items;
-      lightboxState.index = Math.max(0, Math.min(startIndex, items.length - 1));
-      resetLightboxZoom();
-      openModal('lightbox-modal');
-      renderLightboxSlide();
-    }
-
-    function closeLightbox() {
-      stopLightboxSlideshow();
-      closeModal('lightbox-modal');
-    }
-
-    async function renderLightboxSlide() {
-      const item = lightboxState.items[lightboxState.index];
-      if (!item) return;
-
-      document.getElementById('lightbox-counter').textContent = `${lightboxState.index + 1} / ${lightboxState.items.length}`;
-      document.getElementById('lightbox-title').textContent = item.title || '';
-      document.getElementById('lightbox-fav-btn').textContent = item.favorite ? '⭐' : '☆';
-      document.getElementById('lightbox-tags').innerHTML = (item.tags || [])
-        .map(t => `<span class="px-1.5 py-0.5 rounded bg-indigo-500/30 text-indigo-200 text-[10px]">#${escapeHtml(t)}</span>`)
-        .join('');
-
-      const imgEl = document.getElementById('lightbox-img');
-      const loadEl = document.getElementById('lightbox-loading');
-
-      if (item.url) {
-        loadEl.classList.add('hidden');
-        imgEl.src = item.url;
-      } else if (item.driveId) {
-        loadEl.classList.remove('hidden');
-        const resolved = await resolveDriveBlobUrl(item.driveId);
-        loadEl.classList.add('hidden');
-        if (resolved) imgEl.src = resolved;
-      }
-
-      const nextItem = lightboxState.items[lightboxState.index + 1];
-      if (nextItem && nextItem.driveId) {
-        resolveDriveBlobUrl(nextItem.driveId);
-      }
-    }
-
-    function stepLightbox(delta) {
-      const len = lightboxState.items.length;
-      if (!len) return;
-      lightboxState.index = (lightboxState.index + delta + len) % len;
-      resetLightboxZoom();
-      renderLightboxSlide();
-    }
-
-    function toggleLightboxFavorite() {
-      const item = lightboxState.items[lightboxState.index];
-      if (!item) return;
-      item.favorite = !item.favorite;
-      document.getElementById('lightbox-fav-btn').textContent = item.favorite ? '⭐' : '☆';
-      persistLibrary();
-      renderAll();
-    }
-
-    function toggleLightboxSlideshow() {
-      const btn = document.getElementById('lightbox-slideshow-btn');
-      if (lightboxState.slideshowTimer) {
-        stopLightboxSlideshow();
-      } else {
-        btn.textContent = '⏸️';
-        lightboxState.slideshowTimer = setInterval(() => stepLightbox(1), 4000);
-      }
-    }
-
-    function stopLightboxSlideshow() {
-      if (lightboxState.slideshowTimer) {
-        clearInterval(lightboxState.slideshowTimer);
-        lightboxState.slideshowTimer = null;
-      }
-      const btn = document.getElementById('lightbox-slideshow-btn');
-      if (btn) btn.textContent = '▶️';
-    }
-
-    function applyLightboxTransform() {
-      const img = document.getElementById('lightbox-img');
-      img.style.transform = `translate(${lightboxState.translateX}px, ${lightboxState.translateY}px) scale(${lightboxState.scale})`;
-    }
-
-    function resetLightboxZoom() {
-      lightboxState.scale = 1;
-      lightboxState.translateX = 0;
-      lightboxState.translateY = 0;
-      applyLightboxTransform();
-    }
-
-    (function initLightboxGestures() {
-      const viewport = document.getElementById('lightbox-viewport');
-      let lastTapTime = 0;
-      let startX = 0;
-      let startY = 0;
-      let startTranslateX = 0;
-      let startTranslateY = 0;
-      let isDragging = false;
-      let initialPinchDist = 0;
-      let initialScale = 1;
-
-      viewport.addEventListener('pointerdown', (e) => {
-        startX = e.clientX;
-        startY = e.clientY;
-        startTranslateX = lightboxState.translateX;
-        startTranslateY = lightboxState.translateY;
-        isDragging = true;
-      });
-
-      viewport.addEventListener('pointermove', (e) => {
-        if (!isDragging || lightboxState.scale <= 1) return;
-        lightboxState.translateX = startTranslateX + (e.clientX - startX);
-        lightboxState.translateY = startTranslateY + (e.clientY - startY);
-        applyLightboxTransform();
-      });
-
-      viewport.addEventListener('pointerup', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
-        const dx = Math.abs(e.clientX - startX);
-        const dy = Math.abs(e.clientY - startY);
-        if (dx > 12 || dy > 12) return;
-
-        const now = Date.now();
-        if (now - lastTapTime < 260) {
-          lastTapTime = 0;
-          if (lightboxState.scale > 1) {
-            resetLightboxZoom();
-          } else {
-            lightboxState.scale = 2.2;
-            applyLightboxTransform();
-          }
-          return;
-        }
-        lastTapTime = now;
-
-        setTimeout(() => {
-          if (lastTapTime !== now) return;
-          if (lightboxState.scale > 1) return;
-          const rect = viewport.getBoundingClientRect();
-          const clickX = e.clientX - rect.left;
-          if (clickX < rect.width / 2) {
-            stepLightbox(1);
-          } else {
-            stepLightbox(-1);
-          }
-        }, 265);
-      });
-
-      viewport.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
-          initialPinchDist = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-          );
-          initialScale = lightboxState.scale;
-        }
-      }, { passive: true });
-
-      viewport.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2 && initialPinchDist > 0) {
-          const dist = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-          );
-          lightboxState.scale = Math.max(1, Math.min(4, initialScale * (dist / initialPinchDist)));
-          if (lightboxState.scale === 1) {
-            lightboxState.translateX = 0;
-            lightboxState.translateY = 0;
-          }
-          applyLightboxTransform();
-        }
-      }, { passive: true });
-
-      document.addEventListener('keydown', (e) => {
-        const modal = document.getElementById('lightbox-modal');
-        if (modal.classList.contains('hidden')) return;
-        if (e.key === 'ArrowLeft') stepLightbox(1);
-        if (e.key === 'ArrowRight') stepLightbox(-1);
-        if (e.key === 'Escape') closeLightbox();
-      });
-    })();
-
-    // =========================================================================
-    // VISOR DE HISTORIAS (PDF / VIDEO / AUDIO / TEXTO)
-    // =========================================================================
     function openStoryViewerById(artistId, itemId) {
       const artist = libraryData.historia.find(a => a.id === artistId);
       const st = artist ? artist.items.find(i => i.id === itemId) : null;
       if (st) openStoryViewerItem(st);
+    }
+
+    async function renderIntegratedPdfPage(num) {
+      if (!pdfReaderState.pdfDoc) return;
+      pdfReaderState.rendering = true;
+
+      const indicatorEl = document.getElementById('pdf-page-indicator');
+      if (indicatorEl) {
+        indicatorEl.textContent = `Página ${num} de ${pdfReaderState.totalPages}`;
+      }
+
+      try {
+        const page = await pdfReaderState.pdfDoc.getPage(num);
+        const viewport = page.getViewport({ scale: pdfReaderState.scale });
+        const canvas = document.getElementById('pdf-render-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const outputScale = Math.min(window.devicePixelRatio || 1, 2);
+
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+        await page.render({ canvasContext: ctx, transform, viewport }).promise;
+
+        const scrollWrap = document.getElementById('pdf-canvas-scroll-area');
+        if (scrollWrap) scrollWrap.scrollTop = 0;
+      } finally {
+        pdfReaderState.rendering = false;
+        if (pdfReaderState.pendingPage !== null) {
+          const next = pdfReaderState.pendingPage;
+          pdfReaderState.pendingPage = null;
+          renderIntegratedPdfPage(next);
+        }
+      }
+    }
+
+    function queuePdfPageRender(num) {
+      if (!pdfReaderState.pdfDoc) return;
+      const clamped = Math.max(1, Math.min(num, pdfReaderState.totalPages));
+      pdfReaderState.pageNum = clamped;
+      if (pdfReaderState.rendering) {
+        pdfReaderState.pendingPage = clamped;
+      } else {
+        renderIntegratedPdfPage(clamped);
+      }
+    }
+
+    function stepPdfReaderPage(delta) {
+      if (!pdfReaderState.pdfDoc) return;
+      queuePdfPageRender(pdfReaderState.pageNum + delta);
+    }
+
+    function changePdfReaderZoom(delta) {
+      if (!pdfReaderState.pdfDoc) return;
+      pdfReaderState.scale = Math.max(0.6, Math.min(3.5, +(pdfReaderState.scale + delta).toFixed(2)));
+      const zoomLbl = document.getElementById('pdf-zoom-label');
+      if (zoomLbl) zoomLbl.textContent = `${Math.round((pdfReaderState.scale / 1.35) * 100)}%`;
+      queuePdfPageRender(pdfReaderState.pageNum);
+    }
+
+    async function fitPdfReaderToWidth() {
+      if (!pdfReaderState.pdfDoc) return;
+      const page = await pdfReaderState.pdfDoc.getPage(pdfReaderState.pageNum);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const container = document.getElementById('pdf-canvas-scroll-area');
+      const availWidth = container ? Math.max(280, container.clientWidth - 24) : window.innerWidth - 24;
+      pdfReaderState.scale = +(availWidth / baseViewport.width).toFixed(2);
+      const zoomLbl = document.getElementById('pdf-zoom-label');
+      if (zoomLbl) zoomLbl.textContent = `${Math.round((pdfReaderState.scale / 1.35) * 100)}%`;
+      queuePdfPageRender(pdfReaderState.pageNum);
     }
 
     async function openStoryViewerItem(item) {
@@ -7776,8 +7008,58 @@
       }
 
       const mime = item.mimeType || '';
-      if (mime.includes('pdf')) {
-        body.innerHTML = `<iframe src="${url}" class="w-full h-full rounded-xl bg-white"></iframe>`;
+      if (mime.includes('pdf') || String(item.title || '').toLowerCase().endsWith('.pdf')) {
+        if (!window.pdfjsLib) {
+          body.innerHTML = `<iframe src="${url}" class="w-full h-full rounded-xl bg-white"></iframe>`;
+          return;
+        }
+
+        try {
+          body.innerHTML = `<div class="text-sm text-indigo-300">Renderizando páginas del PDF...</div>`;
+          const loadingTask = window.pdfjsLib.getDocument(url);
+          const pdfDoc = await loadingTask.promise;
+          pdfReaderState.pdfDoc = pdfDoc;
+          pdfReaderState.totalPages = pdfDoc.numPages;
+          pdfReaderState.pageNum = 1;
+          pdfReaderState.blobUrl = url;
+
+          const firstPage = await pdfDoc.getPage(1);
+          const baseViewport = firstPage.getViewport({ scale: 1 });
+          const targetWidth = Math.min(window.innerWidth - 28, 920);
+          pdfReaderState.scale = Math.max(0.75, +(targetWidth / baseViewport.width).toFixed(2));
+
+          body.innerHTML = `
+            <div class="w-full h-full flex flex-col">
+              <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 mb-2 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+                <div class="flex items-center gap-1.5">
+                  <button onclick="stepPdfReaderPage(-1)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold">◀ Anterior</button>
+                  <span id="pdf-page-indicator" class="px-2.5 py-1 font-bold text-indigo-300">Página 1 de ${pdfDoc.numPages}</span>
+                  <button onclick="stepPdfReaderPage(1)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold">Siguiente ▶</button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="changePdfReaderZoom(-0.2)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold">−</button>
+                  <span id="pdf-zoom-label" class="px-1.5 text-slate-300 font-semibold">${Math.round((pdfReaderState.scale / 1.35) * 100)}%</span>
+                  <button onclick="changePdfReaderZoom(0.2)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold">+</button>
+                  <button onclick="fitPdfReaderToWidth()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 font-semibold">Ajustar ancho</button>
+                  <a href="${url}" download="${escapeHtml(item.title || 'documento')}.pdf" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200" title="Descargar PDF">📥</a>
+                </div>
+              </div>
+              <div id="pdf-canvas-scroll-area" class="flex-1 overflow-auto flex justify-center items-start bg-slate-950/80 rounded-xl p-2">
+                <canvas id="pdf-render-canvas" class="rounded-lg shadow-2xl bg-white"></canvas>
+              </div>
+            </div>
+          `;
+
+          await renderIntegratedPdfPage(1);
+        } catch (err) {
+          console.error('Error renderizando PDF con PDF.js:', err);
+          body.innerHTML = `
+            <div class="text-center space-y-3">
+              <div class="text-sm text-rose-400">No se pudo renderizar este PDF directamente.</div>
+              <a href="${url}" download="${escapeHtml(item.title || 'documento')}.pdf" class="inline-block px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm">📥 Descargar PDF</a>
+            </div>
+          `;
+        }
       } else if (mime.startsWith('video/')) {
         body.innerHTML = `<video src="${url}" controls autoplay class="max-h-full max-w-full rounded-xl"></video>`;
       } else if (mime.startsWith('audio/')) {
@@ -7788,6 +7070,7 @@
     }
 
     function closeStoryViewer() {
+      pdfReaderState.pdfDoc = null;
       document.getElementById('story-viewer-body').innerHTML = '';
       closeModal('story-viewer-modal');
     }
