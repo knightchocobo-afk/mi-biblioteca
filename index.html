@@ -3570,7 +3570,7 @@
       pdfDoc: null,
       pageNum: 1,
       numPages: 0,
-      scale: 1.25,
+      scale: 3.5,
       rendering: false
     };
 
@@ -3688,7 +3688,7 @@
           pdfViewerState.pdfDoc = pdf;
           pdfViewerState.numPages = pdf.numPages;
           pdfViewerState.pageNum = 1;
-          pdfViewerState.scale = window.innerWidth < 640 ? 0.9 : 1.3;
+          pdfViewerState.scale = 3.5;
           await renderPdfPageOnCanvas(1);
         } catch (e) {
           bodyEl.innerHTML = `<div class="text-sm text-rose-400">No se pudo renderizar el PDF. <a href="${srcUrl}" target="_blank" class="underline text-indigo-300">Abrir externamente</a></div>`;
