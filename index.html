@@ -639,7 +639,7 @@
 
         <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer pt-1">
           <input id="d2a-also-move-drive-folder" type="checkbox" checked class="w-4 h-4 accent-indigo-500" />
-          <span>📁 Organizar también estos archivos dentro de la carpeta del artista en Google Drive</span>
+          <span>📁 Mover realmente estos archivos/carpetas desde su carpeta original a la carpeta del artista en Google Drive</span>
         </label>
       </div>
 
@@ -2325,12 +2325,15 @@
         if (!metaRes.ok) return;
         const meta = await metaRes.json();
         const prevParents = Array.isArray(meta.parents) ? meta.parents : [];
-        if (prevParents.includes(newParentFolderId)) return;
-        const removeParam = prevParents.length ? `&removeParents=${encodeURIComponent(prevParents.join(','))}` : '';
-        await driveApiFetch(
-          `https://www.googleapis.com/drive/v3/files/${driveFileId}?addParents=${encodeURIComponent(newParentFolderId)}${removeParam}&supportsAllDrives=true&fields=id,parents`,
-          { method: 'PATCH' }
-        );
+        const parentsToRemove = prevParents.filter(pid => pid !== newParentFolderId);
+        if (!prevParents.includes(newParentFolderId) || parentsToRemove.length > 0) {
+          const addParam = !prevParents.includes(newParentFolderId) ? `addParents=${encodeURIComponent(newParentFolderId)}&` : '';
+          const removeParam = parentsToRemove.length ? `removeParents=${encodeURIComponent(parentsToRemove.join(','))}&` : '';
+          await driveApiFetch(
+            `https://www.googleapis.com/drive/v3/files/${driveFileId}?${addParam}${removeParam}supportsAllDrives=true&fields=id,parents`,
+            { method: 'PATCH' }
+          );
+        }
       } catch (e) {
         console.warn('No se pudo mover archivo/carpeta en Drive:', driveFileId, e);
       }
@@ -5834,7 +5837,8 @@
         if (!artist) return;
 
         const artistAutoTags = extractArtistNameTags(artist.name);
-        const artistDriveFolder = alsoMoveDrive ? await ensureTargetFolderForContext(sec, artist, null) : '';
+        const artistDriveFolder = await ensureTargetFolderForContext(sec, artist, null);
+        const movedDriveIds = new Set();
 
         if (sec === 'artistas') {
           const folderChoice = document.getElementById('d2a-artist-folder-select').value;
@@ -5859,21 +5863,38 @@
 
           for (const item of selected) {
             if (item.mimeType === 'application/vnd.google-apps.folder') {
-              const subFolder = fixedTargetFolder || {
-                id: generateId('afolder'),
-                name: item.name,
-                driveFolderId: item.id,
-                tags: normalizeTags([...artistAutoTags, ...extractFolderNameTags(item.name), ...extractDriveFileTags(item), ...extraTags]),
-                coverUrl: '',
-                coverDriveId: '',
-                createdAt: Date.now(),
-                images: []
-              };
-              if (!fixedTargetFolder) artist.folders.unshift(subFolder);
-              if (alsoMoveDrive && artistDriveFolder) await moveDriveFileToTargetParent(item.id, artistDriveFolder);
+              let subFolder = fixedTargetFolder || (artist.folders || []).find(
+                f => f.driveFolderId === item.id || f.name.toLowerCase() === item.name.toLowerCase()
+              );
+              if (!subFolder) {
+                subFolder = {
+                  id: generateId('afolder'),
+                  name: item.name,
+                  driveFolderId: fixedTargetFolder ? '' : item.id,
+                  tags: normalizeTags([...artistAutoTags, ...extractFolderNameTags(item.name), ...extractDriveFileTags(item), ...extraTags]),
+                  coverUrl: '',
+                  coverDriveId: '',
+                  createdAt: Date.now(),
+                  images: []
+                };
+                artist.folders.unshift(subFolder);
+              }
+              if (alsoMoveDrive) {
+                if (fixedTargetFolder) {
+                  const destSubDriveId = await ensureTargetFolderForContext('artistas', artist, subFolder);
+                  const imgsToMove = await fetchAllImagesInsideDriveFolder(item.id);
+                  for (const mImg of imgsToMove) {
+                    if (destSubDriveId) await moveDriveFileToTargetParent(mImg.id, destSubDriveId);
+                  }
+                } else if (artistDriveFolder) {
+                  await moveDriveFileToTargetParent(item.id, artistDriveFolder);
+                }
+              }
+              movedDriveIds.add(item.id);
 
               const imgs = await fetchAllImagesInsideDriveFolder(item.id);
               for (const img of imgs) {
+                removeDriveIdFromCatalog(img.id);
                 const tags = normalizeTags([...artistAutoTags, ...extractFolderNameTags(subFolder.name), ...extractDriveFileTags(img), ...extraTags]);
                 await updateDriveFileTagsMetadata(img.id, tags);
                 subFolder.images.unshift({
@@ -5888,6 +5909,7 @@
                 if (!subFolder.coverDriveId) subFolder.coverDriveId = img.id;
               }
             } else {
+              removeDriveIdFromCatalog(item.id);
               const targetFolder = fixedTargetFolder;
               const tags = normalizeTags([
                 ...artistAutoTags,
@@ -5900,6 +5922,7 @@
                 const destParent = targetFolder ? await ensureTargetFolderForContext('artistas', artist, targetFolder) : artistDriveFolder;
                 if (destParent) await moveDriveFileToTargetParent(item.id, destParent);
               }
+              movedDriveIds.add(item.id);
               const imgObj = {
                 id: generateId('img'),
                 title: (item.name || 'Imagen').replace(/\.[^/.]+$/, ''),
@@ -5926,21 +5949,38 @@
 
           for (const item of selected) {
             if (item.mimeType === 'application/vnd.google-apps.folder') {
-              const comic = fixedComic || {
-                id: generateId('comic'),
-                title: customComicTitle || item.name,
-                driveFolderId: item.id,
-                tags: normalizeTags([...artistAutoTags, ...extractDriveFileTags(item), ...extraTags]),
-                coverUrl: '',
-                coverDriveId: '',
-                createdAt: Date.now(),
-                pages: []
-              };
-              if (!fixedComic) artist.comics.unshift(comic);
-              if (alsoMoveDrive && artistDriveFolder) await moveDriveFileToTargetParent(item.id, artistDriveFolder);
+              let comic = fixedComic || (artist.comics || []).find(
+                c => c.driveFolderId === item.id || c.title.toLowerCase() === (customComicTitle || item.name).toLowerCase()
+              );
+              if (!comic) {
+                comic = {
+                  id: generateId('comic'),
+                  title: customComicTitle || item.name,
+                  driveFolderId: fixedComic ? '' : item.id,
+                  tags: normalizeTags([...artistAutoTags, ...extractDriveFileTags(item), ...extraTags]),
+                  coverUrl: '',
+                  coverDriveId: '',
+                  createdAt: Date.now(),
+                  pages: []
+                };
+                artist.comics.unshift(comic);
+              }
+              if (alsoMoveDrive) {
+                if (fixedComic) {
+                  const destComicDriveId = await ensureTargetFolderForContext('comics', artist, comic);
+                  const imgsToMove = await fetchAllImagesInsideDriveFolder(item.id);
+                  for (const mImg of imgsToMove) {
+                    if (destComicDriveId) await moveDriveFileToTargetParent(mImg.id, destComicDriveId);
+                  }
+                } else if (artistDriveFolder) {
+                  await moveDriveFileToTargetParent(item.id, artistDriveFolder);
+                }
+              }
+              movedDriveIds.add(item.id);
 
               const imgs = await fetchAllImagesInsideDriveFolder(item.id);
               for (const pg of imgs) {
+                removeDriveIdFromCatalog(pg.id);
                 const tags = normalizeTags([...artistAutoTags, ...(comic.tags || []), ...extractDriveFileTags(pg), ...extraTags]);
                 await updateDriveFileTagsMetadata(pg.id, tags);
                 comic.pages.push({
@@ -5955,6 +5995,7 @@
                 if (!comic.coverDriveId) comic.coverDriveId = pg.id;
               }
             } else {
+              removeDriveIdFromCatalog(item.id);
               if (!fixedComic) {
                 fixedComic = {
                   id: generateId('comic'),
@@ -5973,6 +6014,7 @@
                 const comicFolder = await ensureTargetFolderForContext('comics', artist, fixedComic);
                 if (comicFolder) await moveDriveFileToTargetParent(item.id, comicFolder);
               }
+              movedDriveIds.add(item.id);
               fixedComic.pages.push({
                 id: generateId('page'),
                 title: (item.name || 'Página').replace(/\.[^/.]+$/, ''),
@@ -5988,9 +6030,11 @@
         } else if (sec === 'historia') {
           for (const item of selected) {
             if (item.mimeType === 'application/vnd.google-apps.folder') continue;
+            removeDriveIdFromCatalog(item.id);
             const tags = normalizeTags([...artistAutoTags, ...extractDriveFileTags(item), ...extraTags]);
             await updateDriveFileTagsMetadata(item.id, tags);
             if (alsoMoveDrive && artistDriveFolder) await moveDriveFileToTargetParent(item.id, artistDriveFolder);
+            movedDriveIds.add(item.id);
             artist.items.unshift({
               id: generateId('story'),
               title: (item.name || 'Documento').replace(/\.[^/.]+$/, ''),
@@ -6004,6 +6048,10 @@
           }
         }
 
+        if (alsoMoveDrive && movedDriveIds.size > 0) {
+          driveBrowserState.items = driveBrowserState.items.filter(f => !movedDriveIds.has(f.id));
+        }
+
         driveBrowserState.selectedIds.clear();
         state.activeTags = [];
         state.section = sec;
@@ -6012,10 +6060,10 @@
         state.comicId = null;
         state.page = 1;
 
-        await persistLibrary(`Importados ${selected.length} elemento(s) desde Drive a ${artist.name}`);
+        await persistLibrary(`Movidos ${selected.length} elemento(s) desde Drive a ${artist.name}`);
         closeModal('drive-to-app-modal');
         renderAll();
-        showToast(`✅ Elementos pasados a ${artist.name}`);
+        showToast(`✅ Elementos movidos a ${artist.name}`);
       } finally {
         btn.disabled = false;
         btn.textContent = '✅ Pasar a Mi App';
