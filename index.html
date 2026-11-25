@@ -180,6 +180,12 @@
           ⊞
         </button>
 
+        <!-- MODO MINIATURA COMPLETA (LARGO/ANCHO NATURAL SIN RECORTE) -->
+        <button onclick="toggleFullThumbMode()" id="thumb-fit-btn" title="Alternar entre miniaturas completas adaptables y recorte uniforme" class="flex items-center gap-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:border-indigo-500 shrink-0">
+          <span>🖼️</span>
+          <span id="thumb-fit-label" class="hidden sm:inline">Recorte</span>
+        </button>
+
         <!-- BOTÓN ACTUALIZAR CARPETAS APP ↔ DRIVE -->
         <button onclick="syncFoldersBidirectionalWithDrive()" id="top-sync-folders-btn" title="Sincronizar carpetas faltantes entre la App y Google Drive" class="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/40 text-xs font-semibold text-emerald-200 shrink-0">
           <span>🔄</span>
@@ -762,16 +768,16 @@
       </div>
 
       <!-- INDICADORES VISUALES DE ZONA TÁCTIL -->
-      <div class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 px-2.5 py-2 rounded-full bg-black/45 text-white/75 text-xs">
+      <button type="button" onclick="event.stopPropagation(); stepLightbox(1);" aria-label="Siguiente imagen" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 px-3 py-2.5 rounded-full bg-black/60 hover:bg-indigo-600/80 border border-white/15 text-white text-xs font-semibold shadow-lg">
         ◀ Siguiente
-      </div>
-      <div class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 px-2.5 py-2 rounded-full bg-black/45 text-white/75 text-xs">
+      </button>
+      <button type="button" onclick="event.stopPropagation(); stepLightbox(-1);" aria-label="Imagen anterior" class="absolute right-3 top-1/2 -translate-y-1/2 z-20 px-3 py-2.5 rounded-full bg-black/60 hover:bg-indigo-600/80 border border-white/15 text-white text-xs font-semibold shadow-lg">
         Anterior ▶
-      </div>
+      </button>
     </div>
 
     <div class="px-4 py-2 bg-black/80 text-center text-[11px] text-slate-400">
-      Toca mitad izquierda: Siguiente (+1) • Mitad derecha: Anterior (−1) • Doble toque o pellizco: Zoom
+      Toca mitad izquierda o desliza: Siguiente (+1) • Mitad derecha: Anterior (−1) • Doble toque: Zoom
     </div>
   </div>
 
@@ -843,6 +849,7 @@
       sortBy: 'date-desc',
       page: 1,
       compactGrid: false,
+      fullThumbMode: localStorage.getItem('mi_boveda_full_thumb_mode') === '1',
       bulkSelectMode: false,
       selectedImageIds: new Set()
     };
@@ -1163,6 +1170,42 @@
       } else {
         grid.className = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5';
       }
+    }
+
+    function toggleFullThumbMode() {
+      state.fullThumbMode = !state.fullThumbMode;
+      try {
+        localStorage.setItem('mi_boveda_full_thumb_mode', state.fullThumbMode ? '1' : '0');
+      } catch (e) {}
+      updateThumbFitButtonUI();
+      renderAll();
+      showToast(state.fullThumbMode ? '🖼️ Miniaturas completas (adaptadas en largo y ancho)' : '📐 Miniaturas con recorte uniforme');
+    }
+
+    function updateThumbFitButtonUI() {
+      const btn = document.getElementById('thumb-fit-btn');
+      const lbl = document.getElementById('thumb-fit-label');
+      if (!btn || !lbl) return;
+      if (state.fullThumbMode) {
+        btn.className = 'flex items-center gap-1 px-3 py-2.5 rounded-xl bg-indigo-600/30 border border-indigo-500/60 text-xs font-semibold text-indigo-200 shrink-0';
+        lbl.textContent = 'Completa';
+      } else {
+        btn.className = 'flex items-center gap-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:border-indigo-500 shrink-0';
+        lbl.textContent = 'Recorte';
+      }
+    }
+
+    function getThumbWrapperClass(baseExtra = '') {
+      return state.fullThumbMode
+        ? `relative min-h-[140px] bg-slate-950/90 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`
+        : `relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
+    }
+
+    function getThumbImgClass(isDriveDelayed = false) {
+      const fade = isDriveDelayed ? 'opacity-0 transition-opacity duration-200' : 'transition-opacity duration-200';
+      return state.fullThumbMode
+        ? `${fade} w-full h-auto max-h-[420px] object-contain`
+        : `${fade} w-full h-full object-cover`;
     }
 
     let toastTimer = null;
@@ -3440,9 +3483,63 @@
       } else if (kind === 'artist') {
         const artist = libraryData.artistas.find(a => a.id === artistId);
         items = artist ? getFilteredArtistImages(artist) : [];
+      } else if (kind === 'drive-browser') {
+        const filtered = sortItems(
+          driveBrowserState.items.filter(f => matchesSearchAndTag(f.name, extractDriveFileTags(f))),
+          'name'
+        );
+        const imgFiles = filtered.filter(f => (f.mimeType || '').startsWith('image/'));
+        items = imgFiles.map(f => ({
+          id: f.id,
+          driveId: f.id,
+          title: f.name,
+          tags: extractDriveFileTags(f),
+          favorite: false
+        }));
+      } else if (kind === 'unified-drive') {
+        const imgFiles = (unifiedTagResults.drive || []).filter(f => (f.mimeType || '').startsWith('image/'));
+        items = imgFiles.map(f => ({
+          id: f.id,
+          driveId: f.id,
+          title: f.name,
+          tags: extractDriveFileTags(f),
+          favorite: false
+        }));
+      } else if (kind === 'unified-artist') {
+        items = (unifiedTagResults.artistas || [])
+          .filter(entry => entry.kind === 'image' && entry.image)
+          .map(entry => entry.image);
+      } else if (kind === 'favorites') {
+        const favImgs = [];
+        for (const a of libraryData.artistas) {
+          for (const img of (a.images || [])) if (img.favorite) favImgs.push(img);
+          for (const f of (a.folders || [])) for (const img of (f.images || [])) if (img.favorite) favImgs.push(img);
+        }
+        for (const a of libraryData.comics) {
+          for (const c of (a.comics || [])) {
+            for (const p of (c.pages || [])) if (p.favorite) favImgs.push(p);
+          }
+        }
+        items = favImgs;
       }
       if (!items.length) return;
       openLightbox(items, index);
+    }
+
+    function openLightboxByDriveId(kind, driveId) {
+      if (kind === 'drive-browser') {
+        const filtered = sortItems(
+          driveBrowserState.items.filter(f => matchesSearchAndTag(f.name, extractDriveFileTags(f))),
+          'name'
+        );
+        const imgFiles = filtered.filter(f => (f.mimeType || '').startsWith('image/'));
+        const idx = Math.max(0, imgFiles.findIndex(f => f.id === driveId));
+        openLightboxFromContext('drive-browser', null, null, idx);
+      } else if (kind === 'unified-drive') {
+        const imgFiles = (unifiedTagResults.drive || []).filter(f => (f.mimeType || '').startsWith('image/'));
+        const idx = Math.max(0, imgFiles.findIndex(f => f.id === driveId));
+        openLightboxFromContext('unified-drive', null, null, idx);
+      }
     }
 
     function openLightbox(items, startIndex = 0) {
@@ -3531,8 +3628,33 @@
       const viewport = document.getElementById('lightbox-viewport');
       if (!viewport) return;
       let lastTapTime = 0;
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let ignoreNextClick = false;
+
+      viewport.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      viewport.addEventListener('touchend', (e) => {
+        if (lightboxState.scale > 1 || e.changedTouches.length !== 1) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+          ignoreNextClick = true;
+          if (dx > 0) stepLightbox(1);
+          else stepLightbox(-1);
+        }
+      }, { passive: true });
 
       viewport.addEventListener('click', (e) => {
+        if (ignoreNextClick) {
+          ignoreNextClick = false;
+          return;
+        }
         const now = Date.now();
         if (now - lastTapTime < 280) {
           lightboxState.scale = lightboxState.scale > 1 ? 1 : 2.2;
@@ -4126,9 +4248,9 @@
 
           return `
             <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
-              <div onclick="state.artistId='${artist.id}'; state.page=1; renderAll();" class="relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center">
+              <div onclick="state.artistId='${artist.id}'; state.page=1; renderAll();" class="${getThumbWrapperClass()}">
                 ${cover.url || cover.driveId
-                  ? `<img ${cover.driveId ? `data-drive-id="${cover.driveId}"` : ''} src="${escapeHtml(cover.url)}" alt="" class="${cover.driveId ? 'opacity-0' : ''} transition-opacity duration-200 w-full h-full object-cover" />`
+                  ? `<img ${cover.driveId ? `data-drive-id="${cover.driveId}"` : ''} src="${escapeHtml(cover.url)}" alt="" class="${getThumbImgClass(!!cover.driveId)}" />`
                   : `<span class="text-4xl">${sec === 'artistas' ? '🎨' : sec === 'comics' ? '💬' : '📚'}</span>`}
                 <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-bold text-slate-200">${count}</span>
               </div>
@@ -4183,9 +4305,9 @@
           const isPdf = (st.mimeType || '') === 'application/pdf' || (st.title || '').toLowerCase().endsWith('.pdf');
           return `
             <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
-              <div onclick='openStoryViewer(${JSON.stringify({ id: st.id, title: st.title, mimeType: st.mimeType, driveId: st.driveId, url: st.url, tags: st.tags }).replace(/'/g, "&#39;")})' class="relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center">
+              <div onclick='openStoryViewer(${JSON.stringify({ id: st.id, title: st.title, mimeType: st.mimeType, driveId: st.driveId, url: st.url, tags: st.tags }).replace(/'/g, "&#39;")})' class="${getThumbWrapperClass()}">
                 ${isPdf
-                  ? `<img data-pdf-cover-id="${st.driveId || ''}" data-pdf-url="${escapeHtml(st.url || '')}" src="" alt="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" /><span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-rose-600/90 text-[10px] font-bold text-white">PDF</span>`
+                  ? `<img data-pdf-cover-id="${st.driveId || ''}" data-pdf-url="${escapeHtml(st.url || '')}" src="" alt="" class="${getThumbImgClass(true)}" /><span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-rose-600/90 text-[10px] font-bold text-white">PDF</span>`
                   : `<span class="text-4xl">📄</span>`}
                 ${st.size ? `<span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(st.size)}</span>` : ''}
               </div>
@@ -4239,9 +4361,9 @@
             const covUrl = comic.coverUrl || (comic.pages && comic.pages[0]?.url) || '';
             return `
               <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
-                <div onclick="state.comicId='${comic.id}'; state.page=1; renderAll();" class="relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center">
+                <div onclick="state.comicId='${comic.id}'; state.page=1; renderAll();" class="${getThumbWrapperClass()}">
                   ${covUrl || covDrive
-                    ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${covDrive ? 'opacity-0' : ''} transition-opacity duration-200 w-full h-full object-cover" />`
+                    ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${getThumbImgClass(!!covDrive)}" />`
                     : `<span class="text-4xl">💬</span>`}
                   <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-bold text-slate-200">${(comic.pages || []).length} págs</span>
                 </div>
@@ -4295,8 +4417,8 @@
 
         grid.innerHTML = pageItems.map((pg, idx) => `
           <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
-            <div onclick="openLightboxFromContext('comic', '${artist.id}', '${comic.id}', ${startIdx + idx})" class="relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center">
-              <img ${pg.driveId ? `data-drive-id="${pg.driveId}"` : ''} src="${escapeHtml(pg.url || '')}" alt="" class="${pg.driveId ? 'opacity-0' : ''} transition-opacity duration-200 w-full h-full object-cover" />
+            <div onclick="openLightboxFromContext('comic', '${artist.id}', '${comic.id}', ${startIdx + idx})" class="${getThumbWrapperClass()}">
+              <img ${pg.driveId ? `data-drive-id="${pg.driveId}"` : ''} src="${escapeHtml(pg.url || '')}" alt="" class="${getThumbImgClass(!!pg.driveId)}" />
               <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 text-[10px] font-bold text-white">#${startIdx + idx + 1}</span>
               ${pg.size ? `<span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(pg.size)}</span>` : ''}
             </div>
@@ -4376,9 +4498,9 @@
           const covUrl = f.coverUrl || (f.images && f.images[0]?.url) || '';
           return `
             <div class="card-hover rounded-2xl bg-slate-900 border border-amber-500/40 overflow-hidden flex flex-col">
-              <div onclick="state.artistFolderId='${f.id}'; state.page=1; renderAll();" class="relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center">
+              <div onclick="state.artistFolderId='${f.id}'; state.page=1; renderAll();" class="${getThumbWrapperClass()}">
                 ${covUrl || covDrive
-                  ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${covDrive ? 'opacity-0' : ''} transition-opacity duration-200 w-full h-full object-cover" />`
+                  ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${getThumbImgClass(!!covDrive)}" />`
                   : `<span class="text-5xl">📁</span>`}
                 <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-amber-600/90 text-[10px] font-bold text-white">Carpeta</span>
                 <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-bold text-slate-200">${(f.images || []).length}</span>
@@ -4404,8 +4526,8 @@
         const isSelected = state.selectedImageIds.has(img.id);
         return `
           <div class="card-hover rounded-2xl bg-slate-900 border ${isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800'} overflow-hidden flex flex-col">
-            <div onclick="${state.bulkSelectMode ? `toggleSelectArtistImage('${img.id}')` : `openLightboxFromContext('artist', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', ${entry.imgIndex})`}" class="relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center">
-              <img ${img.driveId ? `data-drive-id="${img.driveId}"` : ''} src="${escapeHtml(img.url || '')}" alt="" class="${img.driveId ? 'opacity-0' : ''} transition-opacity duration-200 w-full h-full object-cover" />
+            <div onclick="${state.bulkSelectMode ? `toggleSelectArtistImage('${img.id}')` : `openLightboxFromContext('artist', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', ${entry.imgIndex})`}" class="${getThumbWrapperClass()}">
+              <img ${img.driveId ? `data-drive-id="${img.driveId}"` : ''} src="${escapeHtml(img.url || '')}" alt="" class="${getThumbImgClass(!!img.driveId)}" />
               ${state.bulkSelectMode ? `<span class="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-indigo-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</span>` : ''}
               ${img.size ? `<span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(img.size)}</span>` : ''}
             </div>
@@ -4491,11 +4613,12 @@
         const it = entry.item;
         const covDrive = it.driveId || it.coverDriveId || (it.pages && it.pages[0]?.driveId) || '';
         const covUrl = it.url || it.coverUrl || (it.pages && it.pages[0]?.url) || '';
+        const favImgIdx = favImageList.findIndex(x => x.id === it.id);
         return `
           <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
-            <div onclick="${entry.kind === 'story' ? `openStoryViewer(${JSON.stringify({ id: it.id, title: it.title, mimeType: it.mimeType, driveId: it.driveId, url: it.url, tags: it.tags }).replace(/'/g, '&#39;')})` : entry.kind === 'comic' ? `state.section='comics'; state.artistId='${entry.artist.id}'; state.comicId='${it.id}'; renderAll();` : `openLightbox([${JSON.stringify({ id: it.id, title: it.title, driveId: it.driveId, url: it.url, tags: it.tags, favorite: true }).replace(/'/g, '&#39;')}], 0)`}" class="relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center">
+            <div onclick="${entry.kind === 'story' ? `openStoryViewer(${JSON.stringify({ id: it.id, title: it.title, mimeType: it.mimeType, driveId: it.driveId, url: it.url, tags: it.tags }).replace(/'/g, '&#39;')})` : entry.kind === 'comic' ? `state.section='comics'; state.artistId='${entry.artist.id}'; state.comicId='${it.id}'; renderAll();` : `openLightboxFromContext('favorites', null, null, ${Math.max(0, favImgIdx)})`}" class="${getThumbWrapperClass()}">
               ${covUrl || covDrive
-                ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${covDrive ? 'opacity-0' : ''} transition-opacity duration-200 w-full h-full object-cover" />`
+                ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${getThumbImgClass(!!covDrive)}" />`
                 : `<span class="text-4xl">⭐</span>`}
               <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 text-[10px] text-amber-300 font-bold">${escapeHtml(entry.artist.name)}</span>
             </div>
@@ -4597,10 +4720,12 @@
           `;
         }
         const img = entry.image;
+        const unifiedArtistImgs = (unifiedTagResults.artistas || []).filter(x => x.kind === 'image' && x.image).map(x => x.image);
+        const uIdx = Math.max(0, unifiedArtistImgs.findIndex(x => x.id === img.id));
         return `
-          <div onclick='openLightbox([${JSON.stringify({ id: img.id, title: img.title, driveId: img.driveId, url: img.url, tags: img.tags }).replace(/'/g, "&#39;")}], 0)' class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
-            <div class="relative aspect-[3/4] bg-slate-800 flex items-center justify-center">
-              <img ${img.driveId ? `data-drive-id="${img.driveId}"` : ''} src="${escapeHtml(img.url || '')}" class="${img.driveId ? 'opacity-0' : ''} w-full h-full object-cover" />
+          <div onclick="openLightboxFromContext('unified-artist', null, null, ${uIdx})" class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
+            <div class="${getThumbWrapperClass()}">
+              <img ${img.driveId ? `data-drive-id="${img.driveId}"` : ''} src="${escapeHtml(img.url || '')}" class="${getThumbImgClass(!!img.driveId)}" />
               <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${escapeHtml(entry.artist.name)}</span>
             </div>
             <div class="p-2.5 text-xs font-semibold text-white truncate">${escapeHtml(img.title)}</div>
@@ -4636,11 +4761,11 @@
         const isSelected = driveBrowserState.selectedIds.has(f.id);
         return `
           <div class="card-hover rounded-2xl bg-slate-900 border ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : 'border-slate-800'} overflow-hidden flex flex-col">
-            <div onclick="${isImg ? `openLightbox([{ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', tags: ${JSON.stringify(extractDriveFileTags(f)).replace(/"/g, '&quot;')} }], 0)` : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(extractDriveFileTags(f)).replace(/"/g, '&quot;')} })`}" class="relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center">
+            <div onclick="${isImg ? `openLightboxByDriveId('unified-drive', '${f.id}')` : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(extractDriveFileTags(f)).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
               ${isImg
-                ? `<img data-drive-id="${f.id}" src="" class="opacity-0 w-full h-full object-cover" />`
+                ? `<img data-drive-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
                 : isPdf
-                  ? `<img data-pdf-cover-id="${f.id}" src="" class="opacity-0 w-full h-full object-cover" />`
+                  ? `<img data-pdf-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
                   : `<span class="text-4xl">📄</span>`}
               <button onclick="event.stopPropagation(); toggleSelectDriveBrowserItem('${f.id}')" class="absolute top-2 left-2 w-6 h-6 rounded-full text-xs font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</button>
               <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[9px] font-bold ${f.inCatalog ? 'text-indigo-300' : 'text-emerald-300'}">${f.inCatalog ? 'En App' : '☁️ Drive'}</span>
@@ -4712,13 +4837,13 @@
 
         return `
           <div class="card-hover rounded-2xl bg-slate-900 border ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : 'border-slate-800'} overflow-hidden flex flex-col">
-            <div onclick="${isFolder ? `driveBrowserState.path.push({ id: '${f.id}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${f.id}');` : isImg ? `openLightbox([{ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} }], 0)` : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} })`}" class="relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center">
+            <div onclick="${isFolder ? `driveBrowserState.path.push({ id: '${f.id}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${f.id}');` : isImg ? `openLightboxByDriveId('drive-browser', '${f.id}')` : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
               ${isFolder
-                ? `<img data-folder-cover-id="${f.id}" src="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" /><span class="text-5xl">📁</span>`
+                ? `<img data-folder-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" /><span class="text-5xl">📁</span>`
                 : isImg
-                  ? `<img data-drive-id="${f.id}" src="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" />`
+                  ? `<img data-drive-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
                   : isPdf
-                    ? `<img data-pdf-cover-id="${f.id}" src="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" />`
+                    ? `<img data-pdf-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
                     : `<span class="text-4xl">📄</span>`}
               <button onclick="event.stopPropagation(); toggleSelectDriveBrowserItem('${f.id}')" class="absolute top-2 left-2 w-6 h-6 rounded-full text-xs font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</button>
               ${f.size ? `<span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(f.size)}</span>` : ''}
@@ -5903,6 +6028,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       loadSavedCredentials();
       loadLocalData();
+      updateThumbFitButtonUI();
       initLightboxTouchControls();
       renderAll();
       checkUrlHashForOAuthToken();
