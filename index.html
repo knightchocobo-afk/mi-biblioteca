@@ -58,13 +58,6 @@
       </div>
       <button onclick="toggleSidebar(false)" class="p-2 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
     </div>
-        <div>
-          <h1 class="font-bold text-base tracking-tight text-white leading-tight">Mi Bóveda</h1>
-          <p class="text-xs text-slate-400">Biblioteca &amp; Drive</p>
-        </div>
-      </div>
-      <button onclick="toggleSidebar(false)" class="md:hidden p-2 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
-    </div>
 
     <nav class="flex-1 p-3 space-y-1.5 overflow-y-auto">
       <div class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Colecciones</div>
@@ -263,7 +256,7 @@
     <!-- CUADRÍCULA PRINCIPAL -->
     <main class="flex-1 px-4 pb-8">
       <div id="pagination-top-bar" class="mb-3 flex items-center justify-center gap-2"></div>
-      <div id="main-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense"></div>
+      <div id="main-grid" class="grid grid-cols-3 sm:grid-cols-5 gap-2.5 grid-flow-dense"></div>
       <div id="pagination-bar" class="mt-6 flex items-center justify-center gap-2"></div>
     </main>
   </div>
@@ -1428,9 +1421,9 @@
       const grid = document.getElementById('main-grid');
       if (!grid) return;
       if (state.compactGrid) {
-        grid.className = 'grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 grid-flow-dense';
+        grid.className = 'grid grid-cols-4 sm:grid-cols-6 gap-2 grid-flow-dense';
       } else {
-        grid.className = 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense';
+        grid.className = 'grid grid-cols-3 sm:grid-cols-5 gap-2.5 grid-flow-dense';
       }
     }
 
@@ -4754,7 +4747,7 @@
         sectionsHtml.push(`
           <div class="col-span-full space-y-2.5">
             <h3 class="text-sm font-bold text-indigo-300">💬 Comics (${unifiedTagResults.comics.length})</h3>
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense">
+            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2.5 grid-flow-dense">
               ${unifiedTagResults.comics.map(({ artist, comic }) => {
                 const covDrive = comic.coverDriveId || (comic.pages && comic.pages[0]?.driveId) || '';
                 const covUrl = comic.coverUrl || (comic.pages && comic.pages[0]?.url) || '';
@@ -4782,7 +4775,7 @@
         sectionsHtml.push(`
           <div class="col-span-full space-y-2.5">
             <h3 class="text-sm font-bold text-emerald-300">🎨 Artistas, Carpetas e Imágenes (${unifiedTagResults.artistas.length})</h3>
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense">
+            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2.5 grid-flow-dense">
               ${unifiedTagResults.artistas.map(entry => {
                 if (entry.kind === 'artist') {
                   const cov = getArtistPreviewCover(entry.artist, 'artistas');
@@ -4835,7 +4828,7 @@
         sectionsHtml.push(`
           <div class="col-span-full space-y-2.5">
             <h3 class="text-sm font-bold text-amber-300">📚 Historia (${unifiedTagResults.historia.length})</h3>
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense">
+            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2.5 grid-flow-dense">
               ${unifiedTagResults.historia.map(entry => {
                 if (entry.kind === 'artist') {
                   return `
@@ -4871,7 +4864,7 @@
         sectionsHtml.push(`
           <div class="col-span-full space-y-2.5">
             <h3 class="text-sm font-bold text-purple-300">📂 Google Drive (${unifiedTagResults.drive.length})</h3>
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense">
+            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2.5 grid-flow-dense">
               ${unifiedTagResults.drive.map(f => {
                 const isImg = (f.mimeType || '').startsWith('image/');
                 const isPdf = (f.mimeType || '') === 'application/pdf';
@@ -4957,28 +4950,28 @@
       grid.innerHTML = pageItems.map(f => {
         const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
         const isImg = (f.mimeType || '').startsWith('image/');
-        const isPdf = (f.mimeType || '') === 'application/pdf';
-        const isSelected = driveBrowserState.selectedIds.has(f.id);
-        const tags = extractDriveFileTags(f);
+        const img = entry.data;
+        const isSelected = state.selectedImageIds.has(img.id);
         return `
-          <div class="card-hover relative rounded-2xl bg-slate-900 border ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : 'border-slate-800'} overflow-hidden">
-            <div onclick="${isFolder ? `driveBrowserState.path.push({ id: '${f.id}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${f.id}');` : isImg ? `openLightboxByDriveId('drive-browser', '${f.id}')` : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
-              ${isFolder
-                ? `<img data-folder-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" /><span class="text-5xl">📁</span>`
-                : isImg
-                  ? `<img data-drive-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
-                  : isPdf
-                    ? `<img data-pdf-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
-                    : `<span class="text-4xl">📄</span>`}
-              <button onclick="event.stopPropagation(); toggleSelectDriveBrowserItem('${f.id}')" class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full text-xs font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</button>
-              ${f.size ? `<span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(f.size)}</span>` : ''}
-              <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-2.5 pt-8 space-y-1">
-                <div class="text-xs font-semibold text-white truncate drop-shadow" title="${escapeHtml(f.name)}">${isFolder ? '📁 ' : ''}${escapeHtml(f.name)}</div>
-                <div class="flex items-center justify-between gap-1">
-                  <div class="flex flex-wrap gap-1 min-w-0 overflow-hidden max-h-5">
-                    ${tags.slice(0, 2).map(t => `<span class="px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
+          <div class="card-hover relative rounded-2xl bg-slate-900 border ${isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800'} overflow-hidden">
+            <div onclick="${state.bulkSelectMode ? `toggleSelectArtistImage('${img.id}')` : `openLightboxFromContext('artist', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', ${entry.imgIndex})`}" class="${getThumbWrapperClass()}">
+              <img ${img.driveId ? `data-drive-id="${img.driveId}"` : ''} src="${escapeHtml(img.url || '')}" alt="" class="${getThumbImgClass(!!img.driveId)}" />
+              ${state.bulkSelectMode ? `<span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-indigo-600 text-white' : 'bg-black/75 text-slate-200 border border-slate-400'}">${isSelected ? '✓' : ''}</span>` : ''}
+              ${img.size ? `<span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-semibold text-white">${formatFileSize(img.size)}</span>` : ''}
+              <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/85 to-transparent p-2 pt-10 space-y-1">
+                <div class="text-[11px] font-bold text-white truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">${escapeHtml(img.title)}</div>
+                ${(img.tags && img.tags.length) ? `
+                  <div class="flex flex-wrap gap-1 overflow-hidden max-h-4">
+                    ${img.tags.slice(0, 2).map(t => `<span class="px-1.5 py-0.2 rounded bg-black/80 border border-white/15 text-[9px] font-semibold text-indigo-200">#${escapeHtml(t)}</span>`).join('')}
                   </div>
-                  <button onclick="openDriveRenameModal('${f.id}', '${escapeHtml(f.name)}')" title="Renombrar" class="p-1 rounded bg-slate-900/90 text-xs shrink-0">✏️</button>
+                ` : ''}
+                <div class="flex items-center justify-between pt-0.5">
+                  <button onclick="toggleItemFavorite('artistas', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', '${img.id}')" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">${img.favorite ? '⭐' : '☆'}</button>
+                  <div class="flex items-center gap-1">
+                    <button onclick="openEditTagsModal({ section: 'artistas', artistId: '${artist.id}', folderId: '${activeFolder ? activeFolder.id : ''}', itemId: '${img.id}' })" title="Editar tags y título" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">🏷️</button>
+                    <button onclick="openAppMoveModal({ mode: 'single-artist-image', artistId: '${artist.id}', folderId: '${activeFolder ? activeFolder.id : ''}', itemId: '${img.id}' })" title="Mover imagen" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">📁</button>
+                    <button onclick="deleteCollectionItem('artistas', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', '${img.id}')" title="Borrar imagen" class="p-1 rounded-lg bg-rose-950/90 hover:bg-rose-800 border border-rose-500/30 text-rose-200 text-xs">🗑️</button>
+                  </div>
                 </div>
               </div>
             </div>
