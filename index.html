@@ -1507,9 +1507,8 @@
         : `relative w-full h-full aspect-square bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
     }
 
-    function getThumbImgClass(isDriveDelayed = false) {
-      const fade = isDriveDelayed ? 'opacity-0 transition-opacity duration-200' : 'transition-opacity duration-200';
-      return `${fade} absolute inset-0 w-full h-full object-cover`;
+    function getArtistCardWrapperClass() {
+      return `relative w-full h-full aspect-[1/2] bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden`;
     }
 
     function applyAdaptiveThumbAspect(img) {
@@ -3588,18 +3587,40 @@
     }
 
     function openLightboxByDriveId(kind, driveId) {
+      const getEffectiveId = (f) => (f.shortcutDetails && f.shortcutDetails.targetId) ? f.shortcutDetails.targetId : f.id;
+      const isImageFile = (f) => {
+        const mime = (f.shortcutDetails && f.shortcutDetails.targetMimeType) ? f.shortcutDetails.targetMimeType : (f.mimeType || '');
+        return mime.startsWith('image/') || /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.name || '');
+      };
+
       if (kind === 'drive-browser') {
         const filtered = sortItems(
           driveBrowserState.items.filter(f => matchesSearchAndTag(f.name, extractDriveFileTags(f))),
           'name'
         );
-        const imgFiles = filtered.filter(f => (f.mimeType || '').startsWith('image/'));
-        const idx = Math.max(0, imgFiles.findIndex(f => f.id === driveId));
-        openLightboxFromContext('drive-browser', null, null, idx);
+        const imgFiles = filtered.filter(isImageFile);
+        if (!imgFiles.length) return;
+        const idx = Math.max(0, imgFiles.findIndex(f => f.id === driveId || getEffectiveId(f) === driveId));
+        const items = imgFiles.map(f => ({
+          id: f.id,
+          driveId: getEffectiveId(f),
+          title: f.name,
+          tags: extractDriveFileTags(f),
+          favorite: false
+        }));
+        openLightbox(items, idx);
       } else if (kind === 'unified-drive') {
-        const imgFiles = (unifiedTagResults.drive || []).filter(f => (f.mimeType || '').startsWith('image/'));
-        const idx = Math.max(0, imgFiles.findIndex(f => f.id === driveId));
-        openLightboxFromContext('unified-drive', null, null, idx);
+        const imgFiles = (unifiedTagResults.drive || []).filter(isImageFile);
+        if (!imgFiles.length) return;
+        const idx = Math.max(0, imgFiles.findIndex(f => f.id === driveId || getEffectiveId(f) === driveId));
+        const items = imgFiles.map(f => ({
+          id: f.id,
+          driveId: getEffectiveId(f),
+          title: f.name,
+          tags: extractDriveFileTags(f),
+          favorite: false
+        }));
+        openLightbox(items, idx);
       }
     }
 
@@ -4309,7 +4330,7 @@
 
           return `
             <div class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
-              <div onclick="state.artistId='${artist.id}'; state.page=1; renderAll();" class="${getThumbWrapperClass()}">
+              <div onclick="state.artistId='${artist.id}'; state.page=1; renderAll();" class="${getArtistCardWrapperClass()}">
                 ${cover.url || cover.driveId
                   ? `<img ${cover.driveId ? `data-drive-id="${cover.driveId}"` : ''} src="${escapeHtml(cover.url)}" alt="" class="${getThumbImgClass(!!cover.driveId)}" />`
                   : `<span class="text-4xl">${sec === 'artistas' ? '🎨' : sec === 'comics' ? '💬' : '📚'}</span>`}
@@ -4948,9 +4969,11 @@
       }
 
       grid.innerHTML = pageItems.map(f => {
-        const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
-        const isImg = (f.mimeType || '').startsWith('image/');
-        const isPdf = (f.mimeType || '') === 'application/pdf' || (f.name || '').toLowerCase().endsWith('.pdf');
+        const effectiveMime = (f.shortcutDetails && f.shortcutDetails.targetMimeType) ? f.shortcutDetails.targetMimeType : (f.mimeType || '');
+        const effectiveId = (f.shortcutDetails && f.shortcutDetails.targetId) ? f.shortcutDetails.targetId : f.id;
+        const isFolder = effectiveMime === 'application/vnd.google-apps.folder';
+        const isImg = effectiveMime.startsWith('image/') || /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.name || '');
+        const isPdf = effectiveMime === 'application/pdf' || (f.name || '').toLowerCase().endsWith('.pdf');
         const isSelected = driveBrowserState.selectedIds.has(f.id);
         const tags = extractDriveFileTags(f);
         const sizeLabel = !isFolder && f.size ? formatFileSize(f.size) : '';
@@ -4958,29 +4981,29 @@
         return `
           <div class="card-hover relative rounded-2xl bg-slate-900 border ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : isFolder ? 'border-amber-500/40' : 'border-slate-800'} overflow-hidden">
             <div onclick="${isFolder
-              ? `driveBrowserState.path.push({ id: '${f.id}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${f.id}');`
+              ? `driveBrowserState.path.push({ id: '${effectiveId}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${effectiveId}');`
               : isImg
                 ? `openLightboxByDriveId('drive-browser', '${f.id}')`
-                : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
+                : `openStoryViewer({ id: '${effectiveId}', driveId: '${effectiveId}', title: '${escapeHtml(f.name)}', mimeType: '${effectiveMime}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
               ${isFolder
-                ? `<img data-folder-cover-id="${f.id}" src="" alt="" class="${getThumbImgClass(true)}" /><span class="text-5xl">📁</span>`
+                ? `<img data-folder-cover-id="${effectiveId}" src="" alt="" class="${getThumbImgClass(true)}" /><span class="text-5xl">📁</span>`
                 : isImg
-                  ? `<img data-drive-id="${f.id}" src="" alt="" class="${getThumbImgClass(true)}" />`
+                  ? `<img data-drive-id="${effectiveId}" src="" alt="" class="${getThumbImgClass(true)}" />`
                   : isPdf
-                    ? `<img data-pdf-cover-id="${f.id}" src="" alt="" class="${getThumbImgClass(true)}" /><span class="text-4xl">📕</span>`
+                    ? `<img data-pdf-cover-id="${effectiveId}" src="" alt="" class="${getThumbImgClass(true)}" /><span class="text-4xl">📕</span>`
                     : `<span class="text-4xl">📄</span>`}
 
               <button onclick="event.stopPropagation(); toggleSelectDriveBrowserItem('${f.id}')" class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/75 text-slate-200 border border-slate-400'}">${isSelected ? '✓' : ''}</button>
               ${sizeLabel ? `<span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-semibold text-white">${sizeLabel}</span>` : isFolder ? `<span class="absolute top-2 right-2 z-10 px-2 py-0.5 rounded bg-amber-600/90 text-[10px] font-bold text-white">Carpeta</span>` : ''}
 
-              <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/85 to-transparent p-2 pt-10 space-y-1">
-                <div onclick="${isFolder ? `driveBrowserState.path.push({ id: '${f.id}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${f.id}');` : ''}" class="text-[11px] font-bold ${isFolder ? 'text-amber-200 cursor-pointer' : 'text-white'} truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">${isFolder ? '📁 ' : ''}${escapeHtml(f.name)}</div>
+              <div class="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/85 to-transparent p-2 pt-10 space-y-1">
+                <div class="text-[11px] font-bold ${isFolder ? 'text-amber-200' : 'text-white'} truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">${isFolder ? '📁 ' : ''}${escapeHtml(f.name)}</div>
                 ${tags.length ? `
                   <div class="flex flex-wrap gap-1 overflow-hidden max-h-4">
                     ${tags.slice(0, 2).map(t => `<span class="px-1.5 py-0.2 rounded bg-black/80 border border-white/15 text-[9px] font-semibold text-indigo-200">#${escapeHtml(t)}</span>`).join('')}
                   </div>
                 ` : ''}
-                <div class="flex items-center justify-end gap-1 pt-0.5">
+                <div onclick="event.stopPropagation()" class="pointer-events-auto flex items-center justify-end gap-1 pt-0.5">
                   <button onclick="driveBrowserState.selectedIds.clear(); driveBrowserState.selectedIds.add('${f.id}'); openDriveBrowserTagModal();" title="Tags en Drive" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">🏷️</button>
                   <button onclick="driveBrowserState.selectedIds.clear(); driveBrowserState.selectedIds.add('${f.id}'); openDriveImportToAppModal();" title="Pasar a Mi App" class="p-1 rounded-lg bg-purple-950/90 hover:bg-purple-800 border border-purple-500/30 text-purple-200 text-xs">📥</button>
                   <button onclick="openDriveRenameModal('${f.id}', '${escapeHtml(f.name)}')" title="Renombrar" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">✏️</button>
