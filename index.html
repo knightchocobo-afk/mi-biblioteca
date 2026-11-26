@@ -1511,6 +1511,13 @@
       return `relative w-full h-full aspect-[1/2] bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden`;
     }
 
+    function getThumbImgClass(isLazyDrive = false) {
+      const base = state.fullThumbMode
+        ? 'w-full h-full object-contain'
+        : 'w-full h-full object-cover';
+      return isLazyDrive ? `opacity-0 transition-opacity duration-200 ${base}` : base;
+    }
+
     function applyAdaptiveThumbAspect(img) {
       if (!img || !img.naturalWidth || !img.naturalHeight) return;
       const wrapper = img.parentElement;
@@ -4919,6 +4926,219 @@
       }
 
       grid.innerHTML = sectionsHtml.join('');
+    }
+
+    // =========================================================================
+    // MODALES DE EDICIÓN Y ELIMINACIÓN DE TAGS (INDIVIDUAL, MASIVO Y DRIVE)
+    // =========================================================================
+    function renderToggleableChipsContainer(containerId, activeTagsList, removedSet, onToggleFnName) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      if (!activeTagsList.length) {
+        container.innerHTML = '<span class="text-xs text-slate-500">Sin tags asignados todavía.</span>';
+        return;
+      }
+      container.innerHTML = activeTagsList.map(tag => {
+        const isRemoved = removedSet.has(tag);
+        return `
+          <button type="button" onclick="${onToggleFnName}('${escapeHtml(tag)}')"
+            class="px-2.5 py-1 rounded-full text-xs font-semibold transition flex items-center gap-1 ${
+              isRemoved
+                ? 'bg-rose-950/90 border border-rose-500/60 text-rose-300 line-through'
+                : 'bg-indigo-600 text-white shadow'
+            }">
+            <span>${isRemoved ? '✕' : '✓'} #${escapeHtml(tag)}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function toggleSingleEditTagChip(tag) {
+      if (!editingTagsContext) return;
+      if (editingTagsContext.removedTags.has(tag)) editingTagsContext.removedTags.delete(tag);
+      else editingTagsContext.removedTags.add(tag);
+      renderToggleableChipsContainer('edit-active-tags-chips', editingTagsContext.currentTags, editingTagsContext.removedTags, 'toggleSingleEditTagChip');
+    }
+
+    function openEditTagsModal(ctx) {
+      const artist = (libraryData[ctx.section] || []).find(a => a.id === ctx.artistId);
+      if (!artist) return;
+
+      let target = null;
+      if (ctx.section === 'historia') {
+        target = (artist.items || []).find(i => i.id === ctx.itemId);
+      } else if (ctx.section === 'comics') {
+        const comic = (artist.comics || []).find(c => c.id === ctx.comicId);
+        target = ctx.isComicFolder ? comic : (comic ? (comic.pages || []).find(p => p.id === ctx.itemId) : null);
+      } else if (ctx.section === 'artistas') {
+        const folder = ctx.folderId ? (artist.folders || []).find(f => f.id === ctx.folderId) : null;
+        target = folder ? (folder.images || []).find(i => i.id === ctx.itemId) : (artist.images || []).find(i => i.id === ctx.itemId);
+      }
+      if (!target) return;
+
+      editingTagsContext = {
+        ...ctx,
+        target,
+        currentTags: normalizeTags(target.tags || []),
+        removedTags: new Set()
+      };
+
+      document.getElementById('edit-item-title-input').value = target.title || '';
+      document.getElementById('edit-tags-input').value = '';
+      document.getElementById('edit-tags-spell-box').classList.add('hidden');
+      renderToggleableChipsContainer('edit-active-tags-chips', editingTagsContext.currentTags, editingTagsContext.removedTags, 'toggleSingleEditTagChip');
+      renderQuickTagPicker('edit-quick-tag-picker', 'edit-tags-input', 'edit-tags-spell-box');
+      openModal('edit-tags-modal');
+    }
+
+    async function saveEditedTags() {
+      if (!editingTagsContext || !editingTagsContext.target) return;
+      const { target, currentTags, removedTags, isComicFolder } = editingTagsContext;
+      const newTitle = document.getElementById('edit-item-title-input').value.trim();
+      const addedTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('edit-tags-input').value));
+
+      const kept = currentTags.filter(t => !removedTags.has(t));
+      const finalTags = normalizeTags([...kept, ...addedTags]);
+
+      if (newTitle && target.title !== newTitle) {
+        target.title = newTitle;
+        if (isComicFolder && target.driveFolderId) {
+          await renameDriveItemById(target.driveFolderId, newTitle, false);
+        } else if (target.driveId) {
+          await renameDriveItemById(target.driveId, newTitle, true);
+        }
+      }
+
+      target.tags = finalTags;
+      if (target.driveId) {
+        if (removedTags.size > 0) purgeRemovedTagsGloballyForDriveId(target.driveId, removedTags);
+        await updateDriveFileTagsMetadata(target.driveId, finalTags);
+      }
+      if (isComicFolder && Array.isArray(target.pages)) {
+        for (const p of target.pages) {
+          p.tags = normalizeTags([...(p.tags || []).filter(t => !removedTags.has(t)), ...addedTags]);
+          if (p.driveId) await updateDriveFileTagsMetadata(p.driveId, p.tags);
+        }
+      }
+
+      await persistLibrary(`Editados tags/título de "${target.title}"`);
+      closeModal('edit-tags-modal');
+      renderAll();
+      showToast('✅ Cambios guardados');
+    }
+
+    function toggleBulkActiveTagChip(tag) {
+      if (bulkTagChipsState.removedTags.has(tag)) bulkTagChipsState.removedTags.delete(tag);
+      else bulkTagChipsState.removedTags.add(tag);
+      renderToggleableChipsContainer('bulk-active-tags-chips', bulkTagChipsState.activeTags, bulkTagChipsState.removedTags, 'toggleBulkActiveTagChip');
+    }
+
+    function openBulkTagModal() {
+      const artist = libraryData.artistas.find(a => a.id === state.artistId);
+      if (!artist || !state.selectedImageIds.size) return;
+      const folder = state.artistFolderId ? (artist.folders || []).find(f => f.id === state.artistFolderId) : null;
+      const list = folder ? (folder.images || []) : (artist.images || []);
+      const selected = list.filter(img => state.selectedImageIds.has(img.id));
+
+      const tagSet = new Set();
+      selected.forEach(img => normalizeTags(img.tags || []).forEach(t => tagSet.add(t)));
+      bulkTagChipsState = {
+        activeTags: Array.from(tagSet).sort(),
+        removedTags: new Set()
+      };
+
+      document.getElementById('bulk-modal-count').textContent = selected.length;
+      document.getElementById('bulk-add-tags-input').value = '';
+      document.getElementById('bulk-tags-spell-box').classList.add('hidden');
+      renderToggleableChipsContainer('bulk-active-tags-chips', bulkTagChipsState.activeTags, bulkTagChipsState.removedTags, 'toggleBulkActiveTagChip');
+      renderQuickTagPicker('bulk-quick-tag-picker', 'bulk-add-tags-input', 'bulk-tags-spell-box');
+      openModal('bulk-tag-modal');
+    }
+
+    async function applyBulkTags() {
+      const artist = libraryData.artistas.find(a => a.id === state.artistId);
+      if (!artist || !state.selectedImageIds.size) return;
+      const folder = state.artistFolderId ? (artist.folders || []).find(f => f.id === state.artistFolderId) : null;
+      const list = folder ? (folder.images || []) : (artist.images || []);
+      const added = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('bulk-add-tags-input').value));
+
+      for (const img of list) {
+        if (!state.selectedImageIds.has(img.id)) continue;
+        const kept = (img.tags || []).filter(t => !bulkTagChipsState.removedTags.has(t));
+        img.tags = normalizeTags([...kept, ...added]);
+        if (img.driveId) {
+          if (bulkTagChipsState.removedTags.size > 0) {
+            purgeRemovedTagsGloballyForDriveId(img.driveId, bulkTagChipsState.removedTags);
+          }
+          await updateDriveFileTagsMetadata(img.driveId, img.tags);
+        }
+      }
+
+      await persistLibrary(`Actualizados tags masivos en ${artist.name}`);
+      closeModal('bulk-tag-modal');
+      renderAll();
+      showToast('✅ Tags actualizados en la selección');
+    }
+
+    function toggleDriveActiveTagChip(tag) {
+      if (driveTagChipsState.removedTags.has(tag)) driveTagChipsState.removedTags.delete(tag);
+      else driveTagChipsState.removedTags.add(tag);
+      renderToggleableChipsContainer('drive-browser-active-tags-chips', driveTagChipsState.activeTags, driveTagChipsState.removedTags, 'toggleDriveActiveTagChip');
+    }
+
+    function openDriveBrowserTagModal() {
+      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
+      const selected = sourceList.filter(f => driveBrowserState.selectedIds.has(f.id));
+      if (!selected.length) return;
+
+      const tagSet = new Set();
+      selected.forEach(f => extractDriveFileTags(f).forEach(t => tagSet.add(t)));
+      driveTagChipsState = {
+        activeTags: Array.from(tagSet).sort(),
+        removedTags: new Set()
+      };
+
+      document.getElementById('drive-tag-modal-count').textContent = selected.length;
+      document.getElementById('drive-browser-add-tags').value = '';
+      document.getElementById('drive-tags-spell-box').classList.add('hidden');
+      renderToggleableChipsContainer('drive-browser-active-tags-chips', driveTagChipsState.activeTags, driveTagChipsState.removedTags, 'toggleDriveActiveTagChip');
+      renderQuickTagPicker('drive-quick-tag-picker', 'drive-browser-add-tags', 'drive-tags-spell-box');
+      openModal('drive-browser-tag-modal');
+    }
+
+    async function applyDriveBrowserTags() {
+      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
+      const selected = sourceList.filter(f => driveBrowserState.selectedIds.has(f.id));
+      if (!selected.length) return;
+
+      const added = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('drive-browser-add-tags').value));
+      const btn = document.getElementById('confirm-drive-browser-tag-btn');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      try {
+        for (const f of selected) {
+          const current = extractDriveFileTags(f);
+          const kept = current.filter(t => !driveTagChipsState.removedTags.has(t));
+          const finalTags = normalizeTags([...kept, ...added]);
+          await updateDriveFileTagsMetadata(f.id, finalTags);
+          if (driveTagChipsState.removedTags.size > 0) {
+            purgeRemovedTagsGloballyForDriveId(f.id, driveTagChipsState.removedTags);
+          }
+          f.appProperties = { ...(f.appProperties || {}), tags: finalTags.join(',') };
+          f.description = finalTags.length
+            ? `Tags: ${finalTags.map(t => '#' + t).join(' ')} | ${finalTags.map(t => '[#' + t + ']').join(' ')}`
+            : '';
+        }
+
+        await persistLibrary(`Actualizados tags en ${selected.length} archivo(s) de Drive`);
+        closeModal('drive-browser-tag-modal');
+        renderAll();
+        showToast('✅ Tags sincronizados en Drive y en la App');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar Tags';
+      }
     }
 
     function renderDriveBrowserView(breadcrumb, actions, grid) {
