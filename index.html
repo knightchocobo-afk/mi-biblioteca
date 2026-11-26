@@ -44,13 +44,20 @@
   <!-- OVERLAY MÓVIL/TABLET PARA MENÚ LATERAL -->
   <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/70 z-30 hidden md:hidden"></div>
 
-  <!-- MENÚ LATERAL IZQUIERDO -->
-  <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-slate-900/95 border-r border-slate-800 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-out">
+  <!-- MENÚ LATERAL IZQUIERDO (MINIMIZADO POR DEFECTO PARA APROVECHAR PANTALLA) -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900/95 border-r border-slate-800 flex flex-col transform -translate-x-full transition-transform duration-200 ease-out shadow-2xl">
     <div class="p-5 border-b border-slate-800 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold shadow-lg">
           🏛️
         </div>
+        <div>
+          <h1 class="font-bold text-base tracking-tight text-white leading-tight">Mi Bóveda</h1>
+          <p class="text-xs text-slate-400">Biblioteca &amp; Drive</p>
+        </div>
+      </div>
+      <button onclick="toggleSidebar(false)" class="p-2 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
+    </div>
         <div>
           <h1 class="font-bold text-base tracking-tight text-white leading-tight">Mi Bóveda</h1>
           <p class="text-xs text-slate-400">Biblioteca &amp; Drive</p>
@@ -146,7 +153,7 @@
     <!-- BARRA SUPERIOR -->
     <header class="sticky top-0 z-20 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/90 px-4 py-3 space-y-2.5">
       <div class="flex items-center gap-2.5">
-        <button onclick="toggleSidebar(true)" class="md:hidden p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200">
+        <button onclick="toggleSidebar()" title="Mostrar / minimizar menú lateral" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 shrink-0">
           ☰
         </button>
 
@@ -256,7 +263,7 @@
     <!-- CUADRÍCULA PRINCIPAL -->
     <main class="flex-1 px-4 pb-8">
       <div id="pagination-top-bar" class="mb-3 flex items-center justify-center gap-2"></div>
-      <div id="main-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5"></div>
+      <div id="main-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense"></div>
       <div id="pagination-bar" class="mt-6 flex items-center justify-center gap-2"></div>
     </main>
   </div>
@@ -345,6 +352,14 @@
           <label class="block text-xs font-semibold text-slate-400 mb-1">Avatar / Portada (opcional)</label>
           <input id="artist-avatar-file" type="file" accept="image/*" class="w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white file:font-semibold" />
         </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <label class="block text-xs font-semibold text-indigo-300">🔗 Enlaces al artista (hasta 4 links)</label>
+          <input id="artist-link-1" type="url" placeholder="Link 1 (ej: https://furaffinity.net/user/...)" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+          <input id="artist-link-2" type="url" placeholder="Link 2 (ej: https://x.com/...)" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+          <input id="artist-link-3" type="url" placeholder="Link 3 (ej: https://patreon.com/...)" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+          <input id="artist-link-4" type="url" placeholder="Link 4 (ej: https://inkbunny.net/...)" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+        </div>
       </div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
@@ -355,7 +370,7 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 3B: CREAR / EDITAR CARPETA DENTRO DE UN ARTISTA                 -->
+  <!-- MODAL 3B: CREAR / EDITAR CARPETA DENTRO DE ARTISTA                    -->
   <!-- ===================================================================== -->
   <div id="artist-folder-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
@@ -363,22 +378,18 @@
         <h2 id="artist-folder-modal-title" class="text-lg font-bold text-white">📁 Nueva Carpeta en Artista</h2>
         <button onclick="closeModal('artist-folder-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
       </div>
-
       <div class="space-y-3">
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">Nombre de la Carpeta</label>
-          <input id="artist-folder-name-input" type="text" placeholder="Ej: Sketches, Comisiones 2026, Personajes..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
-          <p id="artist-folder-auto-tag-hint" class="text-[11px] text-emerald-300 mt-1">Tanto el nombre del artista como el nombre de esta carpeta se pondrán en automático como tags en todas sus imágenes.</p>
+          <input id="artist-folder-name-input" type="text" placeholder="Ej: Comisiones, Sketches..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
         </div>
-
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags extra de la Carpeta (opcional, escribe o elige de las filas rápidas)</label>
-          <input id="artist-folder-tags-input" type="text" oninput="onQuickTagManualInputChange('artist-folder-tags-input', 'folder-quick-tag-picker', 'folder-tags-spell-box')" placeholder="ej: male, anthro, canine, wolf..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags de la Carpeta</label>
+          <input id="artist-folder-tags-input" type="text" oninput="onQuickTagManualInputChange('artist-folder-tags-input', 'folder-quick-tag-picker', 'folder-tags-spell-box')" placeholder="anthro, male, tf..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
           <div id="folder-tags-spell-box" class="hidden mt-1.5"></div>
           <div id="folder-quick-tag-picker" class="mt-2"></div>
         </div>
       </div>
-
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
         <button onclick="closeModal('artist-folder-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
         <button id="save-artist-folder-btn" onclick="saveArtistFolderForm()" class="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm">Guardar Carpeta</button>
@@ -1162,135 +1173,26 @@
       }
     }
 
-    function toggleGridDensity() {
-      state.compactGrid = !state.compactGrid;
-      const grid = document.getElementById('main-grid');
-      if (state.compactGrid) {
-        grid.className = 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-2.5';
-      } else {
-        grid.className = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5';
-      }
-    }
-
-    function toggleFullThumbMode() {
-      state.fullThumbMode = !state.fullThumbMode;
+    function formatLinkHostLabel(url) {
       try {
-        localStorage.setItem('mi_boveda_full_thumb_mode', state.fullThumbMode ? '1' : '0');
-      } catch (e) {}
-      updateThumbFitButtonUI();
-      renderAll();
-      showToast(state.fullThumbMode ? '🖼️ Miniaturas completas (adaptadas en largo y ancho)' : '📐 Miniaturas con recorte uniforme');
-    }
-
-    function updateThumbFitButtonUI() {
-      const btn = document.getElementById('thumb-fit-btn');
-      const lbl = document.getElementById('thumb-fit-label');
-      if (!btn || !lbl) return;
-      if (state.fullThumbMode) {
-        btn.className = 'flex items-center gap-1 px-3 py-2.5 rounded-xl bg-indigo-600/30 border border-indigo-500/60 text-xs font-semibold text-indigo-200 shrink-0';
-        lbl.textContent = 'Completa';
-      } else {
-        btn.className = 'flex items-center gap-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:border-indigo-500 shrink-0';
-        lbl.textContent = 'Recorte';
+        const u = new URL(url);
+        return u.hostname.replace(/^www\./i, '');
+      } catch (e) {
+        return 'Link';
       }
     }
 
-    function getThumbWrapperClass(baseExtra = '') {
-      return state.fullThumbMode
-        ? `relative min-h-[140px] bg-slate-950/90 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`
-        : `relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
-    }
-
-    function getThumbImgClass(isDriveDelayed = false) {
-      const fade = isDriveDelayed ? 'opacity-0 transition-opacity duration-200' : 'transition-opacity duration-200';
-      return state.fullThumbMode
-        ? `${fade} w-full h-auto max-h-[420px] object-contain`
-        : `${fade} w-full h-full object-cover`;
-    }
-
-    let toastTimer = null;
-    function showToast(msg) {
-      const el = document.getElementById('toast');
-      if (!el) return;
-      el.textContent = msg;
-      el.classList.remove('hidden');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.classList.add('hidden'), 3400);
-    }
-
-    function askYesNoConfirm({ title = 'Confirmar', message = '', doubleStep = false, icon = '⚠️', yesLabel = 'Sí', noLabel = 'No' }) {
-      return new Promise((resolve) => {
-        const modal = document.getElementById('app-confirm-modal');
-        const titleEl = document.getElementById('app-confirm-title');
-        const msgEl = document.getElementById('app-confirm-message');
-        const iconEl = document.getElementById('app-confirm-icon');
-        const badgeEl = document.getElementById('app-confirm-step-badge');
-        const yesBtn = document.getElementById('app-confirm-yes-btn');
-        const noBtn = document.getElementById('app-confirm-no-btn');
-
-        let step = 1;
-        iconEl.textContent = icon;
-        titleEl.textContent = title;
-        msgEl.textContent = message;
-        yesBtn.textContent = yesLabel;
-        noBtn.textContent = noLabel;
-        badgeEl.classList.add('hidden');
-        openModal('app-confirm-modal');
-
-        const cleanup = () => {
-          yesBtn.onclick = null;
-          noBtn.onclick = null;
-          closeModal('app-confirm-modal');
-        };
-
-        noBtn.onclick = () => {
-          cleanup();
-          resolve(false);
-        };
-
-        yesBtn.onclick = () => {
-          if (doubleStep && step === 1) {
-            step = 2;
-            badgeEl.classList.remove('hidden');
-            yesBtn.textContent = 'Sí, confirmar definitivamente';
-            return;
-          }
-          cleanup();
-          resolve(true);
-        };
-      });
-    }
-
-    // =========================================================================
-    // SELECTOR RÁPIDO DE TAGS POR FILAS + CORRECTOR ORTOGRÁFICO EN INGLÉS
-    // =========================================================================
-    function handleTagInputSpellingCheck(inputId, spellBoxId) {
-      const input = document.getElementById(inputId);
-      const spellBox = document.getElementById(spellBoxId);
-      if (!input || !spellBox) return;
-
-      const rawTokens = normalizeTags(input.value);
-      const suggestions = [];
-      for (const tok of rawTokens) {
-        if (ENGLISH_TAG_CORRECTIONS[tok] && ENGLISH_TAG_CORRECTIONS[tok] !== tok) {
-          suggestions.push({ wrong: tok, right: ENGLISH_TAG_CORRECTIONS[tok] });
-        }
-      }
-
-      if (!suggestions.length) {
-        spellBox.classList.add('hidden');
-        spellBox.innerHTML = '';
-        return;
-      }
-
-      spellBox.classList.remove('hidden');
-      spellBox.innerHTML = `
-        <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-amber-950/60 border border-amber-500/40 text-[11px] text-amber-200">
-          <span>💡 Corrección en inglés:</span>
-          ${suggestions.map(s => `
-            <button type="button" onclick="applySpellingSuggestion('${inputId}', '${spellBoxId}', '${escapeHtml(s.wrong)}', '${escapeHtml(s.right)}')" class="px-2 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold">
-              ${escapeHtml(s.wrong)} → ${escapeHtml(s.right)}
-            </button>
+    function renderArtistLinksBadges(links, compact = false) {
+      const valid = (links || []).filter(u => String(u || '').trim());
+      if (!valid.length) return '';
+      return `
+        <div class="flex flex-wrap gap-1 ${compact ? 'mt-1' : ''}">
+          ${valid.map((url, idx) => `
+            <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"
+               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-950/90 hover:bg-indigo-600 border border-indigo-500/40 text-[10px] font-semibold text-indigo-200 hover:text-white transition">
+              <span>🔗</span>
+              <span>${escapeHtml(formatLinkHostLabel(url))}</span>
+            </a>
           `).join('')}
         </div>
       `;
@@ -1460,15 +1362,15 @@
 
     function extractDriveFileTags(fileObj) {
       if (!fileObj) return [];
-      const targetId = (fileObj.mimeType === 'application/vnd.google-apps.shortcut' && fileObj.shortcutDetails)
-        ? fileObj.shortcutDetails.targetId
-        : fileObj.id;
       const fromMeta = extractRawDriveMetadataTags(fileObj);
-      const fromIndex = driveConfig.driveTagsIndex.get(fileObj.id) || driveConfig.driveTagsIndex.get(targetId) || [];
+      const fromIndex = fileObj.id ? (driveConfig.driveTagsIndex.get(fileObj.id) || []) : [];
       return normalizeTags([...fromMeta, ...fromIndex]);
     }
 
     function ensureArtistCollectionsNormalized() {
+      if (!libraryData || typeof libraryData !== 'object') {
+        libraryData = { historia: [], comics: [], artistas: [] };
+      }
       if (!Array.isArray(libraryData.historia)) libraryData.historia = [];
       if (!Array.isArray(libraryData.comics)) libraryData.comics = [];
       if (!Array.isArray(libraryData.artistas)) libraryData.artistas = [];
@@ -1476,18 +1378,173 @@
       for (const a of libraryData.artistas) {
         if (!Array.isArray(a.images)) a.images = [];
         if (!Array.isArray(a.folders)) a.folders = [];
+        if (!Array.isArray(a.tags)) a.tags = [];
+        if (!Array.isArray(a.links)) a.links = [];
         for (const f of a.folders) {
           if (!Array.isArray(f.images)) f.images = [];
+          if (!Array.isArray(f.tags)) f.tags = [];
         }
       }
       for (const a of libraryData.comics) {
         if (!Array.isArray(a.comics)) a.comics = [];
+        if (!Array.isArray(a.tags)) a.tags = [];
+        if (!Array.isArray(a.links)) a.links = [];
         for (const c of a.comics) {
           if (!Array.isArray(c.pages)) c.pages = [];
+          if (!Array.isArray(c.tags)) c.tags = [];
         }
       }
       for (const a of libraryData.historia) {
         if (!Array.isArray(a.items)) a.items = [];
+        if (!Array.isArray(a.tags)) a.tags = [];
+        if (!Array.isArray(a.links)) a.links = [];
+      }
+    }
+
+    function updateThumbFitButtonUI() {
+      const btn = document.getElementById('thumb-fit-btn');
+      const label = document.getElementById('thumb-fit-label');
+      if (!btn || !label) return;
+      if (state.fullThumbMode) {
+        label.textContent = 'Completa';
+        btn.classList.add('border-indigo-500', 'bg-indigo-600/25', 'text-indigo-200');
+      } else {
+        label.textContent = 'Recorte';
+        btn.classList.remove('border-indigo-500', 'bg-indigo-600/25', 'text-indigo-200');
+      }
+    }
+
+    function toggleFullThumbMode() {
+      state.fullThumbMode = !state.fullThumbMode;
+      try {
+        localStorage.setItem('mi_boveda_full_thumb_mode', state.fullThumbMode ? '1' : '0');
+      } catch (e) {}
+      updateThumbFitButtonUI();
+      renderAll();
+    }
+
+    function toggleGridDensity() {
+      state.compactGrid = !state.compactGrid;
+      const grid = document.getElementById('main-grid');
+      if (!grid) return;
+      if (state.compactGrid) {
+        grid.className = 'grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 grid-flow-dense';
+      } else {
+        grid.className = 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense';
+      }
+    }
+
+    function handleTagInputSpellingCheck(inputId, spellBoxId) {
+      const input = document.getElementById(inputId);
+      const box = document.getElementById(spellBoxId);
+      if (!input || !box) return;
+      const tokens = normalizeTags(input.value);
+      const fixes = [];
+      for (const t of tokens) {
+        if (ENGLISH_TAG_CORRECTIONS[t] && ENGLISH_TAG_CORRECTIONS[t] !== t) {
+          fixes.push({ wrong: t, right: ENGLISH_TAG_CORRECTIONS[t] });
+        }
+      }
+      if (!fixes.length) {
+        box.classList.add('hidden');
+        box.innerHTML = '';
+        return;
+      }
+      box.classList.remove('hidden');
+      box.innerHTML = fixes.map(f => `
+        <button type="button" onclick="applySpellingSuggestion('${inputId}', '${spellBoxId}', '${escapeHtml(f.wrong)}', '${escapeHtml(f.right)}')"
+          class="inline-flex items-center gap-1 mr-1.5 mb-1 px-2.5 py-1 rounded-lg bg-amber-950/90 hover:bg-amber-800 border border-amber-500/50 text-[11px] text-amber-200">
+          <span>💡 ¿Quisiste decir <strong>${escapeHtml(f.right)}</strong> en lugar de <em>${escapeHtml(f.wrong)}</em>?</span>
+        </button>
+      `).join('');
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => el.classList.add('hidden'), 3200);
+    }
+
+    function askYesNoConfirm({ title = 'Confirmar', message = '', doubleStep = false, icon = '⚠️', yesLabel = 'Sí', noLabel = 'No' } = {}) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('app-confirm-modal');
+        const titleEl = document.getElementById('app-confirm-title');
+        const msgEl = document.getElementById('app-confirm-message');
+        const iconEl = document.getElementById('app-confirm-icon');
+        const badgeEl = document.getElementById('app-confirm-step-badge');
+        const yesBtn = document.getElementById('app-confirm-yes-btn');
+        const noBtn = document.getElementById('app-confirm-no-btn');
+
+        let step = 1;
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        iconEl.textContent = icon;
+        yesBtn.textContent = yesLabel;
+        noBtn.textContent = noLabel;
+        badgeEl.classList.add('hidden');
+
+        const cleanup = (result) => {
+          closeModal('app-confirm-modal');
+          yesBtn.onclick = null;
+          noBtn.onclick = null;
+          resolve(result);
+        };
+
+        yesBtn.onclick = () => {
+          if (doubleStep && step === 1) {
+            step = 2;
+            badgeEl.classList.remove('hidden');
+            yesBtn.textContent = 'Sí, estoy seguro';
+            return;
+          }
+          cleanup(true);
+        };
+        noBtn.onclick = () => cleanup(false);
+
+        openModal('app-confirm-modal');
+      });
+    }
+
+    function getThumbWrapperClass(baseExtra = '') {
+      return state.fullThumbMode
+        ? `relative w-full h-full min-h-[120px] aspect-square bg-slate-950/95 cursor-pointer flex items-center justify-center overflow-hidden transition-all duration-200 ${baseExtra}`
+        : `relative w-full h-full aspect-square bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
+    }
+
+    function getThumbImgClass(isDriveDelayed = false) {
+      const fade = isDriveDelayed ? 'opacity-0 transition-opacity duration-200' : 'transition-opacity duration-200';
+      return `${fade} absolute inset-0 w-full h-full object-cover`;
+    }
+
+    function applyAdaptiveThumbAspect(img) {
+      if (!img || !img.naturalWidth || !img.naturalHeight) return;
+      const wrapper = img.parentElement;
+      const card = wrapper ? wrapper.closest('.card-hover') : null;
+      if (!wrapper || !card) return;
+
+      card.classList.remove('col-span-2', 'row-span-2');
+      wrapper.classList.remove('aspect-square', 'aspect-[1/2]', 'aspect-[2/1]');
+
+      if (!state.fullThumbMode) {
+        wrapper.classList.add('aspect-square');
+        return;
+      }
+
+      const ratio = img.naturalWidth / img.naturalHeight;
+      if (ratio < 0.78) {
+        // Vertical / larga: duplica el alto (2 filas) manteniendo el ancho (1 columna)
+        card.classList.add('row-span-2');
+        wrapper.classList.add('aspect-[1/2]');
+      } else if (ratio > 1.28) {
+        // Panorámica / horizontal: duplica el ancho (2 columnas) manteniendo el alto (1 fila)
+        card.classList.add('col-span-2');
+        wrapper.classList.add('aspect-[2/1]');
+      } else {
+        // Cuadrada base (1x1)
+        wrapper.classList.add('aspect-square');
       }
     }
 
@@ -3053,8 +3110,16 @@
         if (!driveId) return;
         const url = await resolveDriveBlobUrl(driveId);
         if (url && img.isConnected) {
+          img.onload = () => applyAdaptiveThumbAspect(img);
           img.src = url;
           img.classList.remove('opacity-0');
+          if (img.complete) applyAdaptiveThumbAspect(img);
+        }
+      });
+      document.querySelectorAll('img:not([data-drive-id])').forEach(img => {
+        if (img.src) {
+          img.onload = () => applyAdaptiveThumbAspect(img);
+          if (img.complete) applyAdaptiveThumbAspect(img);
         }
       });
       hydratePdfFirstPageCovers();
@@ -4250,23 +4315,24 @@
               : (artist.items?.length || 0);
 
           return `
-            <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
+            <div class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
               <div onclick="state.artistId='${artist.id}'; state.page=1; renderAll();" class="${getThumbWrapperClass()}">
                 ${cover.url || cover.driveId
                   ? `<img ${cover.driveId ? `data-drive-id="${cover.driveId}"` : ''} src="${escapeHtml(cover.url)}" alt="" class="${getThumbImgClass(!!cover.driveId)}" />`
                   : `<span class="text-4xl">${sec === 'artistas' ? '🎨' : sec === 'comics' ? '💬' : '📚'}</span>`}
-                <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-bold text-slate-200">${count}</span>
-              </div>
-              <div class="p-3 flex-1 flex flex-col justify-between space-y-2">
-                <div>
-                  <div onclick="state.artistId='${artist.id}'; state.page=1; renderAll();" class="font-bold text-sm text-white truncate cursor-pointer">${escapeHtml(artist.name)}</div>
-                  <div class="flex flex-wrap gap-1 mt-1">
-                    ${(artist.tags || []).slice(0, 3).map(t => `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
+                <span class="absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-bold text-slate-200">${count}</span>
+                <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-2.5 pt-8 space-y-1.5">
+                  <div onclick="state.artistId='${artist.id}'; state.page=1; renderAll();" class="font-bold text-xs sm:text-sm text-white truncate cursor-pointer drop-shadow">${escapeHtml(artist.name)}</div>
+                  ${renderArtistLinksBadges(artist.links, true)}
+                  <div class="flex items-center justify-between gap-1">
+                    <div class="flex flex-wrap gap-1 min-w-0 overflow-hidden max-h-5">
+                      ${(artist.tags || []).slice(0, 2).map(t => `<span class="px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button onclick="openArtistModal('${sec}', '${artist.id}')" title="Editar artista" class="p-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-700 text-xs">✏️</button>
+                      <button onclick="deleteArtist('${sec}', '${artist.id}')" title="Borrar artista" class="p-1.5 rounded-lg bg-rose-950/90 hover:bg-rose-800 text-rose-200 text-xs">🗑️</button>
+                    </div>
                   </div>
-                </div>
-                <div class="flex items-center justify-end gap-1.5 pt-1 border-t border-slate-800/80">
-                  <button onclick="openArtistModal('${sec}', '${artist.id}')" title="Editar artista" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs">✏️</button>
-                  <button onclick="deleteArtist('${sec}', '${artist.id}')" title="Borrar artista" class="p-1.5 rounded-lg bg-rose-950/70 hover:bg-rose-800 text-rose-200 text-xs">🗑️</button>
                 </div>
               </div>
             </div>
@@ -4288,8 +4354,12 @@
           <button onclick="state.artistId=null; state.page=1; renderAll();" class="hover:text-white">${secLabel}</button>
           <span>/</span>
           <span class="font-bold text-white">${escapeHtml(artist.name)}</span>
+          ${renderArtistLinksBadges(artist.links, false)}
         `;
         actions.innerHTML = `
+          <button onclick="openArtistModal('historia', '${artist.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+            ✏️ Editar / Links
+          </button>
           <button onclick="openUploadModal({ section: 'historia', artistId: '${artist.id}' })" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow">
             + Subir PDF / Historia
           </button>
@@ -4307,26 +4377,21 @@
         grid.innerHTML = pageItems.map(st => {
           const isPdf = (st.mimeType || '') === 'application/pdf' || (st.title || '').toLowerCase().endsWith('.pdf');
           return `
-            <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
+            <div class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
               <div onclick='openStoryViewer(${JSON.stringify({ id: st.id, title: st.title, mimeType: st.mimeType, driveId: st.driveId, url: st.url, tags: st.tags }).replace(/'/g, "&#39;")})' class="${getThumbWrapperClass()}">
                 ${isPdf
-                  ? `<img data-pdf-cover-id="${st.driveId || ''}" data-pdf-url="${escapeHtml(st.url || '')}" src="" alt="" class="${getThumbImgClass(true)}" /><span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-rose-600/90 text-[10px] font-bold text-white">PDF</span>`
+                  ? `<img data-pdf-cover-id="${st.driveId || ''}" data-pdf-url="${escapeHtml(st.url || '')}" src="" alt="" class="${getThumbImgClass(true)}" /><span class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded bg-rose-600/90 text-[10px] font-bold text-white">PDF</span>`
                   : `<span class="text-4xl">📄</span>`}
-                ${st.size ? `<span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(st.size)}</span>` : ''}
-              </div>
-              <div class="p-3 flex-1 flex flex-col justify-between space-y-2">
-                <div>
-                  <div class="font-bold text-xs text-white truncate">${escapeHtml(st.title)}</div>
-                  <div class="flex flex-wrap gap-1 mt-1">
-                    ${(st.tags || []).slice(0, 3).map(t => `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
-                  </div>
-                </div>
-                <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                  <button onclick="toggleItemFavorite('historia', '${artist.id}', null, '${st.id}')" class="p-1.5 rounded-lg bg-slate-800 text-xs">${st.favorite ? '⭐' : '☆'}</button>
-                  <div class="flex items-center gap-1">
-                    <button onclick="openEditTagsModal({ section: 'historia', artistId: '${artist.id}', itemId: '${st.id}' })" title="Editar tags y título" class="p-1.5 rounded-lg bg-slate-800 text-xs">🏷️</button>
-                    <button onclick="openAppMoveModal({ mode: 'story-item', artistId: '${artist.id}', itemId: '${st.id}', itemTitle: '${escapeHtml(st.title)}' })" title="Mover a otro artista" class="p-1.5 rounded-lg bg-slate-800 text-xs">📁</button>
-                    <button onclick="deleteCollectionItem('historia', '${artist.id}', null, '${st.id}')" title="Borrar" class="p-1.5 rounded-lg bg-rose-950/70 text-rose-200 text-xs">🗑️</button>
+                ${st.size ? `<span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(st.size)}</span>` : ''}
+                <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-2.5 pt-8 space-y-1.5">
+                  <div class="font-bold text-xs text-white truncate drop-shadow">${escapeHtml(st.title)}</div>
+                  <div class="flex items-center justify-between gap-1">
+                    <button onclick="toggleItemFavorite('historia', '${artist.id}', null, '${st.id}')" class="p-1 rounded-lg bg-slate-900/90 text-xs">${st.favorite ? '⭐' : '☆'}</button>
+                    <div class="flex items-center gap-1">
+                      <button onclick="openEditTagsModal({ section: 'historia', artistId: '${artist.id}', itemId: '${st.id}' })" title="Editar tags y título" class="p-1 rounded-lg bg-slate-900/90 text-xs">🏷️</button>
+                      <button onclick="openAppMoveModal({ mode: 'story-item', artistId: '${artist.id}', itemId: '${st.id}', itemTitle: '${escapeHtml(st.title)}' })" title="Mover a otro artista" class="p-1 rounded-lg bg-slate-900/90 text-xs">📁</button>
+                      <button onclick="deleteCollectionItem('historia', '${artist.id}', null, '${st.id}')" title="Borrar" class="p-1 rounded-lg bg-rose-950/90 text-rose-200 text-xs">🗑️</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4343,8 +4408,12 @@
             <button onclick="state.artistId=null; state.page=1; renderAll();" class="hover:text-white">${secLabel}</button>
             <span>/</span>
             <span class="font-bold text-white">${escapeHtml(artist.name)}</span>
+            ${renderArtistLinksBadges(artist.links, false)}
           `;
           actions.innerHTML = `
+            <button onclick="openArtistModal('comics', '${artist.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+              ✏️ Editar / Links
+            </button>
             <button onclick="openUploadModal({ section: 'comics', artistId: '${artist.id}', isNewComic: true })" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow">
               + Nuevo Cómic
             </button>
@@ -4363,26 +4432,21 @@
             const covDrive = comic.coverDriveId || (comic.pages && comic.pages[0]?.driveId) || '';
             const covUrl = comic.coverUrl || (comic.pages && comic.pages[0]?.url) || '';
             return `
-              <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
+              <div class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
                 <div onclick="state.comicId='${comic.id}'; state.page=1; renderAll();" class="${getThumbWrapperClass()}">
                   ${covUrl || covDrive
                     ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${getThumbImgClass(!!covDrive)}" />`
                     : `<span class="text-4xl">💬</span>`}
-                  <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-bold text-slate-200">${(comic.pages || []).length} págs</span>
-                </div>
-                <div class="p-3 flex-1 flex flex-col justify-between space-y-2">
-                  <div>
-                    <div onclick="state.comicId='${comic.id}'; state.page=1; renderAll();" class="font-bold text-sm text-white truncate cursor-pointer">${escapeHtml(comic.title)}</div>
-                    <div class="flex flex-wrap gap-1 mt-1">
-                      ${(comic.tags || []).slice(0, 3).map(t => `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
-                    </div>
-                  </div>
-                  <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                    <button onclick="toggleComicFavorite('${artist.id}', '${comic.id}')" class="p-1.5 rounded-lg bg-slate-800 text-xs">${comic.favorite ? '⭐' : '☆'}</button>
-                    <div class="flex items-center gap-1">
-                      <button onclick="openEditTagsModal({ section: 'comics', artistId: '${artist.id}', comicId: '${comic.id}', isComicFolder: true })" title="Editar tags y título" class="p-1.5 rounded-lg bg-slate-800 text-xs">🏷️</button>
-                      <button onclick="openAppMoveModal({ mode: 'comic', artistId: '${artist.id}', comicId: '${comic.id}', comicTitle: '${escapeHtml(comic.title)}' })" title="Mover cómic a otro artista" class="p-1.5 rounded-lg bg-slate-800 text-xs">📁</button>
-                      <button onclick="deleteComic('${artist.id}', '${comic.id}')" title="Borrar cómic" class="p-1.5 rounded-lg bg-rose-950/70 text-rose-200 text-xs">🗑️</button>
+                  <span class="absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-bold text-slate-200">${(comic.pages || []).length} págs</span>
+                  <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-2.5 pt-8 space-y-1.5">
+                    <div onclick="state.comicId='${comic.id}'; state.page=1; renderAll();" class="font-bold text-xs sm:text-sm text-white truncate cursor-pointer drop-shadow">${escapeHtml(comic.title)}</div>
+                    <div class="flex items-center justify-between gap-1">
+                      <button onclick="toggleComicFavorite('${artist.id}', '${comic.id}')" class="p-1 rounded-lg bg-slate-900/90 text-xs">${comic.favorite ? '⭐' : '☆'}</button>
+                      <div class="flex items-center gap-1">
+                        <button onclick="openEditTagsModal({ section: 'comics', artistId: '${artist.id}', comicId: '${comic.id}', isComicFolder: true })" title="Editar tags y título" class="p-1 rounded-lg bg-slate-900/90 text-xs">🏷️</button>
+                        <button onclick="openAppMoveModal({ mode: 'comic', artistId: '${artist.id}', comicId: '${comic.id}', comicTitle: '${escapeHtml(comic.title)}' })" title="Mover cómic a otro artista" class="p-1 rounded-lg bg-slate-900/90 text-xs">📁</button>
+                        <button onclick="deleteComic('${artist.id}', '${comic.id}')" title="Borrar cómic" class="p-1 rounded-lg bg-rose-950/90 text-rose-200 text-xs">🗑️</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4418,21 +4482,26 @@
         const startIdx = (state.page - 1) * ITEMS_PER_PAGE;
         const pageItems = pages.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
+        if (!pageItems.length) {
+          grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">Este cómic no tiene páginas todavía.</div>`;
+          return;
+        }
+
         grid.innerHTML = pageItems.map((pg, idx) => `
-          <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
+          <div class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
             <div onclick="openLightboxFromContext('comic', '${artist.id}', '${comic.id}', ${startIdx + idx})" class="${getThumbWrapperClass()}">
               <img ${pg.driveId ? `data-drive-id="${pg.driveId}"` : ''} src="${escapeHtml(pg.url || '')}" alt="" class="${getThumbImgClass(!!pg.driveId)}" />
-              <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 text-[10px] font-bold text-white">#${startIdx + idx + 1}</span>
-              ${pg.size ? `<span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(pg.size)}</span>` : ''}
-            </div>
-            <div class="p-2.5 flex flex-col justify-between space-y-1.5">
-              <div class="text-xs font-semibold text-white truncate">${escapeHtml(pg.title)}</div>
-              <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                <button onclick="toggleItemFavorite('comics', '${artist.id}', '${comic.id}', '${pg.id}')" class="p-1 rounded bg-slate-800 text-xs">${pg.favorite ? '⭐' : '☆'}</button>
-                <div class="flex items-center gap-1">
-                  <button onclick="openEditTagsModal({ section: 'comics', artistId: '${artist.id}', comicId: '${comic.id}', itemId: '${pg.id}' })" title="Editar tags y título" class="p-1 rounded bg-slate-800 text-xs">🏷️</button>
-                  <button onclick="openAppMoveModal({ mode: 'comic-page', artistId: '${artist.id}', comicId: '${comic.id}', itemId: '${pg.id}' })" title="Mover página" class="p-1 rounded bg-slate-800 text-xs">📁</button>
-                  <button onclick="deleteCollectionItem('comics', '${artist.id}', '${comic.id}', '${pg.id}')" title="Borrar página" class="p-1 rounded bg-rose-950/70 text-rose-200 text-xs">🗑️</button>
+              <span class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded bg-black/70 text-[10px] font-bold text-white">#${startIdx + idx + 1}</span>
+              ${pg.size ? `<span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(pg.size)}</span>` : ''}
+              <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-2 pt-7 space-y-1">
+                <div class="text-[11px] font-semibold text-white truncate drop-shadow">${escapeHtml(pg.title)}</div>
+                <div class="flex items-center justify-between">
+                  <button onclick="toggleItemFavorite('comics', '${artist.id}', '${comic.id}', '${pg.id}')" class="p-1 rounded bg-slate-900/90 text-xs">${pg.favorite ? '⭐' : '☆'}</button>
+                  <div class="flex items-center gap-1">
+                    <button onclick="openEditTagsModal({ section: 'comics', artistId: '${artist.id}', comicId: '${comic.id}', itemId: '${pg.id}' })" title="Editar tags y título" class="p-1 rounded bg-slate-900/90 text-xs">🏷️</button>
+                    <button onclick="openAppMoveModal({ mode: 'comic-page', artistId: '${artist.id}', comicId: '${comic.id}', itemId: '${pg.id}' })" title="Mover página" class="p-1 rounded bg-slate-900/90 text-xs">📁</button>
+                    <button onclick="deleteCollectionItem('comics', '${artist.id}', '${comic.id}', '${pg.id}')" title="Borrar página" class="p-1 rounded bg-rose-950/90 text-rose-200 text-xs">🗑️</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4453,16 +4522,21 @@
           <button onclick="state.artistFolderId=null; state.page=1; renderAll();" class="hover:text-white">${escapeHtml(artist.name)}</button>
           <span>/</span>
           <span class="font-bold text-amber-300">📁 ${escapeHtml(activeFolder.name)}</span>
+          ${renderArtistLinksBadges(artist.links, false)}
         `;
       } else {
         breadcrumb.innerHTML = `
           <button onclick="state.artistId=null; state.page=1; renderAll();" class="hover:text-white">${secLabel}</button>
           <span>/</span>
           <span class="font-bold text-white">${escapeHtml(artist.name)}</span>
+          ${renderArtistLinksBadges(artist.links, false)}
         `;
       }
 
       actions.innerHTML = `
+        <button onclick="openArtistModal('artistas', '${artist.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+          ✏️ Editar / Links
+        </button>
         <button onclick="toggleBulkSelectMode()" class="px-3 py-2 rounded-xl ${state.bulkSelectMode ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-200'} text-xs font-semibold">
           ☑️ Seleccionar / 📁 Mover varias
         </button>
@@ -4500,25 +4574,25 @@
           const covDrive = f.coverDriveId || (f.images && f.images[0]?.driveId) || '';
           const covUrl = f.coverUrl || (f.images && f.images[0]?.url) || '';
           return `
-            <div class="card-hover rounded-2xl bg-slate-900 border border-amber-500/40 overflow-hidden flex flex-col">
+            <div class="card-hover relative rounded-2xl bg-slate-900 border border-amber-500/40 overflow-hidden">
               <div onclick="state.artistFolderId='${f.id}'; state.page=1; renderAll();" class="${getThumbWrapperClass()}">
                 ${covUrl || covDrive
                   ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${getThumbImgClass(!!covDrive)}" />`
                   : `<span class="text-5xl">📁</span>`}
-                <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-amber-600/90 text-[10px] font-bold text-white">Carpeta</span>
-                <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-bold text-slate-200">${(f.images || []).length}</span>
-              </div>
-              <div class="p-3 flex-1 flex flex-col justify-between space-y-2">
-                <div>
-                  <div onclick="state.artistFolderId='${f.id}'; state.page=1; renderAll();" class="font-bold text-sm text-amber-200 truncate cursor-pointer">📁 ${escapeHtml(f.name)}</div>
-                  <div class="flex flex-wrap gap-1 mt-1">
-                    ${(f.tags || []).slice(0, 3).map(t => `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
+                <span class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded bg-amber-600/90 text-[10px] font-bold text-white">Carpeta</span>
+                <span class="absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-bold text-slate-200">${(f.images || []).length}</span>
+                <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-2.5 pt-8 space-y-1.5">
+                  <div onclick="state.artistFolderId='${f.id}'; state.page=1; renderAll();" class="font-bold text-xs sm:text-sm text-amber-200 truncate cursor-pointer drop-shadow">📁 ${escapeHtml(f.name)}</div>
+                  <div class="flex items-center justify-between gap-1">
+                    <div class="flex flex-wrap gap-1 min-w-0 overflow-hidden max-h-5">
+                      ${(f.tags || []).slice(0, 2).map(t => `<span class="px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button onclick="openArtistFolderModal('${artist.id}', '${f.id}')" title="Editar carpeta" class="p-1.5 rounded-lg bg-slate-900/90 text-xs">✏️</button>
+                      <button onclick="openAppMoveModal({ mode: 'artist-folder', artistId: '${artist.id}', folderId: '${f.id}', folderName: '${escapeHtml(f.name)}' })" title="Mover carpeta a otro artista" class="p-1.5 rounded-lg bg-slate-900/90 text-xs">📁</button>
+                      <button onclick="deleteArtistFolder('${artist.id}', '${f.id}')" title="Borrar carpeta" class="p-1.5 rounded-lg bg-rose-950/90 text-rose-200 text-xs">🗑️</button>
+                    </div>
                   </div>
-                </div>
-                <div class="flex items-center justify-end gap-1.5 pt-1 border-t border-slate-800/80">
-                  <button onclick="openArtistFolderModal('${artist.id}', '${f.id}')" title="Editar carpeta" class="p-1.5 rounded-lg bg-slate-800 text-xs">✏️</button>
-                  <button onclick="openAppMoveModal({ mode: 'artist-folder', artistId: '${artist.id}', folderId: '${f.id}', folderName: '${escapeHtml(f.name)}' })" title="Mover carpeta a otro artista" class="p-1.5 rounded-lg bg-slate-800 text-xs">📁</button>
-                  <button onclick="deleteArtistFolder('${artist.id}', '${f.id}')" title="Borrar carpeta" class="p-1.5 rounded-lg bg-rose-950/70 text-rose-200 text-xs">🗑️</button>
                 </div>
               </div>
             </div>
@@ -4528,338 +4602,21 @@
         const img = entry.data;
         const isSelected = state.selectedImageIds.has(img.id);
         return `
-          <div class="card-hover rounded-2xl bg-slate-900 border ${isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800'} overflow-hidden flex flex-col">
+          <div class="card-hover relative rounded-2xl bg-slate-900 border ${isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800'} overflow-hidden">
             <div onclick="${state.bulkSelectMode ? `toggleSelectArtistImage('${img.id}')` : `openLightboxFromContext('artist', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', ${entry.imgIndex})`}" class="${getThumbWrapperClass()}">
               <img ${img.driveId ? `data-drive-id="${img.driveId}"` : ''} src="${escapeHtml(img.url || '')}" alt="" class="${getThumbImgClass(!!img.driveId)}" />
-              ${state.bulkSelectMode ? `<span class="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-indigo-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</span>` : ''}
-              ${img.size ? `<span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(img.size)}</span>` : ''}
-            </div>
-            <div class="p-2.5 flex-1 flex flex-col justify-between space-y-1.5">
-              <div>
-                <div class="text-xs font-semibold text-white truncate">${escapeHtml(img.title)}</div>
-                <div class="flex flex-wrap gap-1 mt-1">
-                  ${(img.tags || []).slice(0, 3).map(t => `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
+              ${state.bulkSelectMode ? `<span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-indigo-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</span>` : ''}
+              ${img.size ? `<span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(img.size)}</span>` : ''}
+              <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-2 pt-7 space-y-1">
+                <div class="text-[11px] font-semibold text-white truncate drop-shadow">${escapeHtml(img.title)}</div>
+                <div class="flex items-center justify-between">
+                  <button onclick="toggleItemFavorite('artistas', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', '${img.id}')" class="p-1 rounded bg-slate-900/90 text-xs">${img.favorite ? '⭐' : '☆'}</button>
+                  <div class="flex items-center gap-1">
+                    <button onclick="openEditTagsModal({ section: 'artistas', artistId: '${artist.id}', folderId: '${activeFolder ? activeFolder.id : ''}', itemId: '${img.id}' })" title="Editar tags y título" class="p-1 rounded bg-slate-900/90 text-xs">🏷️</button>
+                    <button onclick="openAppMoveModal({ mode: 'single-artist-image', artistId: '${artist.id}', folderId: '${activeFolder ? activeFolder.id : ''}', itemId: '${img.id}' })" title="Mover imagen" class="p-1 rounded bg-slate-900/90 text-xs">📁</button>
+                    <button onclick="deleteCollectionItem('artistas', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', '${img.id}')" title="Borrar imagen" class="p-1 rounded bg-rose-950/90 text-rose-200 text-xs">🗑️</button>
+                  </div>
                 </div>
-              </div>
-              <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                <button onclick="toggleItemFavorite('artistas', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', '${img.id}')" class="p-1 rounded bg-slate-800 text-xs">${img.favorite ? '⭐' : '☆'}</button>
-                <div class="flex items-center gap-1">
-                  <button onclick="openEditTagsModal({ section: 'artistas', artistId: '${artist.id}', folderId: '${activeFolder ? activeFolder.id : ''}', itemId: '${img.id}' })" title="Editar tags y título" class="p-1 rounded bg-slate-800 text-xs">🏷️</button>
-                  <button onclick="openAppMoveModal({ mode: 'single-artist-image', artistId: '${artist.id}', folderId: '${activeFolder ? activeFolder.id : ''}', itemId: '${img.id}' })" title="Mover imagen" class="p-1 rounded bg-slate-800 text-xs">📁</button>
-                  <button onclick="deleteCollectionItem('artistas', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', '${img.id}')" title="Borrar imagen" class="p-1 rounded bg-rose-950/70 text-rose-200 text-xs">🗑️</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function getFilteredArtistImages(artist) {
-      const folder = state.artistFolderId
-        ? (artist.folders || []).find(f => f.id === state.artistFolderId)
-        : null;
-      const source = folder ? (folder.images || []) : (artist.images || []);
-      return sortItems(source.filter(img => matchesSearchAndTag(img.title, img.tags)), 'title');
-    }
-
-    function toggleBulkSelectMode(force) {
-      state.bulkSelectMode = typeof force === 'boolean' ? force : !state.bulkSelectMode;
-      if (!state.bulkSelectMode) state.selectedImageIds.clear();
-      renderAll();
-    }
-
-    function toggleSelectArtistImage(imgId) {
-      if (state.selectedImageIds.has(imgId)) state.selectedImageIds.delete(imgId);
-      else state.selectedImageIds.add(imgId);
-      renderAll();
-    }
-
-    function selectAllArtistImages(selectAll) {
-      const artist = libraryData.artistas.find(a => a.id === state.artistId);
-      if (!artist) return;
-      if (!selectAll) {
-        state.selectedImageIds.clear();
-      } else {
-        getFilteredArtistImages(artist).forEach(img => state.selectedImageIds.add(img.id));
-      }
-      renderAll();
-    }
-
-    // =========================================================================
-    // VISTAS: FAVORITOS, DIRECTORIO TAGS, RESULTADOS UNIFICADOS Y EXPLORADOR DRIVE
-    // =========================================================================
-    function renderFavoritesView(breadcrumb, actions, grid) {
-      breadcrumb.innerHTML = `<span class="font-bold text-amber-300">⭐ Favoritos</span>`;
-      const favItems = [];
-
-      for (const a of libraryData.artistas) {
-        for (const img of (a.images || [])) if (img.favorite) favItems.push({ kind: 'image', artist: a, folder: null, item: img });
-        for (const f of (a.folders || [])) for (const img of (f.images || [])) if (img.favorite) favItems.push({ kind: 'image', artist: a, folder: f, item: img });
-      }
-      for (const a of libraryData.comics) {
-        for (const c of (a.comics || [])) {
-          if (c.favorite) favItems.push({ kind: 'comic', artist: a, comic: c, item: c });
-          for (const p of (c.pages || [])) if (p.favorite) favItems.push({ kind: 'page', artist: a, comic: c, item: p });
-        }
-      }
-      for (const a of libraryData.historia) {
-        for (const st of (a.items || [])) if (st.favorite) favItems.push({ kind: 'story', artist: a, item: st });
-      }
-
-      if (!favItems.length) {
-        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">Aún no has marcado elementos con ⭐.</div>`;
-        return;
-      }
-
-      grid.innerHTML = favItems.map(entry => {
-        const it = entry.item;
-        const covDrive = it.driveId || it.coverDriveId || (it.pages && it.pages[0]?.driveId) || '';
-        const covUrl = it.url || it.coverUrl || (it.pages && it.pages[0]?.url) || '';
-        const favImgIdx = favImageList.findIndex(x => x.id === it.id);
-        return `
-          <div class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col">
-            <div onclick="${entry.kind === 'story' ? `openStoryViewer(${JSON.stringify({ id: it.id, title: it.title, mimeType: it.mimeType, driveId: it.driveId, url: it.url, tags: it.tags }).replace(/'/g, '&#39;')})` : entry.kind === 'comic' ? `state.section='comics'; state.artistId='${entry.artist.id}'; state.comicId='${it.id}'; renderAll();` : `openLightboxFromContext('favorites', null, null, ${Math.max(0, favImgIdx)})`}" class="${getThumbWrapperClass()}">
-              ${covUrl || covDrive
-                ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${getThumbImgClass(!!covDrive)}" />`
-                : `<span class="text-4xl">⭐</span>`}
-              <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 text-[10px] text-amber-300 font-bold">${escapeHtml(entry.artist.name)}</span>
-            </div>
-            <div class="p-2.5 text-xs font-semibold text-white truncate">${escapeHtml(it.title)}</div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderAllTagsDirectoryView(breadcrumb, actions, grid) {
-      breadcrumb.innerHTML = `<span class="font-bold text-white">🏷️ Tags Unificados (App + Google Drive)</span>`;
-      const allTags = getAllUnifiedTagCounts();
-      if (!allTags.length) {
-        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">No hay tags registrados todavía.</div>`;
-        return;
-      }
-      grid.innerHTML = `
-        <div class="col-span-full flex flex-wrap gap-2">
-          ${allTags.map(([t, count]) => `
-            <button onclick="toggleUnifiedTagFilter('${escapeHtml(t)}')" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-indigo-600/30 border border-slate-800 hover:border-indigo-500 text-xs font-semibold text-slate-200 flex items-center gap-2 transition">
-              <span class="text-indigo-400">#${escapeHtml(t)}</span>
-              <span class="px-2 py-0.5 rounded-full bg-slate-800 text-[11px] text-slate-300">${count}</span>
-            </button>
-          `).join('')}
-        </div>
-      `;
-    }
-
-    function renderUnifiedTagSearchResults(breadcrumb, actions, grid) {
-      breadcrumb.innerHTML = `
-        <span class="font-bold text-white">🔍 Resultados por Tags:</span>
-        ${state.activeTags.map(t => `<span class="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-bold">#${escapeHtml(t)}</span>`).join('')}
-      `;
-      actions.innerHTML = `
-        <button onclick="clearUnifiedTagSearch()" class="px-3.5 py-2 rounded-xl bg-rose-600/85 hover:bg-rose-500 text-white text-xs font-bold">
-          ✕ Cerrar filtro de tags
-        </button>
-      `;
-
-      const renderBlock = (key, label, items, renderCardFn) => {
-        if (!items.length) return '';
-        const expanded = unifiedTagResults.expandedSections[key];
-        const visible = expanded ? items : items.slice(0, 20);
-        return `
-          <div class="col-span-full space-y-2.5 pt-2">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
-              <h3 class="text-sm font-bold text-white">${label} <span class="text-xs text-slate-400">(${items.length})</span></h3>
-              ${items.length > 20 ? `
-                <button onclick="unifiedTagResults.expandedSections['${key}'] = !unifiedTagResults.expandedSections['${key}']; renderAll();" class="text-xs text-indigo-400 hover:underline font-semibold">
-                  ${expanded ? 'Mostrar menos ▲' : `Ver todos (${items.length}) ▼`}
-                </button>
-              ` : ''}
-            </div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              ${visible.map(renderCardFn).join('')}
-            </div>
-          </div>
-        `;
-      };
-
-      const comicsHtml = renderBlock('comics', '💬 Comics', unifiedTagResults.comics, ({ artist, comic }) => {
-        const covDrive = comic.coverDriveId || (comic.pages && comic.pages[0]?.driveId) || '';
-        const covUrl = comic.coverUrl || (comic.pages && comic.pages[0]?.url) || '';
-        return `
-          <div onclick="state.activeTags=[]; state.section='comics'; state.artistId='${artist.id}'; state.comicId='${comic.id}'; renderAll();" class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
-            <div class="relative aspect-[3/4] bg-slate-800 flex items-center justify-center">
-              ${covUrl || covDrive ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" class="${covDrive ? 'opacity-0' : ''} w-full h-full object-cover" />` : `<span class="text-4xl">💬</span>`}
-              <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 text-[10px] text-indigo-300 font-bold">${escapeHtml(artist.name)}</span>
-            </div>
-            <div class="p-2.5 text-xs font-bold text-white truncate">${escapeHtml(comic.title)}</div>
-          </div>
-        `;
-      });
-
-      const artistasHtml = renderBlock('artistas', '🎨 Artistas', unifiedTagResults.artistas, (entry) => {
-        if (entry.kind === 'artist') {
-          const cov = getArtistPreviewCover(entry.artist, 'artistas');
-          return `
-            <div onclick="state.activeTags=[]; state.section='artistas'; state.artistId='${entry.artist.id}'; renderAll();" class="card-hover rounded-2xl bg-slate-900 border border-indigo-500/40 overflow-hidden cursor-pointer">
-              <div class="relative aspect-[3/4] bg-slate-800 flex items-center justify-center">
-                ${cov.url || cov.driveId ? `<img ${cov.driveId ? `data-drive-id="${cov.driveId}"` : ''} src="${escapeHtml(cov.url)}" class="${cov.driveId ? 'opacity-0' : ''} w-full h-full object-cover" />` : `<span class="text-4xl">🎨</span>`}
-                <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-indigo-600 text-[10px] text-white font-bold">Artista</span>
-              </div>
-              <div class="p-2.5 text-xs font-bold text-white truncate">${escapeHtml(entry.artist.name)}</div>
-            </div>
-          `;
-        }
-        if (entry.kind === 'folder') {
-          const f = entry.folder;
-          const covDrive = f.coverDriveId || (f.images && f.images[0]?.driveId) || '';
-          return `
-            <div onclick="state.activeTags=[]; state.section='artistas'; state.artistId='${entry.artist.id}'; state.artistFolderId='${f.id}'; renderAll();" class="card-hover rounded-2xl bg-slate-900 border border-amber-500/40 overflow-hidden cursor-pointer">
-              <div class="relative aspect-[3/4] bg-slate-800 flex items-center justify-center">
-                ${covDrive ? `<img data-drive-id="${covDrive}" src="" class="opacity-0 w-full h-full object-cover" />` : `<span class="text-4xl">📁</span>`}
-                <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-amber-600 text-[10px] text-white font-bold">${escapeHtml(entry.artist.name)}</span>
-              </div>
-              <div class="p-2.5 text-xs font-bold text-amber-200 truncate">📁 ${escapeHtml(f.name)}</div>
-            </div>
-          `;
-        }
-        const img = entry.image;
-        const unifiedArtistImgs = (unifiedTagResults.artistas || []).filter(x => x.kind === 'image' && x.image).map(x => x.image);
-        const uIdx = Math.max(0, unifiedArtistImgs.findIndex(x => x.id === img.id));
-        return `
-          <div onclick="openLightboxFromContext('unified-artist', null, null, ${uIdx})" class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
-            <div class="${getThumbWrapperClass()}">
-              <img ${img.driveId ? `data-drive-id="${img.driveId}"` : ''} src="${escapeHtml(img.url || '')}" class="${getThumbImgClass(!!img.driveId)}" />
-              <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${escapeHtml(entry.artist.name)}</span>
-            </div>
-            <div class="p-2.5 text-xs font-semibold text-white truncate">${escapeHtml(img.title)}</div>
-          </div>
-        `;
-      });
-
-      const historiaHtml = renderBlock('historia', '📚 Historia', unifiedTagResults.historia, (entry) => {
-        if (entry.kind === 'artist') {
-          return `
-            <div onclick="state.activeTags=[]; state.section='historia'; state.artistId='${entry.artist.id}'; renderAll();" class="card-hover rounded-2xl bg-slate-900 border border-slate-800 p-4 cursor-pointer">
-              <div class="text-3xl mb-2">📚</div>
-              <div class="font-bold text-xs text-white truncate">${escapeHtml(entry.artist.name)}</div>
-            </div>
-          `;
-        }
-        const st = entry.story;
-        const isPdf = (st.mimeType || '') === 'application/pdf' || (st.title || '').toLowerCase().endsWith('.pdf');
-        return `
-          <div onclick='openStoryViewer(${JSON.stringify({ id: st.id, title: st.title, mimeType: st.mimeType, driveId: st.driveId, url: st.url, tags: st.tags }).replace(/'/g, "&#39;")})' class="card-hover rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
-            <div class="relative aspect-[3/4] bg-slate-800 flex items-center justify-center">
-              ${isPdf ? `<img data-pdf-cover-id="${st.driveId || ''}" src="" class="opacity-0 w-full h-full object-cover" />` : `<span class="text-4xl">📄</span>`}
-              <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${escapeHtml(entry.artist.name)}</span>
-            </div>
-            <div class="p-2.5 text-xs font-semibold text-white truncate">${escapeHtml(st.title)}</div>
-          </div>
-        `;
-      });
-
-      const driveHtml = renderBlock('drive', '📂 Google Drive', unifiedTagResults.drive, (f) => {
-        const isImg = (f.mimeType || '').startsWith('image/');
-        const isPdf = (f.mimeType || '') === 'application/pdf';
-        const isSelected = driveBrowserState.selectedIds.has(f.id);
-        return `
-          <div class="card-hover rounded-2xl bg-slate-900 border ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : 'border-slate-800'} overflow-hidden flex flex-col">
-            <div onclick="${isImg ? `openLightboxByDriveId('unified-drive', '${f.id}')` : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(extractDriveFileTags(f)).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
-              ${isImg
-                ? `<img data-drive-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
-                : isPdf
-                  ? `<img data-pdf-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
-                  : `<span class="text-4xl">📄</span>`}
-              <button onclick="event.stopPropagation(); toggleSelectDriveBrowserItem('${f.id}')" class="absolute top-2 left-2 w-6 h-6 rounded-full text-xs font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</button>
-              <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[9px] font-bold ${f.inCatalog ? 'text-indigo-300' : 'text-emerald-300'}">${f.inCatalog ? 'En App' : '☁️ Drive'}</span>
-            </div>
-            <div class="p-2.5 text-xs font-semibold text-white truncate">${escapeHtml(f.name)}</div>
-          </div>
-        `;
-      });
-
-      const content = comicsHtml + artistasHtml + historiaHtml + driveHtml;
-      grid.innerHTML = content || (unifiedTagResults.loading
-        ? `<div class="col-span-full py-16 text-center text-sm text-indigo-300">Buscando en toda la biblioteca y Google Drive...</div>`
-        : `<div class="col-span-full py-16 text-center text-sm text-slate-400">No se encontraron elementos que coincidan con todos esos tags.</div>`);
-    }
-
-    function renderDriveBrowserView(breadcrumb, actions, grid) {
-      if (!driveConfig.accessToken) {
-        breadcrumb.innerHTML = `<span class="font-bold text-white">📂 Explorador Google Drive</span>`;
-        grid.innerHTML = `
-          <div class="col-span-full py-16 text-center space-y-3">
-            <div class="text-4xl">☁️</div>
-            <div class="text-base font-bold text-white">Conecta Google Drive para navegar tus carpetas en vivo</div>
-            <button onclick="openDriveModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">Conectar Google Drive</button>
-          </div>
-        `;
-        return;
-      }
-
-      breadcrumb.innerHTML = driveBrowserState.path.map((p, idx) => `
-        ${idx > 0 ? '<span>/</span>' : ''}
-        <button onclick="navigateDriveBrowserPath(${idx})" class="${idx === driveBrowserState.path.length - 1 ? 'font-bold text-white' : 'hover:text-white'}">${escapeHtml(p.name)}</button>
-      `).join('');
-
-      actions.innerHTML = `
-        <button onclick="selectAllDriveBrowserItems(driveBrowserState.selectedIds.size === 0)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
-          ☑️ Seleccionar todo
-        </button>
-        <button onclick="useCurrentExplorerFolderForDuplicates()" class="px-3 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-xs font-semibold text-rose-200">
-          👯 Buscar duplicados aquí
-        </button>
-        <button onclick="loadDriveBrowserFolder('${driveBrowserState.path[driveBrowserState.path.length - 1].id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-indigo-300">
-          🔄 Recargar
-        </button>
-      `;
-
-      if (driveBrowserState.loading) {
-        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-indigo-300">Cargando archivos de Google Drive...</div>`;
-        return;
-      }
-
-      const filtered = sortItems(
-        driveBrowserState.items.filter(f => matchesSearchAndTag(f.name, extractDriveFileTags(f))),
-        'name'
-      );
-      renderPaginationBars(filtered.length);
-      const pageItems = filtered.slice((state.page - 1) * ITEMS_PER_PAGE, state.page * ITEMS_PER_PAGE);
-
-      if (!pageItems.length) {
-        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">Esta carpeta está vacía.</div>`;
-        return;
-      }
-
-      grid.innerHTML = pageItems.map(f => {
-        const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
-        const isImg = (f.mimeType || '').startsWith('image/');
-        const isPdf = (f.mimeType || '') === 'application/pdf';
-        const isSelected = driveBrowserState.selectedIds.has(f.id);
-        const tags = extractDriveFileTags(f);
-
-        return `
-          <div class="card-hover rounded-2xl bg-slate-900 border ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : 'border-slate-800'} overflow-hidden flex flex-col">
-            <div onclick="${isFolder ? `driveBrowserState.path.push({ id: '${f.id}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${f.id}');` : isImg ? `openLightboxByDriveId('drive-browser', '${f.id}')` : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
-              ${isFolder
-                ? `<img data-folder-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" /><span class="text-5xl">📁</span>`
-                : isImg
-                  ? `<img data-drive-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
-                  : isPdf
-                    ? `<img data-pdf-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
-                    : `<span class="text-4xl">📄</span>`}
-              <button onclick="event.stopPropagation(); toggleSelectDriveBrowserItem('${f.id}')" class="absolute top-2 left-2 w-6 h-6 rounded-full text-xs font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</button>
-              ${f.size ? `<span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(f.size)}</span>` : ''}
-            </div>
-            <div class="p-2.5 flex-1 flex flex-col justify-between space-y-1.5">
-              <div>
-                <div class="text-xs font-semibold text-white truncate" title="${escapeHtml(f.name)}">${isFolder ? '📁 ' : ''}${escapeHtml(f.name)}</div>
-                <div class="flex flex-wrap gap-1 mt-1">
-                  ${tags.slice(0, 3).map(t => `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
-                </div>
-              </div>
-              <div class="flex items-center justify-end gap-1 pt-1 border-t border-slate-800/80">
-                <button onclick="openDriveRenameModal('${f.id}', '${escapeHtml(f.name)}')" title="Renombrar" class="p-1 rounded bg-slate-800 text-xs">✏️</button>
               </div>
             </div>
           </div>
@@ -4890,26 +4647,429 @@
     }
 
     // =========================================================================
-    // ACCIONES CRUD: ARTISTAS, CARPETAS, SUBIDAS, TAGS Y PASAR DRIVE -> APP
+    // VISTAS: FAVORITOS, DIRECTORIO TAGS, RESULTADOS UNIFICADOS Y EXPLORADOR DRIVE
     // =========================================================================
+    function renderFavoritesView(breadcrumb, actions, grid) {
+      breadcrumb.innerHTML = `<span class="font-bold text-white">⭐ Favoritos</span>`;
+      const favItems = [];
+      const favImageList = [];
+
+      for (const a of libraryData.artistas) {
+        for (const img of (a.images || [])) {
+          if (img.favorite) {
+            favItems.push({ kind: 'image', artist: a, item: img });
+            favImageList.push(img);
+          }
+        }
+        for (const f of (a.folders || [])) {
+          for (const img of (f.images || [])) {
+            if (img.favorite) {
+              favItems.push({ kind: 'image', artist: a, item: img });
+              favImageList.push(img);
+            }
+          }
+        }
+      }
+      for (const a of libraryData.comics) {
+        for (const c of (a.comics || [])) {
+          if (c.favorite) favItems.push({ kind: 'comic', artist: a, item: c });
+          for (const p of (c.pages || [])) {
+            if (p.favorite) {
+              favItems.push({ kind: 'page', artist: a, item: p });
+              favImageList.push(p);
+            }
+          }
+        }
+      }
+      for (const a of libraryData.historia) {
+        for (const st of (a.items || [])) {
+          if (st.favorite) favItems.push({ kind: 'story', artist: a, item: st });
+        }
+      }
+
+      if (!favItems.length) {
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">No has marcado favoritos todavía.</div>`;
+        return;
+      }
+
+      grid.innerHTML = favItems.map(entry => {
+        const it = entry.item;
+        const covDrive = it.driveId || it.coverDriveId || (it.pages && it.pages[0]?.driveId) || '';
+        const covUrl = it.url || it.coverUrl || (it.pages && it.pages[0]?.url) || '';
+        const favImgIdx = favImageList.findIndex(x => x.id === it.id);
+        return `
+          <div class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <div onclick="${entry.kind === 'story' ? `openStoryViewer(${JSON.stringify({ id: it.id, title: it.title, mimeType: it.mimeType, driveId: it.driveId, url: it.url, tags: it.tags }).replace(/'/g, '&#39;')})` : entry.kind === 'comic' ? `state.section='comics'; state.artistId='${entry.artist.id}'; state.comicId='${it.id}'; renderAll();` : `openLightboxFromContext('favorites', null, null, ${Math.max(0, favImgIdx)})`}" class="${getThumbWrapperClass()}">
+              ${covUrl || covDrive
+                ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" alt="" class="${getThumbImgClass(!!covDrive)}" />`
+                : `<span class="text-4xl">⭐</span>`}
+              <span class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded bg-black/70 text-[10px] text-amber-300 font-bold">${escapeHtml(entry.artist.name)}</span>
+              <div class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2.5 pt-7">
+                <div class="text-xs font-semibold text-white truncate drop-shadow">${escapeHtml(it.title)}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAllTagsDirectoryView(breadcrumb, actions, grid) {
+      breadcrumb.innerHTML = `<span class="font-bold text-white">🏷️ Tags Unificados (App + Google Drive)</span>`;
+      const allTags = getAllUnifiedTagCounts();
+      if (!allTags.length) {
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">Aún no hay tags registrados en la app ni en Google Drive.</div>`;
+        return;
+      }
+      grid.innerHTML = `
+        <div class="col-span-full flex flex-wrap gap-2">
+          ${allTags.map(([t, count]) => `
+            <button onclick="toggleUnifiedTagFilter('${escapeHtml(t)}')" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 text-xs font-semibold text-slate-200 hover:text-white transition flex items-center gap-2">
+              <span>#${escapeHtml(t)}</span>
+              <span class="px-1.5 py-0.5 rounded-full bg-slate-800 text-[10px] text-indigo-300">${count}</span>
+            </button>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderUnifiedTagSearchResults(breadcrumb, actions, grid) {
+      breadcrumb.innerHTML = `
+        <span class="font-bold text-white">🏷️ Filtro por tags:</span>
+        ${state.activeTags.map(t => `<span class="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-bold">#${escapeHtml(t)}</span>`).join('')}
+      `;
+      actions.innerHTML = `
+        <button onclick="clearUnifiedTagSearch()" class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold">
+          ✕ Limpiar filtro
+        </button>
+      `;
+
+      if (unifiedTagResults.loading) {
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-indigo-300">Buscando coincidencias en toda tu biblioteca y Google Drive...</div>`;
+        return;
+      }
+
+      const sectionsHtml = [];
+
+      if (unifiedTagResults.comics.length) {
+        sectionsHtml.push(`
+          <div class="col-span-full space-y-2.5">
+            <h3 class="text-sm font-bold text-indigo-300">💬 Comics (${unifiedTagResults.comics.length})</h3>
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense">
+              ${unifiedTagResults.comics.map(({ artist, comic }) => {
+                const covDrive = comic.coverDriveId || (comic.pages && comic.pages[0]?.driveId) || '';
+                const covUrl = comic.coverUrl || (comic.pages && comic.pages[0]?.url) || '';
+                return `
+                  <div onclick="state.activeTags=[]; state.section='comics'; state.artistId='${artist.id}'; state.comicId='${comic.id}'; renderAll();" class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
+                    <div class="${getThumbWrapperClass()}">
+                      ${covUrl || covDrive
+                        ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" class="${getThumbImgClass(!!covDrive)}" />`
+                        : `<span class="text-4xl">💬</span>`}
+                      <span class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded bg-black/75 text-[10px] text-indigo-300 font-bold">${escapeHtml(artist.name)}</span>
+                      <div class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2.5 pt-7">
+                        <div class="text-xs font-bold text-white truncate drop-shadow">${escapeHtml(comic.title)}</div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `);
+      }
+
+      if (unifiedTagResults.artistas.length) {
+        let imgCounter = 0;
+        sectionsHtml.push(`
+          <div class="col-span-full space-y-2.5">
+            <h3 class="text-sm font-bold text-emerald-300">🎨 Artistas, Carpetas e Imágenes (${unifiedTagResults.artistas.length})</h3>
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense">
+              ${unifiedTagResults.artistas.map(entry => {
+                if (entry.kind === 'artist') {
+                  const cov = getArtistPreviewCover(entry.artist, 'artistas');
+                  return `
+                    <div onclick="state.activeTags=[]; state.section='artistas'; state.artistId='${entry.artist.id}'; renderAll();" class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
+                      <div class="${getThumbWrapperClass()}">
+                        ${cov.url || cov.driveId ? `<img ${cov.driveId ? `data-drive-id="${cov.driveId}"` : ''} src="${escapeHtml(cov.url)}" class="${getThumbImgClass(!!cov.driveId)}" />` : `<span class="text-4xl">🎨</span>`}
+                        <span class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded bg-indigo-600/90 text-[10px] font-bold text-white">Artista</span>
+                        <div class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2.5 pt-7">
+                          <div class="text-xs font-bold text-white truncate drop-shadow">${escapeHtml(entry.artist.name)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }
+                if (entry.kind === 'folder') {
+                  const covDrive = entry.folder.coverDriveId || (entry.folder.images && entry.folder.images[0]?.driveId) || '';
+                  const covUrl = entry.folder.coverUrl || (entry.folder.images && entry.folder.images[0]?.url) || '';
+                  return `
+                    <div onclick="state.activeTags=[]; state.section='artistas'; state.artistId='${entry.artist.id}'; state.artistFolderId='${entry.folder.id}'; renderAll();" class="card-hover relative rounded-2xl bg-slate-900 border border-amber-500/40 overflow-hidden cursor-pointer">
+                      <div class="${getThumbWrapperClass()}">
+                        ${covUrl || covDrive ? `<img ${covDrive ? `data-drive-id="${covDrive}"` : ''} src="${escapeHtml(covUrl)}" class="${getThumbImgClass(!!covDrive)}" />` : `<span class="text-4xl">📁</span>`}
+                        <span class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded bg-amber-600/90 text-[10px] font-bold text-white">${escapeHtml(entry.artist.name)}</span>
+                        <div class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2.5 pt-7">
+                          <div class="text-xs font-bold text-amber-200 truncate drop-shadow">📁 ${escapeHtml(entry.folder.name)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }
+                const currentImgIdx = imgCounter++;
+                return `
+                  <div onclick="openLightboxFromContext('unified-artist', null, null, ${currentImgIdx})" class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
+                    <div class="${getThumbWrapperClass()}">
+                      <img ${entry.image.driveId ? `data-drive-id="${entry.image.driveId}"` : ''} src="${escapeHtml(entry.image.url || '')}" class="${getThumbImgClass(!!entry.image.driveId)}" />
+                      <span class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${escapeHtml(entry.artist.name)}</span>
+                      <div class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2.5 pt-7">
+                        <div class="text-xs font-semibold text-white truncate drop-shadow">${escapeHtml(entry.image.title)}</div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `);
+      }
+
+      if (unifiedTagResults.historia.length) {
+        sectionsHtml.push(`
+          <div class="col-span-full space-y-2.5">
+            <h3 class="text-sm font-bold text-amber-300">📚 Historia (${unifiedTagResults.historia.length})</h3>
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense">
+              ${unifiedTagResults.historia.map(entry => {
+                if (entry.kind === 'artist') {
+                  return `
+                    <div onclick="state.activeTags=[]; state.section='historia'; state.artistId='${entry.artist.id}'; renderAll();" class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
+                      <div class="${getThumbWrapperClass()}">
+                        <span class="text-4xl">📚</span>
+                        <div class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2.5 pt-7">
+                          <div class="text-xs font-bold text-white truncate drop-shadow">${escapeHtml(entry.artist.name)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }
+                const st = entry.story;
+                const isPdf = (st.mimeType || '') === 'application/pdf' || (st.title || '').toLowerCase().endsWith('.pdf');
+                return `
+                  <div onclick='openStoryViewer(${JSON.stringify({ id: st.id, title: st.title, mimeType: st.mimeType, driveId: st.driveId, url: st.url, tags: st.tags }).replace(/'/g, "&#39;")})' class="card-hover relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer">
+                    <div class="${getThumbWrapperClass()}">
+                      ${isPdf ? `<img data-pdf-cover-id="${st.driveId || ''}" data-pdf-url="${escapeHtml(st.url || '')}" src="" class="${getThumbImgClass(true)}" />` : `<span class="text-4xl">📄</span>`}
+                      <div class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2.5 pt-7">
+                        <div class="text-xs font-semibold text-white truncate drop-shadow">${escapeHtml(st.title)}</div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `);
+      }
+
+      if (unifiedTagResults.drive.length) {
+        sectionsHtml.push(`
+          <div class="col-span-full space-y-2.5">
+            <h3 class="text-sm font-bold text-purple-300">📂 Google Drive (${unifiedTagResults.drive.length})</h3>
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense">
+              ${unifiedTagResults.drive.map(f => {
+                const isImg = (f.mimeType || '').startsWith('image/');
+                const isPdf = (f.mimeType || '') === 'application/pdf';
+                const isSelected = driveBrowserState.selectedIds.has(f.id);
+                const tags = extractDriveFileTags(f);
+                return `
+                  <div class="card-hover relative rounded-2xl bg-slate-900 border ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : 'border-slate-800'} overflow-hidden">
+                    <div onclick="${isImg ? `openLightboxByDriveId('unified-drive', '${f.id}')` : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
+                      ${isImg
+                        ? `<img data-drive-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
+                        : isPdf
+                          ? `<img data-pdf-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
+                          : `<span class="text-4xl">📄</span>`}
+                      <button onclick="event.stopPropagation(); toggleSelectDriveBrowserItem('${f.id}')" class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full text-xs font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</button>
+                      <span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/75 text-[10px] font-semibold ${f.inCatalog ? 'text-emerald-300' : 'text-purple-200'}">${f.inCatalog ? 'En App' : 'Solo Drive'}</span>
+                      <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2.5 pt-7">
+                        <div class="text-xs font-semibold text-white truncate drop-shadow">${escapeHtml(f.name)}</div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `);
+      }
+
+      if (!sectionsHtml.length) {
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">No se encontraron elementos con esa combinación de tags.</div>`;
+        return;
+      }
+
+      grid.innerHTML = sectionsHtml.join('');
+    }
+
+    function renderDriveBrowserView(breadcrumb, actions, grid) {
+      if (!driveConfig.accessToken) {
+        breadcrumb.innerHTML = `<span class="font-bold text-white">📂 Explorador de Google Drive</span>`;
+        grid.innerHTML = `
+          <div class="col-span-full py-16 text-center space-y-3">
+            <div class="text-4xl">☁️</div>
+            <div class="text-base font-bold text-white">Conecta Google Drive para explorar tus carpetas y archivos</div>
+            <button onclick="openDriveModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">Conectar ahora</button>
+          </div>
+        `;
+        return;
+      }
+
+      breadcrumb.innerHTML = driveBrowserState.path.map((p, idx) => `
+        ${idx > 0 ? '<span>/</span>' : ''}
+        <button onclick="navigateDriveBrowserPath(${idx})" class="${idx === driveBrowserState.path.length - 1 ? 'font-bold text-white' : 'hover:text-white'}">${escapeHtml(p.name)}</button>
+      `).join('');
+
+      actions.innerHTML = `
+        <button onclick="selectAllDriveBrowserItems(driveBrowserState.selectedIds.size === 0)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+          ☑️ Seleccionar todo
+        </button>
+        <button onclick="useCurrentExplorerFolderForDuplicates()" class="px-3 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-xs font-semibold text-rose-200">
+          👯 Buscar duplicados aquí
+        </button>
+        <button onclick="loadDriveBrowserFolder('${driveBrowserState.path[driveBrowserState.path.length - 1].id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-indigo-300">
+          🔄 Recargar
+        </button>
+      `;
+
+      if (driveBrowserState.loading) {
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-indigo-300">Cargando carpeta de Google Drive...</div>`;
+        return;
+      }
+
+      const filtered = sortItems(
+        driveBrowserState.items.filter(f => matchesSearchAndTag(f.name, extractDriveFileTags(f))),
+        'name'
+      );
+      renderPaginationBars(filtered.length);
+      const pageItems = filtered.slice((state.page - 1) * ITEMS_PER_PAGE, state.page * ITEMS_PER_PAGE);
+
+      if (!pageItems.length) {
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-slate-400">Esta carpeta está vacía.</div>`;
+        return;
+      }
+
+      grid.innerHTML = pageItems.map(f => {
+        const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
+        const isImg = (f.mimeType || '').startsWith('image/');
+        const isPdf = (f.mimeType || '') === 'application/pdf';
+        const isSelected = driveBrowserState.selectedIds.has(f.id);
+        const tags = extractDriveFileTags(f);
+        return `
+          <div class="card-hover relative rounded-2xl bg-slate-900 border ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : 'border-slate-800'} overflow-hidden">
+            <div onclick="${isFolder ? `driveBrowserState.path.push({ id: '${f.id}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${f.id}');` : isImg ? `openLightboxByDriveId('drive-browser', '${f.id}')` : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
+              ${isFolder
+                ? `<img data-folder-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" /><span class="text-5xl">📁</span>`
+                : isImg
+                  ? `<img data-drive-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
+                  : isPdf
+                    ? `<img data-pdf-cover-id="${f.id}" src="" class="${getThumbImgClass(true)}" />`
+                    : `<span class="text-4xl">📄</span>`}
+              <button onclick="event.stopPropagation(); toggleSelectDriveBrowserItem('${f.id}')" class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full text-xs font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/70 text-slate-300 border border-slate-500'}">${isSelected ? '✓' : ''}</button>
+              ${f.size ? `<span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-slate-200">${formatFileSize(f.size)}</span>` : ''}
+              <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-2.5 pt-8 space-y-1">
+                <div class="text-xs font-semibold text-white truncate drop-shadow" title="${escapeHtml(f.name)}">${isFolder ? '📁 ' : ''}${escapeHtml(f.name)}</div>
+                <div class="flex items-center justify-between gap-1">
+                  <div class="flex flex-wrap gap-1 min-w-0 overflow-hidden max-h-5">
+                    ${tags.slice(0, 2).map(t => `<span class="px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
+                  </div>
+                  <button onclick="openDriveRenameModal('${f.id}', '${escapeHtml(f.name)}')" title="Renombrar" class="p-1 rounded bg-slate-900/90 text-xs shrink-0">✏️</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // =========================================================================
+    // CRUD DE ARTISTAS, CARPETAS DE ARTISTA, SUBIDA, BORRADO Y ACCIONES DRIVE
+    // =========================================================================
+    function getFilteredArtistImages(artist) {
+      const folder = state.artistFolderId
+        ? (artist.folders || []).find(f => f.id === state.artistFolderId)
+        : null;
+      const raw = folder ? (folder.images || []) : (artist.images || []);
+      return sortItems(raw.filter(img => matchesSearchAndTag(img.title, img.tags)), 'title');
+    }
+
+    function toggleBulkSelectMode(force) {
+      state.bulkSelectMode = typeof force === 'boolean' ? force : !state.bulkSelectMode;
+      if (!state.bulkSelectMode) state.selectedImageIds.clear();
+      renderAll();
+    }
+
+    function toggleSelectArtistImage(imgId) {
+      if (state.selectedImageIds.has(imgId)) state.selectedImageIds.delete(imgId);
+      else state.selectedImageIds.add(imgId);
+      renderAll();
+    }
+
+    function selectAllArtistImages(selectAll) {
+      const artist = libraryData.artistas.find(a => a.id === state.artistId);
+      if (!artist) return;
+      if (!selectAll) {
+        state.selectedImageIds.clear();
+      } else {
+        getFilteredArtistImages(artist).forEach(img => state.selectedImageIds.add(img.id));
+      }
+      renderAll();
+    }
+
+    async function deleteSelectedArtistImages() {
+      const artist = libraryData.artistas.find(a => a.id === state.artistId);
+      if (!artist || !state.selectedImageIds.size) return;
+
+      const ok = await askYesNoConfirm({
+        title: 'Borrar imágenes seleccionadas',
+        message: `¿Borrar ${state.selectedImageIds.size} imagen(es) de la biblioteca${driveConfig.accessToken ? ' y enviarlas a la papelera de Drive' : ''}?`,
+        doubleStep: true,
+        icon: '🗑️',
+        yesLabel: 'Sí, borrar',
+        noLabel: 'No'
+      });
+      if (!ok) return;
+
+      const folder = state.artistFolderId ? (artist.folders || []).find(f => f.id === state.artistFolderId) : null;
+      const list = folder ? folder.images : artist.images;
+      const remaining = [];
+      for (const img of list) {
+        if (state.selectedImageIds.has(img.id)) {
+          if (img.driveId) await trashDriveItemById(img.driveId);
+        } else {
+          remaining.push(img);
+        }
+      }
+      if (folder) folder.images = remaining;
+      else artist.images = remaining;
+
+      state.selectedImageIds.clear();
+      state.bulkSelectMode = false;
+      await persistLibrary(`Borradas imágenes de ${artist.name}`);
+      renderAll();
+      showToast('🗑️ Imágenes borradas');
+    }
+
     function openArtistModal(section, artistId = null) {
       editingArtistContext = { section, artistId };
-      const titleEl = document.getElementById('artist-modal-title');
-      const nameInput = document.getElementById('artist-name-input');
-      const tagsInput = document.getElementById('artist-tags-input');
+      const artist = artistId ? (libraryData[section] || []).find(a => a.id === artistId) : null;
+
+      document.getElementById('artist-modal-title').textContent = artist ? 'Editar Artista y Enlaces' : 'Nuevo Artista';
+      document.getElementById('artist-name-input').value = artist ? artist.name : '';
+      document.getElementById('artist-tags-input').value = artist ? (artist.tags || []).join(', ') : '';
       document.getElementById('artist-avatar-file').value = '';
       document.getElementById('artist-tags-spell-box').classList.add('hidden');
 
-      if (artistId) {
-        const artist = (libraryData[section] || []).find(a => a.id === artistId);
-        titleEl.textContent = 'Editar Artista';
-        nameInput.value = artist ? artist.name : '';
-        tagsInput.value = artist ? (artist.tags || []).join(', ') : '';
-      } else {
-        titleEl.textContent = 'Nuevo Artista';
-        nameInput.value = '';
-        tagsInput.value = '';
+      const links = artist && Array.isArray(artist.links) ? artist.links : [];
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById(`artist-link-${i}`).value = links[i - 1] || '';
       }
+
       openModal('artist-modal');
     }
 
@@ -4921,11 +5081,14 @@
         showToast('Escribe el nombre del artista');
         return;
       }
-      const rawTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('artist-tags-input').value));
-      const autoNameTags = extractArtistNameTags(name);
-      const finalTags = normalizeTags([...autoNameTags, ...rawTags]);
-      const avatarFile = document.getElementById('artist-avatar-file').files?.[0] || null;
 
+      const rawTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('artist-tags-input').value));
+      const tags = normalizeTags([...extractArtistNameTags(name), ...rawTags]);
+      const links = [1, 2, 3, 4]
+        .map(i => document.getElementById(`artist-link-${i}`).value.trim())
+        .filter(Boolean);
+
+      const avatarFile = document.getElementById('artist-avatar-file').files?.[0];
       const btn = document.getElementById('save-artist-btn');
       btn.disabled = true;
       btn.textContent = 'Guardando...';
@@ -4936,7 +5099,8 @@
           artist = {
             id: generateId('art'),
             name,
-            tags: finalTags,
+            tags,
+            links,
             avatarUrl: '',
             avatarDriveId: '',
             createdAt: Date.now(),
@@ -4944,19 +5108,20 @@
           };
           libraryData[section].unshift(artist);
         } else {
-          const oldName = artist.name;
-          artist.name = name;
-          artist.tags = finalTags;
-          if (oldName !== name && artist.driveFolderId) {
+          if (artist.name !== name && artist.driveFolderId) {
             await renameDriveItemById(artist.driveFolderId, name, false);
           }
+          artist.name = name;
+          artist.tags = tags;
+          artist.links = links;
         }
 
         if (driveConfig.accessToken) {
           const folderId = await ensureTargetFolderForContext(section, artist, null);
           if (avatarFile) {
-            const uploaded = await uploadFileToDrive(avatarFile, folderId, finalTags);
-            artist.avatarDriveId = uploaded.id || '';
+            const uploaded = await uploadFileToDrive(avatarFile, folderId, tags);
+            artist.avatarDriveId = uploaded.id;
+            artist.avatarUrl = '';
           }
         } else if (avatarFile) {
           artist.avatarUrl = URL.createObjectURL(avatarFile);
@@ -4976,27 +5141,27 @@
       const artist = (libraryData[section] || []).find(a => a.id === artistId);
       if (!artist) return;
       const ok = await askYesNoConfirm({
-        title: 'Borrar Artista',
-        message: `¿Borrar "${artist.name}" de la app y enviar su carpeta de Google Drive a la papelera?`,
+        title: 'Eliminar artista',
+        message: `¿Seguro que deseas eliminar "${artist.name}" y todo su contenido de la biblioteca?`,
         doubleStep: true,
-        icon: '🗑️'
+        icon: '🗑️',
+        yesLabel: 'Sí, eliminar',
+        noLabel: 'No'
       });
       if (!ok) return;
 
-      if (artist.driveFolderId) {
-        await trashDriveItemById(artist.driveFolderId);
-      }
+      if (artist.driveFolderId) await trashDriveItemById(artist.driveFolderId);
       libraryData[section] = libraryData[section].filter(a => a.id !== artistId);
-      if (state.artistId === artistId) state.artistId = null;
-      await persistLibrary(`Borrado artista "${artist.name}"`);
+      await persistLibrary(`Eliminado artista "${artist.name}"`);
       renderAll();
-      showToast(`🗑️ Artista "${artist.name}" eliminado`);
+      showToast('🗑️ Artista eliminado');
     }
 
     function openArtistFolderModal(artistId, folderId = null) {
       editingArtistFolderContext = { artistId, folderId };
       const artist = libraryData.artistas.find(a => a.id === artistId);
-      const folder = folderId && artist ? (artist.folders || []).find(f => f.id === folderId) : null;
+      if (!artist) return;
+      const folder = folderId ? (artist.folders || []).find(f => f.id === folderId) : null;
 
       document.getElementById('artist-folder-modal-title').textContent = folder ? '✏️ Editar Carpeta' : '📁 Nueva Carpeta en Artista';
       document.getElementById('artist-folder-name-input').value = folder ? folder.name : '';
@@ -5014,12 +5179,12 @@
 
       const name = document.getElementById('artist-folder-name-input').value.trim();
       if (!name) {
-        showToast('Escribe un nombre para la carpeta');
+        showToast('Escribe el nombre de la carpeta');
         return;
       }
 
-      const manualTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('artist-folder-tags-input').value));
-      const finalTags = normalizeTags([...extractArtistNameTags(artist.name), ...extractFolderNameTags(name), ...manualTags]);
+      const rawTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('artist-folder-tags-input').value));
+      const tags = normalizeTags([...extractArtistNameTags(artist.name), ...extractFolderNameTags(name), ...rawTags]);
 
       const btn = document.getElementById('save-artist-folder-btn');
       btn.disabled = true;
@@ -5032,7 +5197,7 @@
             id: generateId('afolder'),
             name,
             driveFolderId: '',
-            tags: finalTags,
+            tags,
             coverUrl: '',
             coverDriveId: '',
             createdAt: Date.now(),
@@ -5040,16 +5205,11 @@
           };
           artist.folders.unshift(folder);
         } else {
-          const oldName = folder.name;
-          folder.name = name;
-          folder.tags = finalTags;
-          if (oldName !== name && folder.driveFolderId) {
+          if (folder.name !== name && folder.driveFolderId) {
             await renameDriveItemById(folder.driveFolderId, name, false);
           }
-          for (const img of (folder.images || [])) {
-            img.tags = normalizeTags([...(img.tags || []), ...finalTags]);
-            if (img.driveId) await updateDriveFileTagsMetadata(img.driveId, img.tags);
-          }
+          folder.name = name;
+          folder.tags = tags;
         }
 
         if (driveConfig.accessToken) {
@@ -5069,149 +5229,102 @@
     async function deleteArtistFolder(artistId, folderId) {
       const artist = libraryData.artistas.find(a => a.id === artistId);
       const folder = artist ? (artist.folders || []).find(f => f.id === folderId) : null;
-      if (!folder) return;
+      if (!artist || !folder) return;
 
       const ok = await askYesNoConfirm({
-        title: 'Borrar Carpeta',
-        message: `¿Borrar la carpeta "${folder.name}" y enviar su carpeta en Drive a la papelera?`,
+        title: 'Borrar carpeta',
+        message: `¿Borrar la carpeta "${folder.name}" y sus ${(folder.images || []).length} imágenes?`,
         doubleStep: true,
-        icon: '🗑️'
+        icon: '🗑️',
+        yesLabel: 'Sí, borrar',
+        noLabel: 'No'
       });
       if (!ok) return;
 
-      if (folder.driveFolderId) {
-        await trashDriveItemById(folder.driveFolderId);
-      }
+      if (folder.driveFolderId) await trashDriveItemById(folder.driveFolderId);
       artist.folders = artist.folders.filter(f => f.id !== folderId);
-      if (state.artistFolderId === folderId) state.artistFolderId = null;
       await persistLibrary(`Borrada carpeta "${folder.name}"`);
       renderAll();
-      showToast(`🗑️ Carpeta "${folder.name}" borrada`);
+      showToast('🗑️ Carpeta eliminada');
     }
 
     async function deleteComic(artistId, comicId) {
       const artist = libraryData.comics.find(a => a.id === artistId);
       const comic = artist ? (artist.comics || []).find(c => c.id === comicId) : null;
-      if (!comic) return;
+      if (!artist || !comic) return;
 
       const ok = await askYesNoConfirm({
-        title: 'Borrar Cómic',
-        message: `¿Borrar el cómic "${comic.title}" y enviar su carpeta en Drive a la papelera?`,
+        title: 'Borrar cómic',
+        message: `¿Eliminar el cómic "${comic.title}" y todas sus páginas?`,
         doubleStep: true,
-        icon: '🗑️'
+        icon: '🗑️',
+        yesLabel: 'Sí, eliminar',
+        noLabel: 'No'
       });
       if (!ok) return;
 
       if (comic.driveFolderId) await trashDriveItemById(comic.driveFolderId);
       artist.comics = artist.comics.filter(c => c.id !== comicId);
-      if (state.comicId === comicId) state.comicId = null;
-      await persistLibrary(`Borrado cómic "${comic.title}"`);
+      await persistLibrary(`Eliminado cómic "${comic.title}"`);
       renderAll();
-      showToast(`🗑️ Cómic "${comic.title}" borrado`);
+      showToast('🗑️ Cómic eliminado');
     }
 
     async function deleteCollectionItem(section, artistId, subId, itemId) {
       const artist = (libraryData[section] || []).find(a => a.id === artistId);
       if (!artist) return;
 
-      let targetItem = null;
+      const ok = await askYesNoConfirm({
+        title: 'Borrar elemento',
+        message: '¿Seguro que deseas borrar este archivo?',
+        doubleStep: false,
+        icon: '🗑️',
+        yesLabel: 'Sí, borrar',
+        noLabel: 'No'
+      });
+      if (!ok) return;
+
+      let removed = null;
       if (section === 'historia') {
-        targetItem = (artist.items || []).find(i => i.id === itemId);
+        removed = (artist.items || []).find(i => i.id === itemId);
+        artist.items = (artist.items || []).filter(i => i.id !== itemId);
       } else if (section === 'comics') {
         const comic = (artist.comics || []).find(c => c.id === subId);
-        targetItem = comic ? (comic.pages || []).find(p => p.id === itemId) : null;
+        if (comic) {
+          removed = (comic.pages || []).find(p => p.id === itemId);
+          comic.pages = (comic.pages || []).filter(p => p.id !== itemId);
+        }
       } else if (section === 'artistas') {
         const folder = subId ? (artist.folders || []).find(f => f.id === subId) : null;
-        targetItem = folder ? (folder.images || []).find(i => i.id === itemId) : (artist.images || []).find(i => i.id === itemId);
-      }
-      if (!targetItem) return;
-
-      const ok = await askYesNoConfirm({
-        title: 'Borrar archivo',
-        message: `¿Borrar "${targetItem.title}" de la app y enviarlo a la papelera de Google Drive?`,
-        doubleStep: false,
-        icon: '🗑️'
-      });
-      if (!ok) return;
-
-      if (targetItem.driveId) await trashDriveItemById(targetItem.driveId);
-
-      if (section === 'historia') {
-        artist.items = artist.items.filter(i => i.id !== itemId);
-      } else if (section === 'comics') {
-        const comic = artist.comics.find(c => c.id === subId);
-        if (comic) comic.pages = comic.pages.filter(p => p.id !== itemId);
-      } else if (section === 'artistas') {
-        const folder = subId ? artist.folders.find(f => f.id === subId) : null;
-        if (folder) folder.images = folder.images.filter(i => i.id !== itemId);
-        else artist.images = artist.images.filter(i => i.id !== itemId);
-      }
-
-      await persistLibrary(`Borrado "${targetItem.title}"`);
-      renderAll();
-      showToast(`🗑️ "${targetItem.title}" borrado`);
-    }
-
-    async function deleteSelectedArtistImages() {
-      const artist = libraryData.artistas.find(a => a.id === state.artistId);
-      if (!artist || !state.selectedImageIds.size) return;
-
-      const ok = await askYesNoConfirm({
-        title: 'Borrar imágenes seleccionadas',
-        message: `¿Borrar ${state.selectedImageIds.size} imagen(es) de la app y enviarlas a la papelera de Google Drive?`,
-        doubleStep: true,
-        icon: '🗑️'
-      });
-      if (!ok) return;
-
-      const folder = state.artistFolderId ? (artist.folders || []).find(f => f.id === state.artistFolderId) : null;
-      const list = folder ? folder.images : artist.images;
-      const kept = [];
-      for (const img of list) {
-        if (state.selectedImageIds.has(img.id)) {
-          if (img.driveId) await trashDriveItemById(img.driveId);
+        if (folder) {
+          removed = (folder.images || []).find(i => i.id === itemId);
+          folder.images = (folder.images || []).filter(i => i.id !== itemId);
         } else {
-          kept.push(img);
+          removed = (artist.images || []).find(i => i.id === itemId);
+          artist.images = (artist.images || []).filter(i => i.id !== itemId);
         }
       }
-      if (folder) folder.images = kept;
-      else artist.images = kept;
 
-      state.selectedImageIds.clear();
-      state.bulkSelectMode = false;
-      await persistLibrary('Borradas imágenes seleccionadas');
+      if (removed && removed.driveId) await trashDriveItemById(removed.driveId);
+      await persistLibrary('Eliminado elemento de colección');
       renderAll();
-      showToast('🗑️ Imágenes eliminadas');
-    }
-
-    function removeDriveIdFromCatalog(driveId) {
-      if (!driveId) return;
-      for (const a of libraryData.artistas) {
-        a.images = (a.images || []).filter(i => i.driveId !== driveId);
-        for (const f of (a.folders || [])) f.images = (f.images || []).filter(i => i.driveId !== driveId);
-      }
-      for (const a of libraryData.comics) {
-        for (const c of (a.comics || [])) c.pages = (c.pages || []).filter(p => p.driveId !== driveId);
-      }
-      for (const a of libraryData.historia) {
-        a.items = (a.items || []).filter(i => i.driveId !== driveId);
-      }
+      showToast('🗑️ Elemento borrado');
     }
 
     async function toggleItemFavorite(section, artistId, subId, itemId) {
       const artist = (libraryData[section] || []).find(a => a.id === artistId);
       if (!artist) return;
-      let item = null;
-      if (section === 'historia') item = (artist.items || []).find(i => i.id === itemId);
+      let target = null;
+      if (section === 'historia') target = (artist.items || []).find(i => i.id === itemId);
       else if (section === 'comics') {
         const comic = (artist.comics || []).find(c => c.id === subId);
-        item = comic ? (comic.pages || []).find(p => p.id === itemId) : null;
+        target = comic ? (comic.pages || []).find(p => p.id === itemId) : null;
       } else if (section === 'artistas') {
         const folder = subId ? (artist.folders || []).find(f => f.id === subId) : null;
-        item = folder ? (folder.images || []).find(i => i.id === itemId) : (artist.images || []).find(i => i.id === itemId);
+        target = folder ? (folder.images || []).find(i => i.id === itemId) : (artist.images || []).find(i => i.id === itemId);
       }
-      if (!item) return;
-      item.favorite = !item.favorite;
+      if (!target) return;
+      target.favorite = !target.favorite;
       await persistLibrary();
       renderAll();
     }
@@ -5225,9 +5338,6 @@
       renderAll();
     }
 
-    // =========================================================================
-    // SUBIDA DE ARCHIVOS DESDE TABLET
-    // =========================================================================
     function openUploadModal(ctx) {
       uploadContext = ctx;
       pickedFileSystemEntries = [];
@@ -5239,8 +5349,13 @@
       document.getElementById('upload-progress-box').classList.add('hidden');
       document.getElementById('picked-deletable-files-badge').classList.add('hidden');
 
-      document.getElementById('upload-comic-title-group').classList.toggle('hidden', !ctx.isNewComic);
-      document.getElementById('upload-cover-group').classList.toggle('hidden', !ctx.isNewComic);
+      document.getElementById('upload-comic-title-group').classList.toggle('hidden', !(ctx.section === 'comics' && ctx.isNewComic));
+      document.getElementById('upload-cover-group').classList.toggle('hidden', !(ctx.section === 'comics' && ctx.isNewComic));
+      document.getElementById('upload-modal-title').textContent = ctx.section === 'historia'
+        ? '📚 Subir PDF o Historia'
+        : ctx.section === 'comics'
+          ? (ctx.isNewComic ? '💬 Crear Cómic y Subir Páginas' : '💬 Añadir Páginas al Cómic')
+          : '🎨 Subir Imágenes';
 
       renderQuickTagPicker('upload-quick-tag-picker', 'upload-tags-input', 'upload-tags-spell-box');
       openModal('upload-modal');
@@ -5248,8 +5363,7 @@
 
     async function pickFilesWithAutoDeleteSupport() {
       if (!window.showOpenFilePicker) {
-        showToast('Tu navegador usará el selector estándar');
-        document.getElementById('upload-files-input').click();
+        showToast('Tu navegador no soporta borrado directo; usa el selector normal.');
         return;
       }
       try {
@@ -5260,7 +5374,7 @@
           pickedFileSystemEntries.push({ handle: h, file });
         }
         const badge = document.getElementById('picked-deletable-files-badge');
-        badge.textContent = `✓ ${pickedFileSystemEntries.length} archivo(s) listos con borrado automático`;
+        badge.textContent = `✅ ${pickedFileSystemEntries.length} archivo(s) listos para subir y borrar automáticamente al finalizar.`;
         badge.classList.remove('hidden');
       } catch (e) {}
     }
@@ -5271,107 +5385,138 @@
       const artist = (libraryData[section] || []).find(a => a.id === artistId);
       if (!artist) return;
 
-      const standardFiles = Array.from(document.getElementById('upload-files-input').files || []);
+      const inputFiles = Array.from(document.getElementById('upload-files-input').files || []);
       const filesToUpload = pickedFileSystemEntries.length > 0
         ? pickedFileSystemEntries.map(e => e.file)
-        : standardFiles;
+        : inputFiles;
 
       if (!filesToUpload.length) {
-        showToast('Selecciona al menos un archivo');
+        showToast('Selecciona al menos un archivo para subir');
         return;
       }
 
-      const comicTitle = document.getElementById('upload-comic-title').value.trim() || `Cómic ${new Date().toLocaleDateString()}`;
-      const manualTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('upload-tags-input').value));
-      const folderObj = (section === 'artistas' && folderId)
-        ? (artist.folders || []).find(f => f.id === folderId)
-        : null;
-
-      let comicObj = (section === 'comics' && comicId)
-        ? (artist.comics || []).find(c => c.id === comicId)
-        : null;
-
-      const baseTags = normalizeTags([
-        ...extractArtistNameTags(artist.name),
-        ...(folderObj ? [...extractFolderNameTags(folderObj.name), ...(folderObj.tags || [])] : []),
-        ...(comicObj ? (comicObj.tags || []) : []),
-        ...manualTags
-      ]);
-
+      const rawTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('upload-tags-input').value));
+      const artistAutoTags = extractArtistNameTags(artist.name);
       const btn = document.getElementById('upload-submit-btn');
-      const progBox = document.getElementById('upload-progress-box');
+      const progressBox = document.getElementById('upload-progress-box');
       btn.disabled = true;
-      progBox.classList.remove('hidden');
+      btn.textContent = 'Subiendo...';
+      progressBox.classList.remove('hidden');
 
       try {
-        if (section === 'comics' && isNewComic) {
-          comicObj = {
-            id: generateId('comic'),
-            title: comicTitle,
-            tags: baseTags,
-            coverUrl: '',
-            coverDriveId: '',
-            createdAt: Date.now(),
-            pages: []
-          };
-          artist.comics.unshift(comicObj);
-        }
-
-        const subTarget = section === 'artistas' ? folderObj : section === 'comics' ? comicObj : null;
-        const driveParentId = driveConfig.accessToken
-          ? await ensureTargetFolderForContext(section, artist, subTarget)
-          : '';
-
-        const coverFile = document.getElementById('upload-cover-file').files?.[0] || null;
-        if (comicObj && coverFile) {
-          if (driveConfig.accessToken && driveParentId) {
-            const upCov = await uploadFileToDrive(coverFile, driveParentId, baseTags);
-            comicObj.coverDriveId = upCov.id || '';
-          } else {
-            comicObj.coverUrl = URL.createObjectURL(coverFile);
-          }
-        }
-
-        for (let i = 0; i < filesToUpload.length; i++) {
-          const f = filesToUpload[i];
-          progBox.textContent = `Subiendo ${i + 1} de ${filesToUpload.length}: ${f.name}...`;
-          let uploadedMeta = null;
-          let localUrl = '';
-
-          if (driveConfig.accessToken && driveParentId) {
-            uploadedMeta = await uploadFileToDrive(f, driveParentId, baseTags);
-          } else {
-            localUrl = URL.createObjectURL(f);
-          }
-
-          const entryObj = {
-            id: generateId(section === 'comics' ? 'page' : section === 'historia' ? 'story' : 'img'),
-            title: f.name.replace(/\.[^/.]+$/, ''),
-            mimeType: f.type || 'application/octet-stream',
-            driveId: uploadedMeta ? uploadedMeta.id : '',
-            url: localUrl,
-            size: uploadedMeta ? Number(uploadedMeta.size) || f.size : f.size,
-            tags: [...baseTags],
-            createdAt: Date.now()
-          };
-
-          if (section === 'historia') {
-            artist.items.unshift(entryObj);
-          } else if (section === 'comics' && comicObj) {
-            comicObj.pages.push(entryObj);
-            if (!comicObj.coverDriveId && !comicObj.coverUrl) {
-              comicObj.coverDriveId = entryObj.driveId;
-              comicObj.coverUrl = entryObj.url;
+        if (section === 'historia') {
+          const parentFolderId = driveConfig.accessToken ? await ensureTargetFolderForContext('historia', artist, null) : null;
+          for (let i = 0; i < filesToUpload.length; i++) {
+            const f = filesToUpload[i];
+            progressBox.textContent = `Subiendo ${i + 1} de ${filesToUpload.length}: ${f.name}...`;
+            const finalTags = normalizeTags([...artistAutoTags, ...rawTags]);
+            let driveId = '';
+            let localUrl = '';
+            if (driveConfig.accessToken) {
+              const up = await uploadFileToDrive(f, parentFolderId, finalTags);
+              driveId = up.id;
+            } else {
+              localUrl = URL.createObjectURL(f);
             }
-          } else if (section === 'artistas') {
-            if (folderObj) {
-              folderObj.images.unshift(entryObj);
-              if (!folderObj.coverDriveId && !folderObj.coverUrl) {
-                folderObj.coverDriveId = entryObj.driveId;
-                folderObj.coverUrl = entryObj.url;
+            artist.items.unshift({
+              id: generateId('story'),
+              title: f.name.replace(/\.[^/.]+$/, ''),
+              mimeType: f.type || 'application/octet-stream',
+              driveId,
+              url: localUrl,
+              size: f.size || 0,
+              tags: finalTags,
+              createdAt: Date.now()
+            });
+          }
+        } else if (section === 'comics') {
+          let comic = comicId ? (artist.comics || []).find(c => c.id === comicId) : null;
+          if (!comic || isNewComic) {
+            const title = document.getElementById('upload-comic-title').value.trim() || filesToUpload[0].name.replace(/\.[^/.]+$/, '');
+            comic = {
+              id: generateId('comic'),
+              title,
+              tags: normalizeTags([...artistAutoTags, ...rawTags]),
+              coverUrl: '',
+              coverDriveId: '',
+              createdAt: Date.now(),
+              pages: []
+            };
+            artist.comics.unshift(comic);
+          }
+
+          const parentFolderId = driveConfig.accessToken ? await ensureTargetFolderForContext('comics', artist, comic) : null;
+          const coverFile = document.getElementById('upload-cover-file').files?.[0];
+          if (coverFile) {
+            if (driveConfig.accessToken) {
+              const upCov = await uploadFileToDrive(coverFile, parentFolderId, comic.tags);
+              comic.coverDriveId = upCov.id;
+            } else {
+              comic.coverUrl = URL.createObjectURL(coverFile);
+            }
+          }
+
+          filesToUpload.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+          for (let i = 0; i < filesToUpload.length; i++) {
+            const f = filesToUpload[i];
+            progressBox.textContent = `Subiendo página ${i + 1} de ${filesToUpload.length}: ${f.name}...`;
+            const finalTags = normalizeTags([...artistAutoTags, ...(comic.tags || []), ...rawTags]);
+            let driveId = '';
+            let localUrl = '';
+            if (driveConfig.accessToken) {
+              const up = await uploadFileToDrive(f, parentFolderId, finalTags);
+              driveId = up.id;
+            } else {
+              localUrl = URL.createObjectURL(f);
+            }
+            comic.pages.push({
+              id: generateId('page'),
+              title: f.name.replace(/\.[^/.]+$/, ''),
+              driveId,
+              url: localUrl,
+              size: f.size || 0,
+              tags: finalTags,
+              createdAt: Date.now()
+            });
+            if (!comic.coverDriveId && !comic.coverUrl) {
+              comic.coverDriveId = driveId;
+              comic.coverUrl = localUrl;
+            }
+          }
+        } else if (section === 'artistas') {
+          const folder = folderId ? (artist.folders || []).find(f => f.id === folderId) : null;
+          const folderAutoTags = folder ? [...extractFolderNameTags(folder.name), ...(folder.tags || [])] : [];
+          const parentFolderId = driveConfig.accessToken ? await ensureTargetFolderForContext('artistas', artist, folder) : null;
+
+          for (let i = 0; i < filesToUpload.length; i++) {
+            const f = filesToUpload[i];
+            progressBox.textContent = `Subiendo imagen ${i + 1} de ${filesToUpload.length}: ${f.name}...`;
+            const finalTags = normalizeTags([...artistAutoTags, ...folderAutoTags, ...rawTags]);
+            let driveId = '';
+            let localUrl = '';
+            if (driveConfig.accessToken) {
+              const up = await uploadFileToDrive(f, parentFolderId, finalTags);
+              driveId = up.id;
+            } else {
+              localUrl = URL.createObjectURL(f);
+            }
+            const imgObj = {
+              id: generateId('img'),
+              title: f.name.replace(/\.[^/.]+$/, ''),
+              driveId,
+              url: localUrl,
+              size: f.size || 0,
+              tags: finalTags,
+              createdAt: Date.now()
+            };
+            if (folder) {
+              folder.images.unshift(imgObj);
+              if (!folder.coverDriveId && !folder.coverUrl) {
+                folder.coverDriveId = driveId;
+                folder.coverUrl = localUrl;
               }
             } else {
-              artist.images.unshift(entryObj);
+              artist.images.unshift(imgObj);
             }
           }
         }
@@ -5388,237 +5533,33 @@
         closeModal('upload-modal');
         renderAll();
         showToast(`✅ ${filesToUpload.length} archivo(s) subidos correctamente`);
+      } catch (e) {
+        console.error(e);
+        showToast('⚠️ Error subiendo archivos');
       } finally {
         btn.disabled = false;
-        progBox.classList.add('hidden');
+        btn.textContent = 'Subir';
       }
     }
 
-    // =========================================================================
-    // EDICIÓN DE TAGS INDIVIDUAL, MASIVA Y EN GOOGLE DRIVE (CON CHIPS APAGABLES)
-    // =========================================================================
-    function renderToggleableChipsContainer(containerId, stateObj, onToggleFnName) {
-      const el = document.getElementById(containerId);
-      if (!el) return;
-      if (!stateObj.activeTags.length) {
-        el.innerHTML = `<span class="text-xs text-slate-500">Sin tags asignados todavía.</span>`;
-        return;
-      }
-      el.innerHTML = stateObj.activeTags.map(t => {
-        const isRemoved = stateObj.removedTags.has(t);
-        return `
-          <button type="button" onclick="${onToggleFnName}('${escapeHtml(t)}')"
-            class="px-2.5 py-1 rounded-full text-xs font-semibold transition ${
-              isRemoved
-                ? 'bg-rose-950/90 border border-rose-500/60 text-rose-300 line-through'
-                : 'bg-indigo-600 text-white shadow'
-            }">
-            ${isRemoved ? '✕' : '✓'} #${escapeHtml(t)}
-          </button>
-        `;
-      }).join('');
-    }
-
-    let editIndividualChipsState = { activeTags: [], removedTags: new Set() };
-
-    function toggleEditIndividualChip(tag) {
-      if (editIndividualChipsState.removedTags.has(tag)) editIndividualChipsState.removedTags.delete(tag);
-      else editIndividualChipsState.removedTags.add(tag);
-      renderToggleableChipsContainer('edit-active-tags-chips', editIndividualChipsState, 'toggleEditIndividualChip');
-    }
-
-    function openEditTagsModal(ctx) {
-      editingTagsContext = ctx;
-      const { section, artistId, folderId, comicId, itemId, isComicFolder } = ctx;
-      const artist = (libraryData[section] || []).find(a => a.id === artistId);
-      if (!artist) return;
-
-      let targetObj = null;
-      if (section === 'historia') targetObj = (artist.items || []).find(i => i.id === itemId);
-      else if (section === 'comics') {
-        const comic = (artist.comics || []).find(c => c.id === comicId);
-        targetObj = isComicFolder ? comic : (comic ? (comic.pages || []).find(p => p.id === itemId) : null);
-      } else if (section === 'artistas') {
-        const folder = folderId ? (artist.folders || []).find(f => f.id === folderId) : null;
-        targetObj = folder ? (folder.images || []).find(i => i.id === itemId) : (artist.images || []).find(i => i.id === itemId);
-      }
-      if (!targetObj) return;
-
-      document.getElementById('edit-item-title-input').value = targetObj.title || targetObj.name || '';
-      document.getElementById('edit-tags-input').value = '';
-      document.getElementById('edit-tags-spell-box').classList.add('hidden');
-
-      editIndividualChipsState = {
-        activeTags: normalizeTags(targetObj.tags || []),
-        removedTags: new Set()
-      };
-      renderToggleableChipsContainer('edit-active-tags-chips', editIndividualChipsState, 'toggleEditIndividualChip');
-      renderQuickTagPicker('edit-quick-tag-picker', 'edit-tags-input', 'edit-tags-spell-box');
-      openModal('edit-tags-modal');
-    }
-
-    async function saveEditedTags() {
-      if (!editingTagsContext) return;
-      const { section, artistId, folderId, comicId, itemId, isComicFolder } = editingTagsContext;
-      const artist = (libraryData[section] || []).find(a => a.id === artistId);
-      if (!artist) return;
-
-      let targetObj = null;
-      if (section === 'historia') targetObj = (artist.items || []).find(i => i.id === itemId);
-      else if (section === 'comics') {
-        const comic = (artist.comics || []).find(c => c.id === comicId);
-        targetObj = isComicFolder ? comic : (comic ? (comic.pages || []).find(p => p.id === itemId) : null);
-      } else if (section === 'artistas') {
-        const folder = folderId ? (artist.folders || []).find(f => f.id === folderId) : null;
-        targetObj = folder ? (folder.images || []).find(i => i.id === itemId) : (artist.images || []).find(i => i.id === itemId);
-      }
-      if (!targetObj) return;
-
-      const newTitle = document.getElementById('edit-item-title-input').value.trim();
-      const addedTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('edit-tags-input').value));
-      const keptTags = editIndividualChipsState.activeTags.filter(t => !editIndividualChipsState.removedTags.has(t));
-      const finalTags = normalizeTags([...keptTags, ...addedTags]);
-
-      if (newTitle && newTitle !== targetObj.title) {
-        targetObj.title = newTitle;
-        if (isComicFolder && targetObj.driveFolderId) {
-          await renameDriveItemById(targetObj.driveFolderId, newTitle, false);
-        } else if (targetObj.driveId) {
-          await renameDriveItemById(targetObj.driveId, newTitle, true);
+    function removeDriveIdFromCatalog(driveId) {
+      if (!driveId) return;
+      for (const a of libraryData.artistas) {
+        a.images = (a.images || []).filter(i => i.driveId !== driveId);
+        for (const f of (a.folders || [])) {
+          f.images = (f.images || []).filter(i => i.driveId !== driveId);
         }
       }
-
-      targetObj.tags = finalTags;
-      if (targetObj.driveId) {
-        if (editIndividualChipsState.removedTags.size > 0) {
-          purgeRemovedTagsGloballyForDriveId(targetObj.driveId, editIndividualChipsState.removedTags);
-        }
-        await updateDriveFileTagsMetadata(targetObj.driveId, finalTags);
-      } else if (isComicFolder) {
-        for (const p of (targetObj.pages || [])) {
-          p.tags = normalizeTags([...(p.tags || []).filter(t => !editIndividualChipsState.removedTags.has(t)), ...addedTags]);
-          if (p.driveId) await updateDriveFileTagsMetadata(p.driveId, p.tags);
+      for (const a of libraryData.comics) {
+        for (const c of (a.comics || [])) {
+          c.pages = (c.pages || []).filter(p => p.driveId !== driveId);
         }
       }
-
-      await persistLibrary(`Editados tags de "${targetObj.title}"`);
-      closeModal('edit-tags-modal');
-      renderAll();
-      showToast('✅ Tags y título actualizados');
-    }
-
-    function toggleBulkChip(tag) {
-      if (bulkTagChipsState.removedTags.has(tag)) bulkTagChipsState.removedTags.delete(tag);
-      else bulkTagChipsState.removedTags.add(tag);
-      renderToggleableChipsContainer('bulk-active-tags-chips', bulkTagChipsState, 'toggleBulkChip');
-    }
-
-    function openBulkTagModal() {
-      const artist = libraryData.artistas.find(a => a.id === state.artistId);
-      if (!artist || !state.selectedImageIds.size) return;
-
-      const folder = state.artistFolderId ? (artist.folders || []).find(f => f.id === state.artistFolderId) : null;
-      const list = (folder ? folder.images : artist.images).filter(img => state.selectedImageIds.has(img.id));
-
-      const unionTags = new Set();
-      list.forEach(img => normalizeTags(img.tags || []).forEach(t => unionTags.add(t)));
-
-      bulkTagChipsState = {
-        activeTags: Array.from(unionTags).sort(),
-        removedTags: new Set()
-      };
-      document.getElementById('bulk-modal-count').textContent = list.length;
-      document.getElementById('bulk-add-tags-input').value = '';
-      document.getElementById('bulk-tags-spell-box').classList.add('hidden');
-      renderToggleableChipsContainer('bulk-active-tags-chips', bulkTagChipsState, 'toggleBulkChip');
-      renderQuickTagPicker('bulk-quick-tag-picker', 'bulk-add-tags-input', 'bulk-tags-spell-box');
-      openModal('bulk-tag-modal');
-    }
-
-    async function applyBulkTags() {
-      const artist = libraryData.artistas.find(a => a.id === state.artistId);
-      if (!artist || !state.selectedImageIds.size) return;
-
-      const folder = state.artistFolderId ? (artist.folders || []).find(f => f.id === state.artistFolderId) : null;
-      const list = folder ? folder.images : artist.images;
-      const addedTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('bulk-add-tags-input').value));
-
-      for (const img of list) {
-        if (!state.selectedImageIds.has(img.id)) continue;
-        const filtered = (img.tags || []).filter(t => !bulkTagChipsState.removedTags.has(t));
-        img.tags = normalizeTags([...filtered, ...addedTags]);
-        if (img.driveId) {
-          if (bulkTagChipsState.removedTags.size > 0) {
-            purgeRemovedTagsGloballyForDriveId(img.driveId, bulkTagChipsState.removedTags);
-          }
-          await updateDriveFileTagsMetadata(img.driveId, img.tags);
-        }
-      }
-
-      await persistLibrary(`Actualizados tags de ${state.selectedImageIds.size} imagen(es)`);
-      closeModal('bulk-tag-modal');
-      renderAll();
-      showToast('✅ Tags aplicados en bloque');
-    }
-
-    function toggleDriveBrowserChip(tag) {
-      if (driveTagChipsState.removedTags.has(tag)) driveTagChipsState.removedTags.delete(tag);
-      else driveTagChipsState.removedTags.add(tag);
-      renderToggleableChipsContainer('drive-browser-active-tags-chips', driveTagChipsState, 'toggleDriveBrowserChip');
-    }
-
-    function openDriveBrowserTagModal() {
-      const ids = Array.from(driveBrowserState.selectedIds);
-      if (!ids.length) return;
-      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
-      const selectedFiles = sourceList.filter(f => driveBrowserState.selectedIds.has(f.id));
-
-      const unionTags = new Set();
-      selectedFiles.forEach(f => extractDriveFileTags(f).forEach(t => unionTags.add(t)));
-
-      driveTagChipsState = {
-        activeTags: Array.from(unionTags).sort(),
-        removedTags: new Set()
-      };
-      document.getElementById('drive-tag-modal-count').textContent = selectedFiles.length;
-      document.getElementById('drive-browser-add-tags').value = '';
-      document.getElementById('drive-tags-spell-box').classList.add('hidden');
-      renderToggleableChipsContainer('drive-browser-active-tags-chips', driveTagChipsState, 'toggleDriveBrowserChip');
-      renderQuickTagPicker('drive-quick-tag-picker', 'drive-browser-add-tags', 'drive-tags-spell-box');
-      openModal('drive-browser-tag-modal');
-    }
-
-    async function applyDriveBrowserTags() {
-      const sourceList = state.activeTags.length > 0 ? unifiedTagResults.drive : driveBrowserState.items;
-      const selectedFiles = sourceList.filter(f => driveBrowserState.selectedIds.has(f.id));
-      const addedTags = autoCorrectKnownEnglishTypos(normalizeTags(document.getElementById('drive-browser-add-tags').value));
-
-      const btn = document.getElementById('confirm-drive-browser-tag-btn');
-      btn.disabled = true;
-      btn.textContent = 'Guardando...';
-
-      try {
-        for (const f of selectedFiles) {
-          const current = extractDriveFileTags(f).filter(t => !driveTagChipsState.removedTags.has(t));
-          const updated = normalizeTags([...current, ...addedTags]);
-          if (driveTagChipsState.removedTags.size > 0) {
-            purgeRemovedTagsGloballyForDriveId(f.id, driveTagChipsState.removedTags);
-          }
-          await updateDriveFileTagsMetadata(f.id, updated);
-        }
-        await persistLibrary(`Actualizados tags en Drive (${selectedFiles.length} archivos)`);
-        closeModal('drive-browser-tag-modal');
-        renderAll();
-        showToast('✅ Tags guardados en Google Drive y en la app');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Guardar Tags';
+      for (const a of libraryData.historia) {
+        a.items = (a.items || []).filter(i => i.driveId !== driveId);
       }
     }
 
-    // =========================================================================
-    // MOVER / BORRAR EN EXPLORADOR DRIVE Y PASAR DE DRIVE A MI APP
-    // =========================================================================
     async function deleteSelectedDriveBrowserItems() {
       const ids = Array.from(driveBrowserState.selectedIds);
       if (!ids.length) return;
@@ -5626,7 +5567,9 @@
         title: 'Enviar a papelera de Drive',
         message: `¿Enviar ${ids.length} elemento(s) seleccionado(s) a la papelera de Google Drive?`,
         doubleStep: true,
-        icon: '🗑️'
+        icon: '🗑️',
+        yesLabel: 'Sí, enviar a papelera',
+        noLabel: 'No'
       });
       if (!ok) return;
 
@@ -5635,18 +5578,22 @@
         removeDriveIdFromCatalog(id);
       }
       driveBrowserState.selectedIds.clear();
-      await persistLibrary(`Enviados ${ids.length} elemento(s) a papelera en Drive`);
-      const current = driveBrowserState.path[driveBrowserState.path.length - 1];
-      await loadDriveBrowserFolder(current.id);
-      showToast('🗑️ Elementos enviados a la papelera');
+      await persistLibrary(`Enviados ${ids.length} elemento(s) a papelera de Drive`);
+      if (state.activeTags.length > 0) {
+        await runDeepUnifiedTagSearch(state.activeTags);
+      } else {
+        const activeFolder = driveBrowserState.path[driveBrowserState.path.length - 1];
+        await loadDriveBrowserFolder(activeFolder.id);
+      }
+      showToast(`🗑️ ${ids.length} elemento(s) enviados a la papelera`);
     }
 
-    async function openDriveMoveModal() {
+    function openDriveMoveModal() {
       if (!driveBrowserState.selectedIds.size) return;
       document.getElementById('drive-move-count').textContent = driveBrowserState.selectedIds.size;
       driveBrowserState.movePath = [{ id: 'root', name: 'Mi Unidad' }];
       openModal('drive-move-modal');
-      await loadDriveMovePickerFolders('root');
+      loadDriveMovePickerFolders('root');
     }
 
     async function loadDriveMovePickerFolders(folderId) {
