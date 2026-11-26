@@ -44,13 +44,20 @@
   <!-- OVERLAY MÓVIL/TABLET PARA MENÚ LATERAL -->
   <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/70 z-30 hidden md:hidden"></div>
 
-  <!-- MENÚ LATERAL IZQUIERDO -->
-  <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-slate-900/95 border-r border-slate-800 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-out">
+  <!-- MENÚ LATERAL IZQUIERDO (MINIMIZADO POR DEFECTO PARA APROVECHAR PANTALLA) -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900/95 border-r border-slate-800 flex flex-col transform -translate-x-full transition-transform duration-200 ease-out shadow-2xl">
     <div class="p-5 border-b border-slate-800 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold shadow-lg">
           🏛️
         </div>
+        <div>
+          <h1 class="font-bold text-base tracking-tight text-white leading-tight">Mi Bóveda</h1>
+          <p class="text-xs text-slate-400">Biblioteca &amp; Drive</p>
+        </div>
+      </div>
+      <button onclick="toggleSidebar(false)" class="p-2 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
+    </div>
         <div>
           <h1 class="font-bold text-base tracking-tight text-white leading-tight">Mi Bóveda</h1>
           <p class="text-xs text-slate-400">Biblioteca &amp; Drive</p>
@@ -146,7 +153,7 @@
     <!-- BARRA SUPERIOR -->
     <header class="sticky top-0 z-20 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/90 px-4 py-3 space-y-2.5">
       <div class="flex items-center gap-2.5">
-        <button onclick="toggleSidebar(true)" class="md:hidden p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200">
+        <button onclick="toggleSidebar()" title="Mostrar / minimizar menú lateral" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 shrink-0">
           ☰
         </button>
 
@@ -345,6 +352,14 @@
           <label class="block text-xs font-semibold text-slate-400 mb-1">Avatar / Portada (opcional)</label>
           <input id="artist-avatar-file" type="file" accept="image/*" class="w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white file:font-semibold" />
         </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <label class="block text-xs font-semibold text-indigo-300">🔗 Enlaces al artista (hasta 4 links)</label>
+          <input id="artist-link-1" type="url" placeholder="Link 1 (ej: https://furaffinity.net/user/...)" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+          <input id="artist-link-2" type="url" placeholder="Link 2 (ej: https://x.com/...)" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+          <input id="artist-link-3" type="url" placeholder="Link 3 (ej: https://patreon.com/...)" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+          <input id="artist-link-4" type="url" placeholder="Link 4 (ej: https://inkbunny.net/...)" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+        </div>
       </div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
@@ -355,7 +370,7 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 3B: CREAR / EDITAR CARPETA DENTRO DE UN ARTISTA                 -->
+  <!-- MODAL 3B: CREAR / EDITAR CARPETA DENTRO DE ARTISTA                    -->
   <!-- ===================================================================== -->
   <div id="artist-folder-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
@@ -363,22 +378,18 @@
         <h2 id="artist-folder-modal-title" class="text-lg font-bold text-white">📁 Nueva Carpeta en Artista</h2>
         <button onclick="closeModal('artist-folder-modal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">✕</button>
       </div>
-
       <div class="space-y-3">
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">Nombre de la Carpeta</label>
-          <input id="artist-folder-name-input" type="text" placeholder="Ej: Sketches, Comisiones 2026, Personajes..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
-          <p id="artist-folder-auto-tag-hint" class="text-[11px] text-emerald-300 mt-1">Tanto el nombre del artista como el nombre de esta carpeta se pondrán en automático como tags en todas sus imágenes.</p>
+          <input id="artist-folder-name-input" type="text" placeholder="Ej: Comisiones, Sketches..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
         </div>
-
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags extra de la Carpeta (opcional, escribe o elige de las filas rápidas)</label>
-          <input id="artist-folder-tags-input" type="text" oninput="onQuickTagManualInputChange('artist-folder-tags-input', 'folder-quick-tag-picker', 'folder-tags-spell-box')" placeholder="ej: male, anthro, canine, wolf..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tags de la Carpeta</label>
+          <input id="artist-folder-tags-input" type="text" oninput="onQuickTagManualInputChange('artist-folder-tags-input', 'folder-quick-tag-picker', 'folder-tags-spell-box')" placeholder="anthro, male, tf..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
           <div id="folder-tags-spell-box" class="hidden mt-1.5"></div>
           <div id="folder-quick-tag-picker" class="mt-2"></div>
         </div>
       </div>
-
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
         <button onclick="closeModal('artist-folder-modal')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancelar</button>
         <button id="save-artist-folder-btn" onclick="saveArtistFolderForm()" class="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm">Guardar Carpeta</button>
@@ -1162,135 +1173,26 @@
       }
     }
 
-    function toggleGridDensity() {
-      state.compactGrid = !state.compactGrid;
-      const grid = document.getElementById('main-grid');
-      if (state.compactGrid) {
-        grid.className = 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-2.5';
-      } else {
-        grid.className = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5';
-      }
-    }
-
-    function toggleFullThumbMode() {
-      state.fullThumbMode = !state.fullThumbMode;
+    function formatLinkHostLabel(url) {
       try {
-        localStorage.setItem('mi_boveda_full_thumb_mode', state.fullThumbMode ? '1' : '0');
-      } catch (e) {}
-      updateThumbFitButtonUI();
-      renderAll();
-      showToast(state.fullThumbMode ? '🖼️ Miniaturas completas (adaptadas en largo y ancho)' : '📐 Miniaturas con recorte uniforme');
-    }
-
-    function updateThumbFitButtonUI() {
-      const btn = document.getElementById('thumb-fit-btn');
-      const lbl = document.getElementById('thumb-fit-label');
-      if (!btn || !lbl) return;
-      if (state.fullThumbMode) {
-        btn.className = 'flex items-center gap-1 px-3 py-2.5 rounded-xl bg-indigo-600/30 border border-indigo-500/60 text-xs font-semibold text-indigo-200 shrink-0';
-        lbl.textContent = 'Completa';
-      } else {
-        btn.className = 'flex items-center gap-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:border-indigo-500 shrink-0';
-        lbl.textContent = 'Recorte';
+        const u = new URL(url);
+        return u.hostname.replace(/^www\./i, '');
+      } catch (e) {
+        return 'Link';
       }
     }
 
-    function getThumbWrapperClass(baseExtra = '') {
-      return state.fullThumbMode
-        ? `relative min-h-[140px] bg-slate-950/90 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`
-        : `relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
-    }
-
-    function getThumbImgClass(isDriveDelayed = false) {
-      const fade = isDriveDelayed ? 'opacity-0 transition-opacity duration-200' : 'transition-opacity duration-200';
-      return state.fullThumbMode
-        ? `${fade} w-full h-auto max-h-[420px] object-contain`
-        : `${fade} w-full h-full object-cover`;
-    }
-
-    let toastTimer = null;
-    function showToast(msg) {
-      const el = document.getElementById('toast');
-      if (!el) return;
-      el.textContent = msg;
-      el.classList.remove('hidden');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.classList.add('hidden'), 3400);
-    }
-
-    function askYesNoConfirm({ title = 'Confirmar', message = '', doubleStep = false, icon = '⚠️', yesLabel = 'Sí', noLabel = 'No' }) {
-      return new Promise((resolve) => {
-        const modal = document.getElementById('app-confirm-modal');
-        const titleEl = document.getElementById('app-confirm-title');
-        const msgEl = document.getElementById('app-confirm-message');
-        const iconEl = document.getElementById('app-confirm-icon');
-        const badgeEl = document.getElementById('app-confirm-step-badge');
-        const yesBtn = document.getElementById('app-confirm-yes-btn');
-        const noBtn = document.getElementById('app-confirm-no-btn');
-
-        let step = 1;
-        iconEl.textContent = icon;
-        titleEl.textContent = title;
-        msgEl.textContent = message;
-        yesBtn.textContent = yesLabel;
-        noBtn.textContent = noLabel;
-        badgeEl.classList.add('hidden');
-        openModal('app-confirm-modal');
-
-        const cleanup = () => {
-          yesBtn.onclick = null;
-          noBtn.onclick = null;
-          closeModal('app-confirm-modal');
-        };
-
-        noBtn.onclick = () => {
-          cleanup();
-          resolve(false);
-        };
-
-        yesBtn.onclick = () => {
-          if (doubleStep && step === 1) {
-            step = 2;
-            badgeEl.classList.remove('hidden');
-            yesBtn.textContent = 'Sí, confirmar definitivamente';
-            return;
-          }
-          cleanup();
-          resolve(true);
-        };
-      });
-    }
-
-    // =========================================================================
-    // SELECTOR RÁPIDO DE TAGS POR FILAS + CORRECTOR ORTOGRÁFICO EN INGLÉS
-    // =========================================================================
-    function handleTagInputSpellingCheck(inputId, spellBoxId) {
-      const input = document.getElementById(inputId);
-      const spellBox = document.getElementById(spellBoxId);
-      if (!input || !spellBox) return;
-
-      const rawTokens = normalizeTags(input.value);
-      const suggestions = [];
-      for (const tok of rawTokens) {
-        if (ENGLISH_TAG_CORRECTIONS[tok] && ENGLISH_TAG_CORRECTIONS[tok] !== tok) {
-          suggestions.push({ wrong: tok, right: ENGLISH_TAG_CORRECTIONS[tok] });
-        }
-      }
-
-      if (!suggestions.length) {
-        spellBox.classList.add('hidden');
-        spellBox.innerHTML = '';
-        return;
-      }
-
-      spellBox.classList.remove('hidden');
-      spellBox.innerHTML = `
-        <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-amber-950/60 border border-amber-500/40 text-[11px] text-amber-200">
-          <span>💡 Corrección en inglés:</span>
-          ${suggestions.map(s => `
-            <button type="button" onclick="applySpellingSuggestion('${inputId}', '${spellBoxId}', '${escapeHtml(s.wrong)}', '${escapeHtml(s.right)}')" class="px-2 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold">
-              ${escapeHtml(s.wrong)} → ${escapeHtml(s.right)}
-            </button>
+    function renderArtistLinksBadges(links, compact = false) {
+      const valid = (links || []).filter(u => String(u || '').trim());
+      if (!valid.length) return '';
+      return `
+        <div class="flex flex-wrap gap-1 ${compact ? 'mt-1' : ''}">
+          ${valid.map((url, idx) => `
+            <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"
+               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-950/90 hover:bg-indigo-600 border border-indigo-500/40 text-[10px] font-semibold text-indigo-200 hover:text-white transition">
+              <span>🔗</span>
+              <span>${escapeHtml(formatLinkHostLabel(url))}</span>
+            </a>
           `).join('')}
         </div>
       `;
@@ -1460,15 +1362,15 @@
 
     function extractDriveFileTags(fileObj) {
       if (!fileObj) return [];
-      const targetId = (fileObj.mimeType === 'application/vnd.google-apps.shortcut' && fileObj.shortcutDetails)
-        ? fileObj.shortcutDetails.targetId
-        : fileObj.id;
       const fromMeta = extractRawDriveMetadataTags(fileObj);
-      const fromIndex = driveConfig.driveTagsIndex.get(fileObj.id) || driveConfig.driveTagsIndex.get(targetId) || [];
+      const fromIndex = fileObj.id ? (driveConfig.driveTagsIndex.get(fileObj.id) || []) : [];
       return normalizeTags([...fromMeta, ...fromIndex]);
     }
 
     function ensureArtistCollectionsNormalized() {
+      if (!libraryData || typeof libraryData !== 'object') {
+        libraryData = { historia: [], comics: [], artistas: [] };
+      }
       if (!Array.isArray(libraryData.historia)) libraryData.historia = [];
       if (!Array.isArray(libraryData.comics)) libraryData.comics = [];
       if (!Array.isArray(libraryData.artistas)) libraryData.artistas = [];
@@ -1476,18 +1378,170 @@
       for (const a of libraryData.artistas) {
         if (!Array.isArray(a.images)) a.images = [];
         if (!Array.isArray(a.folders)) a.folders = [];
+        if (!Array.isArray(a.tags)) a.tags = [];
+        if (!Array.isArray(a.links)) a.links = [];
         for (const f of a.folders) {
           if (!Array.isArray(f.images)) f.images = [];
+          if (!Array.isArray(f.tags)) f.tags = [];
         }
       }
       for (const a of libraryData.comics) {
         if (!Array.isArray(a.comics)) a.comics = [];
+        if (!Array.isArray(a.tags)) a.tags = [];
+        if (!Array.isArray(a.links)) a.links = [];
         for (const c of a.comics) {
           if (!Array.isArray(c.pages)) c.pages = [];
+          if (!Array.isArray(c.tags)) c.tags = [];
         }
       }
       for (const a of libraryData.historia) {
         if (!Array.isArray(a.items)) a.items = [];
+        if (!Array.isArray(a.tags)) a.tags = [];
+        if (!Array.isArray(a.links)) a.links = [];
+      }
+    }
+
+    function updateThumbFitButtonUI() {
+      const btn = document.getElementById('thumb-fit-btn');
+      const label = document.getElementById('thumb-fit-label');
+      if (!btn || !label) return;
+      if (state.fullThumbMode) {
+        label.textContent = 'Completa';
+        btn.classList.add('border-indigo-500', 'bg-indigo-600/25', 'text-indigo-200');
+      } else {
+        label.textContent = 'Recorte';
+        btn.classList.remove('border-indigo-500', 'bg-indigo-600/25', 'text-indigo-200');
+      }
+    }
+
+    function toggleFullThumbMode() {
+      state.fullThumbMode = !state.fullThumbMode;
+      try {
+        localStorage.setItem('mi_boveda_full_thumb_mode', state.fullThumbMode ? '1' : '0');
+      } catch (e) {}
+      updateThumbFitButtonUI();
+      renderAll();
+    }
+
+    function toggleGridDensity() {
+      state.compactGrid = !state.compactGrid;
+      const grid = document.getElementById('main-grid');
+      if (!grid) return;
+      if (state.compactGrid) {
+        grid.className = 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5';
+      } else {
+        grid.className = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5';
+      }
+    }
+
+    function handleTagInputSpellingCheck(inputId, spellBoxId) {
+      const input = document.getElementById(inputId);
+      const box = document.getElementById(spellBoxId);
+      if (!input || !box) return;
+      const tokens = normalizeTags(input.value);
+      const fixes = [];
+      for (const t of tokens) {
+        if (ENGLISH_TAG_CORRECTIONS[t] && ENGLISH_TAG_CORRECTIONS[t] !== t) {
+          fixes.push({ wrong: t, right: ENGLISH_TAG_CORRECTIONS[t] });
+        }
+      }
+      if (!fixes.length) {
+        box.classList.add('hidden');
+        box.innerHTML = '';
+        return;
+      }
+      box.classList.remove('hidden');
+      box.innerHTML = fixes.map(f => `
+        <button type="button" onclick="applySpellingSuggestion('${inputId}', '${spellBoxId}', '${escapeHtml(f.wrong)}', '${escapeHtml(f.right)}')"
+          class="inline-flex items-center gap-1 mr-1.5 mb-1 px-2.5 py-1 rounded-lg bg-amber-950/90 hover:bg-amber-800 border border-amber-500/50 text-[11px] text-amber-200">
+          <span>💡 ¿Quisiste decir <strong>${escapeHtml(f.right)}</strong> en lugar de <em>${escapeHtml(f.wrong)}</em>?</span>
+        </button>
+      `).join('');
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => el.classList.add('hidden'), 3200);
+    }
+
+    function askYesNoConfirm({ title = 'Confirmar', message = '', doubleStep = false, icon = '⚠️', yesLabel = 'Sí', noLabel = 'No' } = {}) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('app-confirm-modal');
+        const titleEl = document.getElementById('app-confirm-title');
+        const msgEl = document.getElementById('app-confirm-message');
+        const iconEl = document.getElementById('app-confirm-icon');
+        const badgeEl = document.getElementById('app-confirm-step-badge');
+        const yesBtn = document.getElementById('app-confirm-yes-btn');
+        const noBtn = document.getElementById('app-confirm-no-btn');
+
+        let step = 1;
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        iconEl.textContent = icon;
+        yesBtn.textContent = yesLabel;
+        noBtn.textContent = noLabel;
+        badgeEl.classList.add('hidden');
+
+        const cleanup = (result) => {
+          closeModal('app-confirm-modal');
+          yesBtn.onclick = null;
+          noBtn.onclick = null;
+          resolve(result);
+        };
+
+        yesBtn.onclick = () => {
+          if (doubleStep && step === 1) {
+            step = 2;
+            badgeEl.classList.remove('hidden');
+            yesBtn.textContent = 'Sí, estoy seguro';
+            return;
+          }
+          cleanup(true);
+        };
+        noBtn.onclick = () => cleanup(false);
+
+        openModal('app-confirm-modal');
+      });
+    }
+
+    function getThumbWrapperClass(baseExtra = '') {
+      return state.fullThumbMode
+        ? `relative aspect-[3/4] bg-slate-950/95 cursor-pointer flex items-center justify-center overflow-hidden transition-all duration-200 ${baseExtra}`
+        : `relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
+    }
+
+    function getThumbImgClass(isDriveDelayed = false) {
+      const fade = isDriveDelayed ? 'opacity-0 transition-opacity duration-200' : 'transition-opacity duration-200';
+      return state.fullThumbMode
+        ? `${fade} w-full h-full object-contain`
+        : `${fade} w-full h-full object-cover`;
+    }
+
+    function applyAdaptiveThumbAspect(img) {
+      if (!state.fullThumbMode || !img || !img.naturalWidth || !img.naturalHeight) return;
+      const wrapper = img.parentElement;
+      const card = wrapper ? wrapper.closest('.card-hover') : null;
+      if (!wrapper) return;
+
+      const ratio = img.naturalWidth / img.naturalHeight;
+      wrapper.classList.remove('aspect-[3/4]', 'aspect-[1/2]', 'aspect-[9/8]');
+      if (card) card.classList.remove('sm:col-span-2');
+
+      if (ratio < 0.85) {
+        // Imagen vertical / retrato: recuadro 50% más alto que el estándar 3:4 (1 : 2)
+        wrapper.classList.add('aspect-[1/2]');
+      } else if (ratio > 1.2) {
+        // Imagen ancha / panorámica: recuadro 50% más ancho (9:8 -> 50% más ancho respecto a 3:4)
+        wrapper.classList.add('aspect-[9/8]');
+        if (ratio > 1.45 && card) {
+          card.classList.add('sm:col-span-2');
+        }
+      } else {
+        wrapper.classList.add('aspect-[3/4]');
       }
     }
 
@@ -3053,8 +3107,16 @@
         if (!driveId) return;
         const url = await resolveDriveBlobUrl(driveId);
         if (url && img.isConnected) {
+          img.onload = () => applyAdaptiveThumbAspect(img);
           img.src = url;
           img.classList.remove('opacity-0');
+          if (img.complete) applyAdaptiveThumbAspect(img);
+        }
+      });
+      document.querySelectorAll('img:not([data-drive-id])').forEach(img => {
+        if (img.src) {
+          img.onload = () => applyAdaptiveThumbAspect(img);
+          if (img.complete) applyAdaptiveThumbAspect(img);
         }
       });
       hydratePdfFirstPageCovers();
@@ -4260,6 +4322,7 @@
               <div class="p-3 flex-1 flex flex-col justify-between space-y-2">
                 <div>
                   <div onclick="state.artistId='${artist.id}'; state.page=1; renderAll();" class="font-bold text-sm text-white truncate cursor-pointer">${escapeHtml(artist.name)}</div>
+                  ${renderArtistLinksBadges(artist.links, true)}
                   <div class="flex flex-wrap gap-1 mt-1">
                     ${(artist.tags || []).slice(0, 3).map(t => `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-indigo-300">#${escapeHtml(t)}</span>`).join('')}
                   </div>
@@ -4288,8 +4351,12 @@
           <button onclick="state.artistId=null; state.page=1; renderAll();" class="hover:text-white">${secLabel}</button>
           <span>/</span>
           <span class="font-bold text-white">${escapeHtml(artist.name)}</span>
+          ${renderArtistLinksBadges(artist.links, false)}
         `;
         actions.innerHTML = `
+          <button onclick="openArtistModal('historia', '${artist.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+            ✏️ Editar / Links
+          </button>
           <button onclick="openUploadModal({ section: 'historia', artistId: '${artist.id}' })" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow">
             + Subir PDF / Historia
           </button>
@@ -4343,8 +4410,12 @@
             <button onclick="state.artistId=null; state.page=1; renderAll();" class="hover:text-white">${secLabel}</button>
             <span>/</span>
             <span class="font-bold text-white">${escapeHtml(artist.name)}</span>
+            ${renderArtistLinksBadges(artist.links, false)}
           `;
           actions.innerHTML = `
+            <button onclick="openArtistModal('comics', '${artist.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+              ✏️ Editar / Links
+            </button>
             <button onclick="openUploadModal({ section: 'comics', artistId: '${artist.id}', isNewComic: true })" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow">
               + Nuevo Cómic
             </button>
@@ -4453,16 +4524,21 @@
           <button onclick="state.artistFolderId=null; state.page=1; renderAll();" class="hover:text-white">${escapeHtml(artist.name)}</button>
           <span>/</span>
           <span class="font-bold text-amber-300">📁 ${escapeHtml(activeFolder.name)}</span>
+          ${renderArtistLinksBadges(artist.links, false)}
         `;
       } else {
         breadcrumb.innerHTML = `
           <button onclick="state.artistId=null; state.page=1; renderAll();" class="hover:text-white">${secLabel}</button>
           <span>/</span>
           <span class="font-bold text-white">${escapeHtml(artist.name)}</span>
+          ${renderArtistLinksBadges(artist.links, false)}
         `;
       }
 
       actions.innerHTML = `
+        <button onclick="openArtistModal('artistas', '${artist.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+          ✏️ Editar / Links
+        </button>
         <button onclick="toggleBulkSelectMode()" class="px-3 py-2 rounded-xl ${state.bulkSelectMode ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-200'} text-xs font-semibold">
           ☑️ Seleccionar / 📁 Mover varias
         </button>
@@ -4902,13 +4978,22 @@
 
       if (artistId) {
         const artist = (libraryData[section] || []).find(a => a.id === artistId);
+        const links = artist && Array.isArray(artist.links) ? artist.links : [];
         titleEl.textContent = 'Editar Artista';
         nameInput.value = artist ? artist.name : '';
         tagsInput.value = artist ? (artist.tags || []).join(', ') : '';
+        document.getElementById('artist-link-1').value = links[0] || '';
+        document.getElementById('artist-link-2').value = links[1] || '';
+        document.getElementById('artist-link-3').value = links[2] || '';
+        document.getElementById('artist-link-4').value = links[3] || '';
       } else {
         titleEl.textContent = 'Nuevo Artista';
         nameInput.value = '';
         tagsInput.value = '';
+        document.getElementById('artist-link-1').value = '';
+        document.getElementById('artist-link-2').value = '';
+        document.getElementById('artist-link-3').value = '';
+        document.getElementById('artist-link-4').value = '';
       }
       openModal('artist-modal');
     }
@@ -4925,6 +5010,10 @@
       const autoNameTags = extractArtistNameTags(name);
       const finalTags = normalizeTags([...autoNameTags, ...rawTags]);
       const avatarFile = document.getElementById('artist-avatar-file').files?.[0] || null;
+      const links = [1, 2, 3, 4]
+        .map(n => document.getElementById(`artist-link-${n}`).value.trim())
+        .filter(Boolean)
+        .map(u => (/^https?:\/\//i.test(u) ? u : `https://${u}`));
 
       const btn = document.getElementById('save-artist-btn');
       btn.disabled = true;
@@ -4937,6 +5026,7 @@
             id: generateId('art'),
             name,
             tags: finalTags,
+            links,
             avatarUrl: '',
             avatarDriveId: '',
             createdAt: Date.now(),
@@ -4947,6 +5037,7 @@
           const oldName = artist.name;
           artist.name = name;
           artist.tags = finalTags;
+          artist.links = links;
           if (oldName !== name && artist.driveFolderId) {
             await renameDriveItemById(artist.driveFolderId, name, false);
           }
