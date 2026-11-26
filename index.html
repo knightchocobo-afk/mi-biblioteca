@@ -4950,28 +4950,40 @@
       grid.innerHTML = pageItems.map(f => {
         const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
         const isImg = (f.mimeType || '').startsWith('image/');
-        const img = entry.data;
-        const isSelected = state.selectedImageIds.has(img.id);
+        const isPdf = (f.mimeType || '') === 'application/pdf' || (f.name || '').toLowerCase().endsWith('.pdf');
+        const isSelected = driveBrowserState.selectedIds.has(f.id);
+        const tags = extractDriveFileTags(f);
+        const sizeLabel = !isFolder && f.size ? formatFileSize(f.size) : '';
+
         return `
-          <div class="card-hover relative rounded-2xl bg-slate-900 border ${isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800'} overflow-hidden">
-            <div onclick="${state.bulkSelectMode ? `toggleSelectArtistImage('${img.id}')` : `openLightboxFromContext('artist', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', ${entry.imgIndex})`}" class="${getThumbWrapperClass()}">
-              <img ${img.driveId ? `data-drive-id="${img.driveId}"` : ''} src="${escapeHtml(img.url || '')}" alt="" class="${getThumbImgClass(!!img.driveId)}" />
-              ${state.bulkSelectMode ? `<span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-indigo-600 text-white' : 'bg-black/75 text-slate-200 border border-slate-400'}">${isSelected ? '✓' : ''}</span>` : ''}
-              ${img.size ? `<span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-semibold text-white">${formatFileSize(img.size)}</span>` : ''}
+          <div class="card-hover relative rounded-2xl bg-slate-900 border ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : isFolder ? 'border-amber-500/40' : 'border-slate-800'} overflow-hidden">
+            <div onclick="${isFolder
+              ? `driveBrowserState.path.push({ id: '${f.id}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${f.id}');`
+              : isImg
+                ? `openLightboxByDriveId('drive-browser', '${f.id}')`
+                : `openStoryViewer({ id: '${f.id}', driveId: '${f.id}', title: '${escapeHtml(f.name)}', mimeType: '${f.mimeType}', tags: ${JSON.stringify(tags).replace(/"/g, '&quot;')} })`}" class="${getThumbWrapperClass()}">
+              ${isFolder
+                ? `<img data-folder-cover-id="${f.id}" src="" alt="" class="${getThumbImgClass(true)}" /><span class="text-5xl">📁</span>`
+                : isImg
+                  ? `<img data-drive-id="${f.id}" src="" alt="" class="${getThumbImgClass(true)}" />`
+                  : isPdf
+                    ? `<img data-pdf-cover-id="${f.id}" src="" alt="" class="${getThumbImgClass(true)}" /><span class="text-4xl">📕</span>`
+                    : `<span class="text-4xl">📄</span>`}
+
+              <button onclick="event.stopPropagation(); toggleSelectDriveBrowserItem('${f.id}')" class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-black/75 text-slate-200 border border-slate-400'}">${isSelected ? '✓' : ''}</button>
+              ${sizeLabel ? `<span class="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-semibold text-white">${sizeLabel}</span>` : isFolder ? `<span class="absolute top-2 right-2 z-10 px-2 py-0.5 rounded bg-amber-600/90 text-[10px] font-bold text-white">Carpeta</span>` : ''}
+
               <div onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/85 to-transparent p-2 pt-10 space-y-1">
-                <div class="text-[11px] font-bold text-white truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">${escapeHtml(img.title)}</div>
-                ${(img.tags && img.tags.length) ? `
+                <div onclick="${isFolder ? `driveBrowserState.path.push({ id: '${f.id}', name: '${escapeHtml(f.name)}' }); loadDriveBrowserFolder('${f.id}');` : ''}" class="text-[11px] font-bold ${isFolder ? 'text-amber-200 cursor-pointer' : 'text-white'} truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">${isFolder ? '📁 ' : ''}${escapeHtml(f.name)}</div>
+                ${tags.length ? `
                   <div class="flex flex-wrap gap-1 overflow-hidden max-h-4">
-                    ${img.tags.slice(0, 2).map(t => `<span class="px-1.5 py-0.2 rounded bg-black/80 border border-white/15 text-[9px] font-semibold text-indigo-200">#${escapeHtml(t)}</span>`).join('')}
+                    ${tags.slice(0, 2).map(t => `<span class="px-1.5 py-0.2 rounded bg-black/80 border border-white/15 text-[9px] font-semibold text-indigo-200">#${escapeHtml(t)}</span>`).join('')}
                   </div>
                 ` : ''}
-                <div class="flex items-center justify-between pt-0.5">
-                  <button onclick="toggleItemFavorite('artistas', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', '${img.id}')" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">${img.favorite ? '⭐' : '☆'}</button>
-                  <div class="flex items-center gap-1">
-                    <button onclick="openEditTagsModal({ section: 'artistas', artistId: '${artist.id}', folderId: '${activeFolder ? activeFolder.id : ''}', itemId: '${img.id}' })" title="Editar tags y título" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">🏷️</button>
-                    <button onclick="openAppMoveModal({ mode: 'single-artist-image', artistId: '${artist.id}', folderId: '${activeFolder ? activeFolder.id : ''}', itemId: '${img.id}' })" title="Mover imagen" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">📁</button>
-                    <button onclick="deleteCollectionItem('artistas', '${artist.id}', '${activeFolder ? activeFolder.id : ''}', '${img.id}')" title="Borrar imagen" class="p-1 rounded-lg bg-rose-950/90 hover:bg-rose-800 border border-rose-500/30 text-rose-200 text-xs">🗑️</button>
-                  </div>
+                <div class="flex items-center justify-end gap-1 pt-0.5">
+                  <button onclick="driveBrowserState.selectedIds.clear(); driveBrowserState.selectedIds.add('${f.id}'); openDriveBrowserTagModal();" title="Tags en Drive" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">🏷️</button>
+                  <button onclick="driveBrowserState.selectedIds.clear(); driveBrowserState.selectedIds.add('${f.id}'); openDriveImportToAppModal();" title="Pasar a Mi App" class="p-1 rounded-lg bg-purple-950/90 hover:bg-purple-800 border border-purple-500/30 text-purple-200 text-xs">📥</button>
+                  <button onclick="openDriveRenameModal('${f.id}', '${escapeHtml(f.name)}')" title="Renombrar" class="p-1 rounded-lg bg-black/80 hover:bg-slate-800 border border-white/15 text-xs">✏️</button>
                 </div>
               </div>
             </div>
