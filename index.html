@@ -263,7 +263,7 @@
     <!-- CUADRÍCULA PRINCIPAL -->
     <main class="flex-1 px-4 pb-8">
       <div id="pagination-top-bar" class="mb-3 flex items-center justify-center gap-2"></div>
-      <div id="main-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5"></div>
+      <div id="main-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense"></div>
       <div id="pagination-bar" class="mt-6 flex items-center justify-center gap-2"></div>
     </main>
   </div>
@@ -1428,9 +1428,9 @@
       const grid = document.getElementById('main-grid');
       if (!grid) return;
       if (state.compactGrid) {
-        grid.className = 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5';
+        grid.className = 'grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 grid-flow-dense';
       } else {
-        grid.className = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5';
+        grid.className = 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 grid-flow-dense';
       }
     }
 
@@ -1510,8 +1510,8 @@
 
     function getThumbWrapperClass(baseExtra = '') {
       return state.fullThumbMode
-        ? `relative aspect-[3/4] bg-slate-950/95 cursor-pointer flex items-center justify-center overflow-hidden transition-all duration-200 ${baseExtra}`
-        : `relative aspect-[3/4] bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
+        ? `relative flex-1 min-h-[115px] aspect-square bg-slate-950/95 cursor-pointer flex items-center justify-center overflow-hidden transition-all duration-200 ${baseExtra}`
+        : `relative aspect-square bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
     }
 
     function getThumbImgClass(isDriveDelayed = false) {
@@ -1522,26 +1522,31 @@
     }
 
     function applyAdaptiveThumbAspect(img) {
-      if (!state.fullThumbMode || !img || !img.naturalWidth || !img.naturalHeight) return;
+      if (!img || !img.naturalWidth || !img.naturalHeight) return;
       const wrapper = img.parentElement;
       const card = wrapper ? wrapper.closest('.card-hover') : null;
-      if (!wrapper) return;
+      if (!wrapper || !card) return;
+
+      card.classList.remove('col-span-2', 'row-span-2');
+      wrapper.classList.remove('aspect-square', 'aspect-[1/2]', 'aspect-[2/1]');
+
+      if (!state.fullThumbMode) {
+        wrapper.classList.add('aspect-square');
+        return;
+      }
 
       const ratio = img.naturalWidth / img.naturalHeight;
-      wrapper.classList.remove('aspect-[3/4]', 'aspect-[1/2]', 'aspect-[9/8]');
-      if (card) card.classList.remove('sm:col-span-2');
-
-      if (ratio < 0.85) {
-        // Imagen vertical / retrato: recuadro 50% más alto que el estándar 3:4 (1 : 2)
+      if (ratio < 0.78) {
+        // Vertical / larga: duplica el alto (2 filas) manteniendo el ancho (1 columna)
+        card.classList.add('row-span-2');
         wrapper.classList.add('aspect-[1/2]');
-      } else if (ratio > 1.2) {
-        // Imagen ancha / panorámica: recuadro 50% más ancho (9:8 -> 50% más ancho respecto a 3:4)
-        wrapper.classList.add('aspect-[9/8]');
-        if (ratio > 1.45 && card) {
-          card.classList.add('sm:col-span-2');
-        }
+      } else if (ratio > 1.28) {
+        // Panorámica / horizontal: duplica el ancho (2 columnas) manteniendo el alto (1 fila)
+        card.classList.add('col-span-2');
+        wrapper.classList.add('aspect-[2/1]');
       } else {
-        wrapper.classList.add('aspect-[3/4]');
+        // Cuadrada base (1x1)
+        wrapper.classList.add('aspect-square');
       }
     }
 
