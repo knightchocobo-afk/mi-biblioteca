@@ -187,13 +187,16 @@
   </main>
 
   <!-- VISOR TÁCTIL DE IMÁGENES / LIGHTBOX -->
-  <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/95 lightbox-backdrop hidden flex-col">
-    <div class="flex items-center justify-between px-3 py-2.5 bg-slate-950/80 border-b border-slate-800/80 z-10">
+  <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/95 lightbox-backdrop hidden flex-col h-screen w-screen overflow-hidden">
+    <div class="flex items-center justify-between px-3 py-2 bg-slate-950/90 border-b border-slate-800/80 z-20 shrink-0">
       <div class="min-w-0 flex-1 pr-2">
         <p id="lb-title" class="text-xs sm:text-sm font-bold text-white truncate">Imagen</p>
         <p id="lb-counter" class="text-[11px] text-slate-400">1 / 1</p>
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="adjustLightboxZoom(-0.5)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold" title="Alejar">−</button>
+        <span id="lb-zoom-label" class="text-[11px] font-mono text-slate-300 px-1">100%</span>
+        <button onclick="adjustLightboxZoom(0.5)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold" title="Acercar">+</button>
         <button onclick="toggleLightboxFavorite()" id="lb-fav-btn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm">☆</button>
         <button onclick="openLightboxTagEditor()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm" title="Editar tags y nombre">🏷️</button>
         <button onclick="downloadCurrentLightboxImage()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm" title="Descargar">⬇️</button>
@@ -201,13 +204,13 @@
       </div>
     </div>
 
-    <div id="lb-stage" class="relative flex-1 flex items-center justify-center overflow-hidden touch-pan-y">
-      <button onclick="navigateLightbox(-1)" class="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-14 rounded-2xl bg-black/60 hover:bg-black/85 border border-white/15 text-white text-lg flex items-center justify-center">◀</button>
-      <img id="lb-img" src="" alt="" referrerPolicy="no-referrer" class="max-h-full max-w-full object-contain transition-opacity duration-150" />
-      <button onclick="navigateLightbox(1)" class="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-14 rounded-2xl bg-black/60 hover:bg-black/85 border border-white/15 text-white text-lg flex items-center justify-center">▶</button>
+    <div id="lb-stage" class="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-auto">
+      <button onclick="event.stopPropagation(); navigateLightbox(-1)" class="fixed left-2 top-1/2 -translate-y-1/2 z-30 w-11 h-16 rounded-2xl bg-black/70 hover:bg-black/90 border border-white/20 text-white text-xl flex items-center justify-center shadow-lg">◀</button>
+      <img id="lb-img" src="" alt="" referrerPolicy="no-referrer" ondblclick="toggleLightboxDoubleTapZoom()" class="max-h-[calc(100vh-105px)] max-w-[96vw] w-auto h-auto object-contain transition-transform duration-150 select-none" />
+      <button onclick="event.stopPropagation(); navigateLightbox(1)" class="fixed right-2 top-1/2 -translate-y-1/2 z-30 w-11 h-16 rounded-2xl bg-black/70 hover:bg-black/90 border border-white/20 text-white text-xl flex items-center justify-center shadow-lg">▶</button>
     </div>
 
-    <div id="lb-tags-footer" class="px-3 py-2 bg-slate-950/90 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar"></div>
+    <div id="lb-tags-footer" class="px-3 py-2 bg-slate-950/90 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 z-20"></div>
   </div>
 
   <!-- VISOR DE PDF / DOCUMENTOS INTEGRADO (PDF.JS A MÁXIMA NITIDEZ) -->
@@ -353,6 +356,7 @@
       lightbox: {
         items: [],
         index: 0,
+        zoom: 1,
         context: null
       },
       pdfViewer: {
@@ -1442,6 +1446,7 @@
         empty.classList.add('hidden');
 
         const visibleItemsOnly = paged.filter(x => x.kind === 'item').map(x => x.data);
+        state.lightbox.items = visibleItemsOnly;
 
         grid.innerHTML = paged.map((entry, idx) => {
           if (entry.kind === 'folder') {
@@ -2503,7 +2508,7 @@
       if (paged.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
       empty.classList.add('hidden');
 
-      const mediaFiles = paged.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && !f.mimeType.includes('pdf'));
+      const mediaFiles = paged.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && !(f.mimeType || '').includes('pdf') && !/\.pdf$/i.test(f.name));
       state.lightbox.items = mediaFiles.map(f => ({
         id: f.id,
         title: f.name,
@@ -2520,7 +2525,7 @@
           ? `loadDriveBrowserFolder('${f.id}', '${escapeHtml(f.name)}')`
           : isPdf
             ? `openDrivePdfDirectly('${f.id}', '${escapeHtml(f.name)}')`
-            : `openLightboxFromArray(${Math.max(0, mediaIdx)})`;
+            : `openLightboxFromDriveId('${f.id}')`;
 
         return renderUnifiedCard({
           id: f.id,
@@ -2632,7 +2637,7 @@
     }
 
     // =========================================================
-    // VISOR TÁCTIL DE IMÁGENES (LIGHTBOX CON SWIPE)
+    // VISOR TÁCTIL DE IMÁGENES (LIGHTBOX CON SWIPE Y ZOOM)
     // =========================================================
     function openLightboxFromSection(sec, artId, subId, idx) {
       const art = state.catalog[sec]?.find(a => a.id === artId);
@@ -2645,12 +2650,93 @@
       }
       state.lightbox.items = items;
       state.lightbox.index = Math.max(0, idx);
+      state.lightbox.zoom = 1;
+      renderLightbox();
+    }
+
+    function openLightboxFromDriveId(driveId) {
+      const mediaFiles = (state.drive.items || []).filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && !(f.mimeType || '').includes('pdf') && !/\.pdf$/i.test(f.name));
+      state.lightbox.items = mediaFiles.map(f => ({
+        id: f.id,
+        title: f.name,
+        driveId: f.id,
+        thumbnailLink: f.thumbnailLink || '',
+        tags: extractRawDriveMetadataTags(f)
+      }));
+      const idx = state.lightbox.items.findIndex(x => x.driveId === driveId || x.id === driveId);
+      state.lightbox.index = Math.max(0, idx);
+      state.lightbox.zoom = 1;
       renderLightbox();
     }
 
     function openLightboxFromArray(idx) {
       state.lightbox.index = Math.max(0, idx);
+      state.lightbox.zoom = 1;
       renderLightbox();
+    }
+
+    function adjustLightboxZoom(delta) {
+      state.lightbox.zoom = Math.min(4, Math.max(1, +(state.lightbox.zoom + delta).toFixed(2)));
+      applyLightboxZoomStyle();
+    }
+
+    function toggleLightboxDoubleTapZoom() {
+      state.lightbox.zoom = state.lightbox.zoom > 1 ? 1 : 2.25;
+      applyLightboxZoomStyle();
+    }
+
+    function applyLightboxZoomStyle() {
+      const img = document.getElementById('lb-img');
+      const lbl = document.getElementById('lb-zoom-label');
+      if (lbl) lbl.textContent = `${Math.round(state.lightbox.zoom * 100)}%`;
+      if (!img) return;
+      if (state.lightbox.zoom <= 1) {
+        img.className = 'max-h-[calc(100vh-105px)] max-w-[96vw] w-auto h-auto object-contain transition-transform duration-150 select-none';
+        img.style.width = '';
+        img.style.maxWidth = '';
+        img.style.maxHeight = '';
+      } else {
+        img.className = 'object-contain select-none';
+        img.style.maxWidth = 'none';
+        img.style.maxHeight = 'none';
+        img.style.width = `${Math.round(state.lightbox.zoom * 95)}vw`;
+      }
+    }
+
+    function openLightboxTagEditor() {
+      const cur = state.lightbox.items[state.lightbox.index];
+      if (!cur) return;
+      openModal(
+        '🏷️ Editar Nombre y Tags',
+        `
+          <div>
+            <label class="block font-semibold mb-1">Nombre</label>
+            <input id="lb-edit-title-inp" type="text" value="${escapeHtml(cur.title || '')}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Tags</label>
+            <input id="lb-edit-tags-inp" type="text" value="${escapeHtml((cur.tags || []).join(', '))}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+        `,
+        `<button onclick="saveLightboxTagEditor()" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold">Guardar</button>`
+      );
+    }
+
+    async function saveLightboxTagEditor() {
+      const cur = state.lightbox.items[state.lightbox.index];
+      if (!cur) return;
+      const newTitle = document.getElementById('lb-edit-title-inp')?.value.trim();
+      const newTags = parseTagString(document.getElementById('lb-edit-tags-inp')?.value || '');
+      if (newTitle && newTitle !== cur.title) {
+        cur.title = newTitle;
+        if (cur.driveId && state.drive.connected) await renameDriveFile(cur.driveId, newTitle);
+      }
+      cur.tags = newTags;
+      saveLocalData(true);
+      closeModal();
+      renderLightbox();
+      renderAll();
+      showToast('Guardado', 'success');
     }
 
     function renderLightbox() {
@@ -2664,6 +2750,8 @@
       document.getElementById('lb-title').textContent = cur.title || 'Imagen';
       document.getElementById('lb-counter').textContent = `${state.lightbox.index + 1} / ${items.length}`;
       document.getElementById('lb-fav-btn').textContent = cur.favorite ? '★' : '☆';
+
+      applyLightboxZoomStyle();
 
       const img = document.getElementById('lb-img');
       img.dataset.fallbackDone = '';
@@ -2684,6 +2772,7 @@
     }
 
     function navigateLightbox(delta) {
+      state.lightbox.zoom = 1;
       state.lightbox.index += delta;
       renderLightbox();
     }
@@ -2717,11 +2806,54 @@
       const stage = document.getElementById('lb-stage');
       if (!stage) return;
       let startX = 0;
-      stage.addEventListener('touchstart', e => { startX = e.changedTouches[0].clientX; }, { passive: true });
-      stage.addEventListener('touchend', e => {
-        const dx = e.changedTouches[0].clientX - startX;
-        if (Math.abs(dx) > 45) navigateLightbox(dx < 0 ? 1 : -1);
+      let startY = 0;
+      let pinchDist = 0;
+
+      stage.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) {
+          pinchDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+        } else if (e.touches.length === 1) {
+          startX = e.changedTouches[0].clientX;
+          startY = e.changedTouches[0].clientY;
+        }
       }, { passive: true });
+
+      stage.addEventListener('touchmove', e => {
+        if (e.touches.length === 2 && pinchDist > 0) {
+          const newDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          const ratio = newDist / pinchDist;
+          if (Math.abs(ratio - 1) > 0.08) {
+            state.lightbox.zoom = Math.min(4, Math.max(1, +(state.lightbox.zoom * ratio).toFixed(2)));
+            pinchDist = newDist;
+            applyLightboxZoomStyle();
+          }
+        }
+      }, { passive: true });
+
+      stage.addEventListener('touchend', e => {
+        if (e.touches.length > 0) return;
+        pinchDist = 0;
+        if (state.lightbox.zoom > 1.05) return;
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+          navigateLightbox(dx < 0 ? 1 : -1);
+        }
+      }, { passive: true });
+
+      window.addEventListener('keydown', e => {
+        const modal = document.getElementById('lightbox-modal');
+        if (!modal || modal.classList.contains('hidden')) return;
+        if (e.key === 'ArrowRight') navigateLightbox(1);
+        else if (e.key === 'ArrowLeft') navigateLightbox(-1);
+        else if (e.key === 'Escape') closeLightbox();
+      });
     }
 
     // =========================================================
