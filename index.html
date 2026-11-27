@@ -496,6 +496,13 @@
       'mi_boveda_google_creds'
     ];
     const VAULT_INDEX_FILENAME = 'mi_boveda_index.json';
+    const KNOWN_INDEX_FILENAMES = [
+      'mi_boveda_index.json',
+      'catalogo_boveda.json',
+      'mi_boveda_backup.json',
+      'biblioteca_multimedia_backup.json',
+      'mi_boveda.json'
+    ];
 
     const state = {
       section: 'artistas', // 'artistas' | 'comics' | 'historia' | 'favoritos' | 'tags' | 'drive' | 'duplicados'
@@ -1173,30 +1180,35 @@
     async function loadCatalogFromDriveIfAvailable() {
       if (!state.drive.connected || !state.drive.accessToken) return;
       try {
-        const q = encodeURIComponent(`(name = '${VAULT_INDEX_FILENAME}' or name = 'catalogo_boveda.json' or name = 'mi_boveda_backup.json') and trashed = false`);
+        // 1. Buscar cualquier JSON de índice/respaldo guardado anteriormente en Drive
+        const nameClauses = KNOWN_INDEX_FILENAMES.map((n) => `name = '${n}'`).join(' or ');
+        const q = encodeURIComponent(`(${nameClauses} or name contains 'boveda') and mimeType = 'application/json' and trashed = false`);
         const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`);
         const data = await res.json();
         if (data.files && data.files.length > 0) {
-          const indexFile = data.files[0];
-          state.drive.vaultIndexFileId = indexFile.id;
-          const contentRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${indexFile.id}?alt=media`);
-          const json = await contentRes.json();
-          const migrated = migrateCatalogStructure(json);
-          if (migrated) {
-            const localCount = state.catalog.artistas.length + state.catalog.comics.length + state.catalog.historia.length;
-            const driveCount = migrated.artistas.length + migrated.comics.length + migrated.historia.length;
-            if (driveCount >= localCount) {
-              state.catalog = migrated;
-              ensureCatalogNormalized();
-              saveLocalData(false);
-              renderAll();
-              showToast('☁️ Catálogo recuperado desde Google Drive', 'success');
-            }
+          for (const indexFile of data.files) {
+            try {
+              const contentRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${indexFile.id}?alt=media`);
+              const json = await contentRes.json();
+              const migrated = migrateCatalogStructure(json);
+              if (migrated) {
+                state.drive.vaultIndexFileId = indexFile.id;
+                const localCount = state.catalog.artistas.length + state.catalog.comics.length + state.catalog.historia.length;
+                const driveCount = migrated.artistas.length + migrated.comics.length + migrated.historia.length;
+                if (driveCount > 0 && driveCount >= localCount) {
+                  state.catalog = migrated;
+                  ensureCatalogNormalized();
+                  saveLocalData(false);
+                  renderAll();
+                  showToast('☁️ Catálogo recuperado desde Google Drive', 'success');
+                }
+                break;
+              }
+            } catch (parseErr) {}
           }
-        } else {
-          // Si no había archivo índice aún, reconstruir desde las carpetas existentes en "Mi Boveda App"
-          await syncAppFoldersFromDrive();
         }
+        // 2. Además reconstruir/fusionar cualquier carpeta Artistas / Comics / Historia existente en Drive (con subcarpetas y archivos)
+        await syncAppFoldersFromDrive();
       } catch (e) {
         console.warn('Error cargando catálogo desde Drive:', e);
       }
@@ -1204,10 +1216,9 @@
 
     async function syncAppFoldersFromDrive() {
       try {
-        const rootId = await findOrCreateDriveAppRoot();
         const secMap = { Artistas: 'artistas', Comics: 'comics', Historia: 'historia' };
-        const qSec = encodeURIComponent(`'${rootId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
-        const secRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${qSec}&fields=files(id,name)`);
+        const qSec = encodeURIComponent(`(name = 'Artistas' or name = 'Comics' or name = 'Historia') and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
+        const secRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${qSec}&fields=files(id,name,parents)&pageSize=50`);
         const secData = await secRes.json();
 
         let importedAny = false;
@@ -1216,7 +1227,7 @@
           if (!targetSec) continue;
 
           const qArt = encodeURIComponent(`'${secFolder.id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
-          const artRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${qArt}&fields=files(id,name,description)`);
+          const artRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${qArt}&fields=files(id,name,description)&pageSize=200`);
           const artData = await artRes.json();
 
           for (const artFolder of (artData.files || [])) {
@@ -1241,7 +1252,43 @@
             const itemsData = await itemsRes.json();
 
             for (const f of (itemsData.files || [])) {
-              if (f.mimeType === 'application/vnd.google-apps.folder') continue;
+              if (f.mimeType === 'application/vnd.google-apps.folder') {
+                // Reconstruir también las subcarpetas / cómics dentro del artista
+                let sub = artist.subfolders.find((s) => s.name.toLowerCase() === f.name.toLowerCase());
+                if (!sub) {
+                  sub = {
+                    id: uid('sub'),
+                    driveFolderId: f.id,
+                    name: f.name,
+                    tags: extractDriveFileTags(f),
+                    createdAt: Date.now(),
+                    items: []
+                  };
+                  artist.subfolders.push(sub);
+                  importedAny = true;
+                }
+                const qSubFiles = encodeURIComponent(`'${f.id}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false`);
+                const subFilesRes = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${qSubFiles}&fields=files(id,name,mimeType,size,thumbnailLink,description,appProperties)&pageSize=200`);
+                const subFilesData = await subFilesRes.json();
+                for (const sfFile of (subFilesData.files || [])) {
+                  if (!sub.items.some((x) => x.driveId === sfFile.id)) {
+                    sub.items.push({
+                      id: uid('item'),
+                      driveId: sfFile.id,
+                      name: sfFile.name,
+                      mimeType: sfFile.mimeType,
+                      size: sfFile.size || 0,
+                      thumbnailLink: sfFile.thumbnailLink || '',
+                      tags: extractDriveFileTags(sfFile),
+                      favorite: false,
+                      createdAt: Date.now()
+                    });
+                    importedAny = true;
+                  }
+                }
+                continue;
+              }
+
               if (!artist.items.some((x) => x.driveId === f.id)) {
                 artist.items.push({
                   id: uid('item'),
@@ -1260,9 +1307,10 @@
           }
         }
         if (importedAny) {
-          saveLocalData(false);
+          ensureCatalogNormalized();
+          saveLocalData(true);
           renderAll();
-          showToast('🔄 Carpetas y archivos sincronizados desde Drive', 'success');
+          showToast('🔄 Artistas, subcarpetas y archivos recuperados desde Drive', 'success');
         }
       } catch (e) {
         console.warn('Error sincronizando carpetas desde Drive:', e);
