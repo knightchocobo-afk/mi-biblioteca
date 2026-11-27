@@ -188,29 +188,33 @@
 
   <!-- VISOR TÁCTIL DE IMÁGENES / LIGHTBOX -->
   <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/95 lightbox-backdrop hidden flex-col h-screen w-screen overflow-hidden">
-    <div class="flex items-center justify-between px-3 py-2 bg-slate-950/90 border-b border-slate-800/80 z-20 shrink-0">
+    <div class="flex items-center justify-between px-3 py-2 bg-slate-950/90 border-b border-slate-800/80 z-30 shrink-0">
       <div class="min-w-0 flex-1 pr-2">
         <p id="lb-title" class="text-xs sm:text-sm font-bold text-white truncate">Imagen</p>
         <p id="lb-counter" class="text-[11px] text-slate-400">1 / 1</p>
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
-        <button onclick="adjustLightboxZoom(-0.5)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold" title="Alejar">−</button>
+        <button type="button" onclick="adjustLightboxZoom(-0.5)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold" title="Alejar">−</button>
         <span id="lb-zoom-label" class="text-[11px] font-mono text-slate-300 px-1">100%</span>
-        <button onclick="adjustLightboxZoom(0.5)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold" title="Acercar">+</button>
-        <button onclick="toggleLightboxFavorite()" id="lb-fav-btn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm">☆</button>
-        <button onclick="openLightboxTagEditor()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm" title="Editar tags y nombre">🏷️</button>
-        <button onclick="downloadCurrentLightboxImage()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm" title="Descargar">⬇️</button>
-        <button onclick="closeLightbox()" class="px-3 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-bold">✕</button>
+        <button type="button" onclick="adjustLightboxZoom(0.5)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold" title="Acercar">+</button>
+        <button type="button" onclick="toggleLightboxFavorite()" id="lb-fav-btn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm">☆</button>
+        <button type="button" onclick="openLightboxTagEditor()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm" title="Editar tags y nombre">🏷️</button>
+        <button type="button" onclick="downloadCurrentLightboxImage()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm" title="Descargar">⬇️</button>
+        <button type="button" onclick="closeLightbox()" class="px-3 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-bold">✕</button>
       </div>
     </div>
 
-    <div id="lb-stage" class="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-auto">
-      <button onclick="event.stopPropagation(); navigateLightbox(-1)" class="fixed left-2 top-1/2 -translate-y-1/2 z-30 w-11 h-16 rounded-2xl bg-black/70 hover:bg-black/90 border border-white/20 text-white text-xl flex items-center justify-center shadow-lg">◀</button>
-      <img id="lb-img" src="" alt="" referrerPolicy="no-referrer" ondblclick="toggleLightboxDoubleTapZoom()" class="max-h-[calc(100vh-105px)] max-w-[96vw] w-auto h-auto object-contain transition-transform duration-150 select-none" />
-      <button onclick="event.stopPropagation(); navigateLightbox(1)" class="fixed right-2 top-1/2 -translate-y-1/2 z-30 w-11 h-16 rounded-2xl bg-black/70 hover:bg-black/90 border border-white/20 text-white text-xl flex items-center justify-center shadow-lg">▶</button>
+    <div class="relative flex-1 min-h-0 w-full overflow-hidden">
+      <button type="button" id="lb-prev-btn" onclick="event.stopPropagation(); navigateLightbox(-1)" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation(); event.preventDefault(); navigateLightbox(-1)" class="absolute left-2 top-1/2 -translate-y-1/2 z-40 w-12 h-16 rounded-2xl bg-black/75 hover:bg-indigo-600/90 active:scale-95 border border-white/25 text-white text-xl flex items-center justify-center shadow-xl cursor-pointer">◀</button>
+
+      <div id="lb-stage" class="w-full h-full overflow-auto flex items-center justify-center p-2">
+        <img id="lb-img" src="" alt="" referrerPolicy="no-referrer" ondblclick="toggleLightboxDoubleTapZoom()" class="max-h-[calc(100vh-110px)] max-w-[94vw] w-auto h-auto object-contain select-none transition-none" />
+      </div>
+
+      <button type="button" id="lb-next-btn" onclick="event.stopPropagation(); navigateLightbox(1)" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation(); event.preventDefault(); navigateLightbox(1)" class="absolute right-2 top-1/2 -translate-y-1/2 z-40 w-12 h-16 rounded-2xl bg-black/75 hover:bg-indigo-600/90 active:scale-95 border border-white/25 text-white text-xl flex items-center justify-center shadow-xl cursor-pointer">▶</button>
     </div>
 
-    <div id="lb-tags-footer" class="px-3 py-2 bg-slate-950/90 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 z-20"></div>
+    <div id="lb-tags-footer" class="px-3 py-2 bg-slate-950/90 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 z-30"></div>
   </div>
 
   <!-- VISOR DE PDF / DOCUMENTOS INTEGRADO (PDF.JS A MÁXIMA NITIDEZ) -->
@@ -1468,7 +1472,8 @@
             });
           } else {
             const it = entry.data;
-            const lbIdx = visibleItemsOnly.findIndex(x => x.id === it.id);
+            const fullArr = subfolder ? subfolder.items : artist.items;
+            const lbIdx = fullArr.findIndex(x => x.id === it.id);
             return renderUnifiedCard({
               id: it.id,
               title: it.title,
@@ -1529,20 +1534,23 @@
           const paged = applyPagination(chapter.pages);
           if (paged.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
           empty.classList.add('hidden');
-          grid.innerHTML = paged.map((pg, idx) => renderUnifiedCard({
-            id: pg.id,
-            title: pg.title,
-            subtitle: `Pág. ${idx + 1}`,
-            thumbUrl: getDriveThumbUrl(pg),
-            driveId: pg.driveId || '',
-            tags: pg.tags,
-            favorite: pg.favorite,
-            onOpenCall: `openLightboxFromSection('comics', '${artist.id}', '${chapter.id}', ${idx})`,
-            onFavCall: `toggleItemFavorite('comics', '${artist.id}', '${chapter.id}', '${pg.id}')`,
-            onEditCall: `openEditItemTagsModal('comics', '${artist.id}', '${chapter.id}', '${pg.id}')`,
-            onMoveCall: `openMoveItemsModal(['${pg.id}'])`,
-            onDeleteCall: `deleteCatalogItem('comics', '${artist.id}', '${chapter.id}', '${pg.id}')`
-          })).join('');
+          grid.innerHTML = paged.map((pg, idx) => {
+            const realIdx = chapter.pages.findIndex(p => p.id === pg.id);
+            return renderUnifiedCard({
+              id: pg.id,
+              title: pg.title,
+              subtitle: `Pág. ${realIdx + 1}`,
+              thumbUrl: getDriveThumbUrl(pg),
+              driveId: pg.driveId || '',
+              tags: pg.tags,
+              favorite: pg.favorite,
+              onOpenCall: `openLightboxFromSection('comics', '${artist.id}', '${chapter.id}', ${realIdx})`,
+              onFavCall: `toggleItemFavorite('comics', '${artist.id}', '${chapter.id}', '${pg.id}')`,
+              onEditCall: `openEditItemTagsModal('comics', '${artist.id}', '${chapter.id}', '${pg.id}')`,
+              onMoveCall: `openMoveItemsModal(['${pg.id}'])`,
+              onDeleteCall: `deleteCatalogItem('comics', '${artist.id}', '${chapter.id}', '${pg.id}')`
+            });
+          }).join('');
         }
         return;
       }
@@ -2362,19 +2370,22 @@
       if (paged.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
       empty.classList.add('hidden');
 
-      state.lightbox.items = paged.map(x => x.item);
-      grid.innerHTML = paged.map((x, idx) => renderUnifiedCard({
-        id: x.item.id,
-        title: x.item.title,
-        subtitle: formatBytes(x.item.size),
-        thumbUrl: getDriveThumbUrl(x.item),
-        driveId: x.item.driveId || '',
-        tags: x.item.tags,
-        favorite: true,
-        onOpenCall: `openLightboxFromArray(${idx})`,
-        onFavCall: `toggleItemFavorite('${x.sec}', '${x.artId}', '${x.subId}', '${x.item.id}')`,
-        onEditCall: `openEditItemTagsModal('${x.sec}', '${x.artId}', '${x.subId}', '${x.item.id}')`
-      })).join('');
+      state.lightbox.items = favs.map(x => x.item);
+      grid.innerHTML = paged.map((x) => {
+        const fullIdx = favs.findIndex(f => f.item.id === x.item.id);
+        return renderUnifiedCard({
+          id: x.item.id,
+          title: x.item.title,
+          subtitle: formatBytes(x.item.size),
+          thumbUrl: getDriveThumbUrl(x.item),
+          driveId: x.item.driveId || '',
+          tags: x.item.tags,
+          favorite: true,
+          onOpenCall: `openLightboxFromArray(${fullIdx})`,
+          onFavCall: `toggleItemFavorite('${x.sec}', '${x.artId}', '${x.subId}', '${x.item.id}')`,
+          onEditCall: `openEditItemTagsModal('${x.sec}', '${x.artId}', '${x.subId}', '${x.item.id}')`
+        });
+      }).join('');
     }
 
     function renderTagsSearchView() {
@@ -2392,19 +2403,22 @@
       if (paged.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
       empty.classList.add('hidden');
 
-      state.lightbox.items = paged.map(x => x.item);
-      grid.innerHTML = paged.map((x, idx) => renderUnifiedCard({
-        id: x.item.id,
-        title: x.item.title,
-        subtitle: formatBytes(x.item.size),
-        thumbUrl: getDriveThumbUrl(x.item),
-        driveId: x.item.driveId || '',
-        tags: x.item.tags,
-        favorite: x.item.favorite,
-        onOpenCall: `openLightboxFromArray(${idx})`,
-        onFavCall: `toggleItemFavorite('${x.sec}', '${x.artId}', '${x.subId}', '${x.item.id}')`,
-        onEditCall: `openEditItemTagsModal('${x.sec}', '${x.artId}', '${x.subId}', '${x.item.id}')`
-      })).join('');
+      state.lightbox.items = all.map(x => x.item);
+      grid.innerHTML = paged.map((x) => {
+        const fullIdx = all.findIndex(a => a.item.id === x.item.id);
+        return renderUnifiedCard({
+          id: x.item.id,
+          title: x.item.title,
+          subtitle: formatBytes(x.item.size),
+          thumbUrl: getDriveThumbUrl(x.item),
+          driveId: x.item.driveId || '',
+          tags: x.item.tags,
+          favorite: x.item.favorite,
+          onOpenCall: `openLightboxFromArray(${fullIdx})`,
+          onFavCall: `toggleItemFavorite('${x.sec}', '${x.artId}', '${x.subId}', '${x.item.id}')`,
+          onEditCall: `openEditItemTagsModal('${x.sec}', '${x.artId}', '${x.subId}', '${x.item.id}')`
+        });
+      }).join('');
     }
 
     function renderDuplicatesView() {
@@ -2423,14 +2437,15 @@
 
       if (dups.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
       empty.classList.add('hidden');
-      grid.innerHTML = dups.map(x => renderUnifiedCard({
+      state.lightbox.items = dups.map(x => x.item);
+      grid.innerHTML = dups.map((x, idx) => renderUnifiedCard({
         id: x.item.id,
         title: x.item.title,
         subtitle: 'Duplicado',
         thumbUrl: getDriveThumbUrl(x.item),
         driveId: x.item.driveId || '',
         tags: x.item.tags,
-        onOpenCall: `openLightboxFromArray(0)`,
+        onOpenCall: `openLightboxFromArray(${idx})`,
         onDeleteCall: `deleteCatalogItem('${x.sec}', '${x.artId}', '${x.subId}', '${x.item.id}')`
       })).join('');
     }
@@ -2637,7 +2652,7 @@
     }
 
     // =========================================================
-    // VISOR TÁCTIL DE IMÁGENES (LIGHTBOX CON SWIPE Y ZOOM)
+    // VISOR TÁCTIL DE IMÁGENES (LIGHTBOX CON SWIPE Y ZOOM SIN DISTORSIÓN)
     // =========================================================
     function openLightboxFromSection(sec, artId, subId, idx) {
       const art = state.catalog[sec]?.find(a => a.id === artId);
@@ -2648,15 +2663,21 @@
       } else if (sec === 'comics') {
         items = art.chapters.find(c => c.id === subId)?.pages || [];
       }
+      if (!items.length) return;
       state.lightbox.items = items;
-      state.lightbox.index = Math.max(0, idx);
+      state.lightbox.index = Math.max(0, Math.min(idx, items.length - 1));
       state.lightbox.zoom = 1;
       renderLightbox();
     }
 
     function openLightboxFromDriveId(driveId) {
-      const mediaFiles = (state.drive.items || []).filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && !(f.mimeType || '').includes('pdf') && !/\.pdf$/i.test(f.name));
-      state.lightbox.items = mediaFiles.map(f => ({
+      const allMedia = (state.drive.items || []).filter(
+        f => f.mimeType !== 'application/vnd.google-apps.folder' &&
+             !(f.mimeType || '').includes('pdf') &&
+             !/\.pdf$/i.test(f.name)
+      );
+      if (!allMedia.length) return;
+      state.lightbox.items = allMedia.map(f => ({
         id: f.id,
         title: f.name,
         driveId: f.id,
@@ -2670,7 +2691,8 @@
     }
 
     function openLightboxFromArray(idx) {
-      state.lightbox.index = Math.max(0, idx);
+      if (!state.lightbox.items || !state.lightbox.items.length) return;
+      state.lightbox.index = Math.max(0, Math.min(idx, state.lightbox.items.length - 1));
       state.lightbox.zoom = 1;
       renderLightbox();
     }
@@ -2686,20 +2708,39 @@
     }
 
     function applyLightboxZoomStyle() {
+      const stage = document.getElementById('lb-stage');
       const img = document.getElementById('lb-img');
       const lbl = document.getElementById('lb-zoom-label');
-      if (lbl) lbl.textContent = `${Math.round(state.lightbox.zoom * 100)}%`;
-      if (!img) return;
-      if (state.lightbox.zoom <= 1) {
-        img.className = 'max-h-[calc(100vh-105px)] max-w-[96vw] w-auto h-auto object-contain transition-transform duration-150 select-none';
-        img.style.width = '';
-        img.style.maxWidth = '';
-        img.style.maxHeight = '';
+      const z = state.lightbox.zoom;
+
+      if (lbl) lbl.textContent = `${Math.round(z * 100)}%`;
+      if (!img || !stage) return;
+
+      if (z <= 1) {
+        stage.className = 'w-full h-full overflow-hidden flex items-center justify-center p-2';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.maxWidth = '94vw';
+        img.style.maxHeight = 'calc(100vh - 110px)';
+        img.style.margin = 'auto';
       } else {
-        img.className = 'object-contain select-none';
+        stage.className = 'w-full h-full overflow-auto block p-4';
         img.style.maxWidth = 'none';
         img.style.maxHeight = 'none';
-        img.style.width = `${Math.round(state.lightbox.zoom * 95)}vw`;
+        img.style.margin = '0 auto';
+
+        const natW = img.naturalWidth || 0;
+        const natH = img.naturalHeight || 0;
+        if (natW > 0 && natH > 0) {
+          const maxBaseW = window.innerWidth * 0.92;
+          const maxBaseH = window.innerHeight - 110;
+          const baseScale = Math.min(maxBaseW / natW, maxBaseH / natH);
+          img.style.width = `${Math.round(natW * baseScale * z)}px`;
+          img.style.height = `${Math.round(natH * baseScale * z)}px`;
+        } else {
+          img.style.width = `${Math.round(z * 90)}vw`;
+          img.style.height = 'auto';
+        }
       }
     }
 
@@ -2743,18 +2784,23 @@
       const modal = document.getElementById('lightbox-modal');
       const items = state.lightbox.items || [];
       if (items.length === 0) return;
-      if (state.lightbox.index >= items.length) state.lightbox.index = 0;
-      if (state.lightbox.index < 0) state.lightbox.index = items.length - 1;
+
+      state.lightbox.index = ((state.lightbox.index % items.length) + items.length) % items.length;
 
       const cur = items[state.lightbox.index];
       document.getElementById('lb-title').textContent = cur.title || 'Imagen';
       document.getElementById('lb-counter').textContent = `${state.lightbox.index + 1} / ${items.length}`;
       document.getElementById('lb-fav-btn').textContent = cur.favorite ? '★' : '☆';
 
-      applyLightboxZoomStyle();
+      const prevBtn = document.getElementById('lb-prev-btn');
+      const nextBtn = document.getElementById('lb-next-btn');
+      if (prevBtn) prevBtn.style.display = items.length > 1 ? 'flex' : 'none';
+      if (nextBtn) nextBtn.style.display = items.length > 1 ? 'flex' : 'none';
 
       const img = document.getElementById('lb-img');
       img.dataset.fallbackDone = '';
+      img.onload = () => applyLightboxZoomStyle();
+
       if (cur.localDataUrl) {
         img.src = cur.localDataUrl;
       } else if (cur.driveId && state.drive.accessToken) {
@@ -2764,6 +2810,8 @@
         img.src = getDriveThumbUrl(cur);
       }
 
+      applyLightboxZoomStyle();
+
       const footer = document.getElementById('lb-tags-footer');
       footer.innerHTML = (cur.tags || []).map(t => `<span class="shrink-0 px-2.5 py-1 rounded-full bg-slate-800 text-xs text-indigo-300">#${escapeHtml(t)}</span>`).join('');
 
@@ -2772,8 +2820,10 @@
     }
 
     function navigateLightbox(delta) {
+      const items = state.lightbox.items || [];
+      if (items.length <= 1) return;
       state.lightbox.zoom = 1;
-      state.lightbox.index += delta;
+      state.lightbox.index = ((state.lightbox.index + delta) % items.length + items.length) % items.length;
       renderLightbox();
     }
 
@@ -2781,6 +2831,7 @@
       const modal = document.getElementById('lightbox-modal');
       modal.classList.add('hidden');
       modal.classList.remove('flex');
+      state.lightbox.zoom = 1;
     }
 
     function toggleLightboxFavorite() {
@@ -2808,14 +2859,17 @@
       let startX = 0;
       let startY = 0;
       let pinchDist = 0;
+      let isPinching = false;
 
       stage.addEventListener('touchstart', e => {
         if (e.touches.length === 2) {
+          isPinching = true;
           pinchDist = Math.hypot(
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
           );
         } else if (e.touches.length === 1) {
+          isPinching = false;
           startX = e.changedTouches[0].clientX;
           startY = e.changedTouches[0].clientY;
         }
@@ -2828,7 +2882,7 @@
             e.touches[0].clientY - e.touches[1].clientY
           );
           const ratio = newDist / pinchDist;
-          if (Math.abs(ratio - 1) > 0.08) {
+          if (Math.abs(ratio - 1) > 0.05) {
             state.lightbox.zoom = Math.min(4, Math.max(1, +(state.lightbox.zoom * ratio).toFixed(2)));
             pinchDist = newDist;
             applyLightboxZoomStyle();
@@ -2838,11 +2892,15 @@
 
       stage.addEventListener('touchend', e => {
         if (e.touches.length > 0) return;
-        pinchDist = 0;
+        if (isPinching) {
+          isPinching = false;
+          pinchDist = 0;
+          return;
+        }
         if (state.lightbox.zoom > 1.05) return;
         const dx = e.changedTouches[0].clientX - startX;
         const dy = e.changedTouches[0].clientY - startY;
-        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
           navigateLightbox(dx < 0 ? 1 : -1);
         }
       }, { passive: true });
