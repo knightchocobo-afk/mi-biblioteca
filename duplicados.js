@@ -1,13 +1,15 @@
 // =========================================================================
-// MÓDULO EXTERNO: DETECTOR VISUAL DE DUPLICADOS DE ALTA PRECISIÓN (512 BITS)
+// MÓDULO EXTERNO: DETECTOR VISUAL DE DUPLICADOS (512 BITS + COMPARADOR + BORRADO MASIVO)
 // =========================================================================
 (function () {
-  // Porcentaje mínimo de similitud (88% equivale a ~61 bits de diferencia sobre 512)
   if (typeof duplicateFinderState.minSimilarityPct !== 'number') {
     duplicateFinderState.minSimilarityPct = 88;
   }
+  if (!duplicateFinderState.selectedForDelete) {
+    duplicateFinderState.selectedForDelete = new Set();
+  }
 
-  // Huella dHash bidireccional (17x16 horizontal + 16x17 vertical = 512 bits) + versión espejo
+  // Huella dHash bidireccional (17x16 horizontal + 16x17 vertical = 512 bits) + espejo
   window.computePerceptualFingerprintFromUrl = function (url) {
     if (!url) return Promise.resolve(null);
     return new Promise((resolve) => {
@@ -24,7 +26,6 @@
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
 
-          // Recortar 4% de bordes exteriores para evitar que marcos o marcas de agua alteren la huella
           const sw = img.naturalWidth || img.width;
           const sh = img.naturalHeight || img.height;
           const padX = Math.floor(sw * 0.04);
@@ -44,7 +45,6 @@
           const data = ctx.getImageData(0, 0, W, H).data;
           const gray = new Float32Array(W * H);
 
-          // Normalizar brillo/contraste (ecualización min-max) para resistir cambios de tono
           let minG = 255;
           let maxG = 0;
           for (let i = 0; i < W * H; i++) {
@@ -62,29 +62,17 @@
           let normalBits = '';
           let mirrorBits = '';
 
-          // 1. Gradientes horizontales (16x16 = 256 bits)
           for (let y = 0; y < 16; y++) {
             for (let x = 0; x < 16; x++) {
-              const left = gray[y * W + x];
-              const right = gray[y * W + (x + 1)];
-              normalBits += left > right ? '1' : '0';
-
-              const mLeft = gray[y * W + (16 - x)];
-              const mRight = gray[y * W + (15 - x)];
-              mirrorBits += mLeft > mRight ? '1' : '0';
+              normalBits += gray[y * W + x] > gray[y * W + (x + 1)] ? '1' : '0';
+              mirrorBits += gray[y * W + (16 - x)] > gray[y * W + (15 - x)] ? '1' : '0';
             }
           }
 
-          // 2. Gradientes verticales (16x16 = 256 bits)
           for (let y = 0; y < 16; y++) {
             for (let x = 0; x < 16; x++) {
-              const top = gray[y * W + x];
-              const bottom = gray[(y + 1) * W + x];
-              normalBits += top > bottom ? '1' : '0';
-
-              const mTop = gray[y * W + (15 - x)];
-              const mBottom = gray[(y + 1) * W + (15 - x)];
-              mirrorBits += mTop > mBottom ? '1' : '0';
+              normalBits += gray[y * W + x] > gray[(y + 1) * W + x] ? '1' : '0';
+              mirrorBits += gray[y * W + (15 - x)] > gray[(y + 1) * W + (15 - x)] ? '1' : '0';
             }
           }
 
@@ -111,23 +99,16 @@
     return d;
   }
 
-  // Devuelve distancia mínima considerando imagen normal o volteada en espejo
   window.getVisualDistance = function (fp1, fp2) {
     if (!fp1 || !fp2) return 9999;
-    // Compatibilidad si quedara algún string viejo en caché
     if (typeof fp1 === 'string' || typeof fp2 === 'string') {
       return hammingDistance(String(fp1), String(fp2));
     }
-    // Si la proporción ancho/alto difiere demasiado (>35%), no son la misma imagen
     const ratioDiff = Math.abs(fp1.aspect - fp2.aspect) / Math.max(fp1.aspect, fp2.aspect);
     if (ratioDiff > 0.35) return 9999;
-
-    const dNormal = hammingDistance(fp1.normal, fp2.normal);
-    const dMirror = hammingDistance(fp1.normal, fp2.mirror);
-    return Math.min(dNormal, dMirror);
+    return Math.min(hammingDistance(fp1.normal, fp2.normal), hammingDistance(fp1.normal, fp2.mirror));
   };
 
-  // Recolector sin límite corto de profundidad
   window.collectAllImagesForDuplicatesScan = async function (folderId, recursive = true, depth = 0) {
     if (depth > 12) return [];
     const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
@@ -152,11 +133,11 @@
     return images;
   };
 
-  // Escaneo mejorado: agrupa primero por MD5 exacto y luego por similitud visual de 512 bits
   window.runDuplicateVisualScan = async function () {
     if (!driveConfig.accessToken) return;
     duplicateFinderState.scanning = true;
     duplicateFinderState.groups = [];
+    duplicateFinderState.selectedForDelete.clear();
     duplicateFinderState.progressText = 'Listando todas las imágenes de la carpeta...';
     renderAll();
 
@@ -223,24 +204,203 @@
     }
   };
 
-  // Añadir selector de sensibilidad en la barra del detector de duplicados sin tocar renderDuplicatesView
-  const origRenderDuplicatesView = window.renderDuplicatesView;
-  window.renderDuplicatesView = function (breadcrumb, actions, grid) {
-    origRenderDuplicatesView.apply(this, arguments);
-    if (!actions || document.getElementById('dup-similarity-select')) return;
+  // Abrir las copias de un grupo en el visor Lightbox para compararlas con zoom
+  window.openDuplicateGroupInLightbox = function (groupIdx, itemIdx) {
+    const group = duplicateFinderState.groups[groupIdx];
+    if (!group || !group.length) return;
+    const lightboxItems = group.map((item, idx) => ({
+      id: item.id,
+      driveId: item.id,
+      title: `${idx === 0 ? '[Mayor peso] ' : `[Copia ${idx + 1}] `}${item.name} (${formatFileSize(item.size)})`,
+      tags: item.similarityPct ? [`parecido ${item.similarityPct}%`] : [],
+      favorite: false
+    }));
+    openLightbox(lightboxItems, itemIdx);
+  };
 
-    const select = document.createElement('select');
-    select.id = 'dup-similarity-select';
-    select.className = 'px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200';
-    select.innerHTML = `
-      <option value="95" ${duplicateFinderState.minSimilarityPct === 95 ? 'selected' : ''}>🎯 Muy exactas (95%)</option>
-      <option value="88" ${duplicateFinderState.minSimilarityPct === 88 ? 'selected' : ''}>✨ Recomendado (88%)</option>
-      <option value="80" ${duplicateFinderState.minSimilarityPct === 80 ? 'selected' : ''}>🔎 Parecidas / Editadas (80%)</option>
+  // Seleccionar / deseleccionar una copia para borrar
+  window.toggleDuplicateDeleteSelection = function (fileId) {
+    if (duplicateFinderState.selectedForDelete.has(fileId)) {
+      duplicateFinderState.selectedForDelete.delete(fileId);
+    } else {
+      duplicateFinderState.selectedForDelete.add(fileId);
+    }
+    renderAll();
+  };
+
+  // Seleccionar todas las copias secundarias de un grupo (deja libre la de mayor peso)
+  window.selectSmallerDuplicatesInGroup = function (groupIdx) {
+    const group = duplicateFinderState.groups[groupIdx];
+    if (!group || group.length < 2) return;
+    for (let i = 1; i < group.length; i++) {
+      duplicateFinderState.selectedForDelete.add(group[i].id);
+    }
+    renderAll();
+  };
+
+  // Seleccionar todas las copias secundarias de TODOS los grupos
+  window.selectAllSmallerDuplicates = function () {
+    for (const group of duplicateFinderState.groups) {
+      for (let i = 1; i < group.length; i++) {
+        duplicateFinderState.selectedForDelete.add(group[i].id);
+      }
+    }
+    renderAll();
+  };
+
+  window.clearDuplicateDeleteSelection = function () {
+    duplicateFinderState.selectedForDelete.clear();
+    renderAll();
+  };
+
+  // Borrar en bloque todas las copias seleccionadas
+  window.deleteSelectedDuplicateItems = async function () {
+    const ids = Array.from(duplicateFinderState.selectedForDelete);
+    if (!ids.length) return;
+
+    const ok = await askYesNoConfirm({
+      title: 'Borrar duplicados seleccionados',
+      message: `¿Enviar ${ids.length} imagen(es) seleccionada(s) a la papelera de Google Drive?`,
+      doubleStep: true,
+      icon: '🗑️',
+      yesLabel: 'Sí, borrar seleccionadas',
+      noLabel: 'No'
+    });
+    if (!ok) return;
+
+    for (const fileId of ids) {
+      await trashDriveItemById(fileId);
+      removeDriveIdFromCatalog(fileId);
+    }
+
+    duplicateFinderState.selectedForDelete.clear();
+    await persistLibrary(`Borradas ${ids.length} copia(s) duplicada(s)`);
+
+    const deletedSet = new Set(ids);
+    duplicateFinderState.groups = duplicateFinderState.groups
+      .map((g) => g.filter((item) => !deletedSet.has(item.id)))
+      .filter((g) => g.length > 1);
+
+    renderAll();
+    showToast(`🗑️ ${ids.length} copia(s) enviada(s) a la papelera`);
+  };
+
+  // Render completo mejorado para el Detector de Duplicados
+  window.renderDuplicatesView = function (breadcrumb, actions, grid) {
+    const selCount = duplicateFinderState.selectedForDelete.size;
+
+    breadcrumb.innerHTML = `<span class="font-bold text-white">👯 Detector Visual de Duplicados</span>`;
+    actions.innerHTML = `
+      <select id="dup-similarity-select" onchange="duplicateFinderState.minSimilarityPct = Number(this.value) || 88; if (duplicateFinderState.totalScanned > 0) runDuplicateVisualScan();" class="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200">
+        <option value="95" ${duplicateFinderState.minSimilarityPct === 95 ? 'selected' : ''}>🎯 Muy exactas (95%)</option>
+        <option value="88" ${duplicateFinderState.minSimilarityPct === 88 ? 'selected' : ''}>✨ Recomendado (88%)</option>
+        <option value="80" ${duplicateFinderState.minSimilarityPct === 80 ? 'selected' : ''}>🔎 Parecidas / Editadas (80%)</option>
+      </select>
+      <button onclick="openDupFolderPickerModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-indigo-300">
+        📂 Carpeta: ${escapeHtml(duplicateFinderState.targetFolderName)}
+      </button>
+      <button onclick="runDuplicateVisualScan()" ${duplicateFinderState.scanning ? 'disabled' : ''} class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow disabled:opacity-50">
+        ${duplicateFinderState.scanning ? '⏳ Analizando...' : '🔍 Buscar Duplicados'}
+      </button>
     `;
-    select.onchange = function () {
-      duplicateFinderState.minSimilarityPct = Number(this.value) || 88;
-      if (duplicateFinderState.totalScanned > 0) runDuplicateVisualScan();
-    };
-    actions.insertBefore(select, actions.firstChild);
+
+    if (!driveConfig.accessToken) {
+      grid.innerHTML = `
+        <div class="col-span-full py-16 text-center space-y-3">
+          <div class="text-4xl">☁️</div>
+          <div class="text-base font-bold text-white">Conecta Google Drive para analizar imágenes duplicadas</div>
+          <button onclick="openDriveModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">Conectar ahora</button>
+        </div>
+      `;
+      return;
+    }
+
+    if (duplicateFinderState.scanning) {
+      grid.innerHTML = `<div class="col-span-full py-16 text-center text-sm text-indigo-300">${escapeHtml(duplicateFinderState.progressText || 'Analizando imágenes...')}</div>`;
+      return;
+    }
+
+    if (!duplicateFinderState.groups.length) {
+      grid.innerHTML = `
+        <div class="col-span-full py-14 text-center space-y-3 bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+          <div class="text-4xl">👯</div>
+          <div class="text-sm font-bold text-white">
+            ${duplicateFinderState.totalScanned > 0
+              ? `Se analizaron ${duplicateFinderState.totalScanned} imágenes en "${escapeHtml(duplicateFinderState.targetFolderName)}" y no se encontraron copias repetidas.`
+              : `Selecciona una carpeta de Google Drive y pulsa "Buscar Duplicados" para agrupar copias iguales o comprimidas.`}
+          </div>
+          <label class="inline-flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+            <input type="checkbox" ${duplicateFinderState.includeSubfolders ? 'checked' : ''} onchange="duplicateFinderState.includeSubfolders = this.checked" class="w-4 h-4 accent-indigo-500" />
+            <span>Incluir subcarpetas</span>
+          </label>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = `
+      <div class="col-span-full space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2 text-xs text-slate-300 bg-slate-900 border border-slate-800 px-4 py-3 rounded-xl">
+          <div>
+            Se encontraron <strong class="text-rose-300">${duplicateFinderState.groups.length} grupo(s)</strong> entre ${duplicateFinderState.totalScanned} imágenes.
+            <span class="text-slate-400 block sm:inline sm:ml-1">Toca cualquier imagen para abrirla en grande con zoom y comparar.</span>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="selectAllSmallerDuplicates()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-200 font-semibold">
+              ☑️ Marcar todas las de menor peso
+            </button>
+            ${selCount > 0 ? `
+              <button onclick="clearDuplicateDeleteSelection()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                Desmarcar (${selCount})
+              </button>
+              <button onclick="deleteSelectedDuplicateItems()" class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shadow">
+                🗑️ Borrar ${selCount} seleccionada(s)
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        ${duplicateFinderState.groups.map((group, gIdx) => `
+          <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between flex-wrap gap-2 text-xs">
+              <span class="font-bold text-rose-300">Grupo #${gIdx + 1} — ${group.length} copias detectadas</span>
+              <button onclick="selectSmallerDuplicatesInGroup(${gIdx})" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-200 font-semibold text-[11px]">
+                ☑️ Marcar copias menores de este grupo
+              </button>
+            </div>
+            <div class="flex gap-3 overflow-x-auto pb-2">
+              ${group.map((item, idx) => {
+                const isMarked = duplicateFinderState.selectedForDelete.has(item.id);
+                return `
+                  <div class="w-48 shrink-0 rounded-xl overflow-hidden bg-slate-950 border ${isMarked ? 'border-rose-500 ring-2 ring-rose-500/60' : idx === 0 ? 'border-emerald-500/60' : 'border-slate-800'} flex flex-col">
+                    <div onclick="openDuplicateGroupInLightbox(${gIdx}, ${idx})" title="Tocar para abrir en visor y comparar" class="relative aspect-[3/4] bg-slate-800 cursor-pointer group">
+                      <img data-drive-id="${item.id}" src="" alt="" class="opacity-0 transition-opacity duration-200 w-full h-full object-cover" />
+                      <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded text-[10px] font-bold ${idx === 0 ? 'bg-emerald-600 text-white' : 'bg-black/75 text-slate-200'}">
+                        ${idx === 0 ? 'Mayor peso' : `Copia ${idx + 1}${item.similarityPct ? ` (${item.similarityPct}%)` : ''}`}
+                      </span>
+                      <button type="button" onclick="event.stopPropagation(); toggleDuplicateDeleteSelection('${item.id}');" title="Seleccionar para borrar" class="absolute top-1.5 right-1.5 z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow ${isMarked ? 'bg-rose-600 text-white' : 'bg-black/75 text-slate-200 border border-slate-400'}">
+                        ${isMarked ? '✓' : ''}
+                      </button>
+                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-black/80 text-[10px] font-semibold text-indigo-200">
+                        🔍 Ver
+                      </span>
+                      <span class="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded bg-black/80 text-[11px] font-bold text-white">
+                        ${formatFileSize(item.size)}
+                      </span>
+                    </div>
+                    <div class="p-2 space-y-1.5">
+                      <div class="text-[11px] text-slate-200 truncate" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+                      <button type="button" onclick="toggleDuplicateDeleteSelection('${item.id}')" class="w-full py-1.5 rounded-lg ${isMarked ? 'bg-rose-600 text-white font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold'} text-[11px] transition">
+                        ${isMarked ? '☑️ Marcada para borrar' : '☐ Seleccionar para borrar'}
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
   };
 })();
