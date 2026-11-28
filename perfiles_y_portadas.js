@@ -1,40 +1,41 @@
 // =========================================================================
-// MÓDULO EXTERNO: MODO COMPLETA SIN BORDES NEGROS + PORTADAS 2X + PERFIL ARTISTA
+// MÓDULO EXTERNO: MODO COMPLETA EN 3 TAMAÑOS (1x1, 1x2, 2x1) + PORTADAS 2X + PERFIL
 // =========================================================================
 (function () {
-  // 1. Modo Completa sin espacios negros: proporción natural de la imagen sin barras negras
   window.getThumbWrapperClass = function (baseExtra = '') {
-    return state.fullThumbMode
-      ? `relative w-full bg-slate-900 cursor-pointer overflow-hidden transition-all duration-200 ${baseExtra}`
-      : `relative w-full h-full aspect-square bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
+    return `relative w-full h-full aspect-square bg-slate-800 cursor-pointer flex items-center justify-center overflow-hidden ${baseExtra}`;
   };
 
   window.getThumbImgClass = function (isLazyDrive = false) {
-    const base = state.fullThumbMode
-      ? 'w-full h-auto block object-cover'
-      : 'w-full h-full object-cover';
+    const base = 'w-full h-full object-cover';
     return isLazyDrive ? `opacity-0 transition-opacity duration-200 ${base}` : base;
   };
 
+  function resetCardGridSpan(card, wrapper) {
+    card.classList.remove('col-span-2', 'row-span-2');
+    wrapper.classList.remove('aspect-square', 'aspect-[1/2]', 'aspect-[2/1]', 'min-h-[120px]', 'bg-slate-950/95');
+  }
+
+  // Clasificar cada imagen en uno de los 3 tamaños exactos según su proporción real
   window.applyAdaptiveThumbAspect = function (img) {
     if (!img || !img.naturalWidth || !img.naturalHeight) return;
     const wrapper = img.parentElement;
     const card = wrapper ? wrapper.closest('.card-hover') : null;
     if (!wrapper || !card) return;
 
-    // Si está en Modo Mosaico, mosaico.js controla el encuadre cuadrado completo
     if (state.mosaicMode) return;
 
-    // Si es tarjeta de portada de artista (aspect-[1/2]), mantener doble altura
-    if (wrapper.classList.contains('aspect-[1/2]')) {
+    // Las portadas de artistas siempre van 2 de largo x 1 de ancho
+    if (wrapper.dataset.forceArtistCover === '1') {
+      resetCardGridSpan(card, wrapper);
+      wrapper.classList.add('aspect-[1/2]');
       img.style.width = '100%';
       img.style.height = '100%';
       img.style.objectFit = 'cover';
       return;
     }
 
-    card.classList.remove('col-span-2', 'row-span-2');
-    wrapper.classList.remove('aspect-square', 'aspect-[1/2]', 'aspect-[2/1]', 'min-h-[120px]', 'bg-slate-950/95');
+    resetCardGridSpan(card, wrapper);
 
     if (!state.fullThumbMode) {
       wrapper.classList.add('aspect-square');
@@ -44,14 +45,28 @@
       return;
     }
 
-    // En Modo Completa: la imagen marca su propia altura exacta sin dejar franjas negras
+    const ratio = img.naturalWidth / img.naturalHeight;
+
+    if (ratio < 0.72) {
+      // Larga: 2 de largo x 1 de ancho
+      card.classList.add('row-span-2');
+      wrapper.classList.add('aspect-[1/2]');
+    } else if (ratio > 1.38) {
+      // Ancha: 1 de largo x 2 de ancho
+      card.classList.add('col-span-2');
+      wrapper.classList.add('aspect-[2/1]');
+    } else {
+      // Cuadrada: 1 x 1
+      wrapper.classList.add('aspect-square');
+    }
+
     img.style.width = '100%';
-    img.style.height = 'auto';
+    img.style.height = '100%';
     img.style.objectFit = 'cover';
     img.style.display = 'block';
   };
 
-  // 2. Portadas de artistas el doble de largas en Historia, Comics y Artistas
+  // Portadas de artistas el doble de largas en Historia, Comics y Artistas
   function enforceDoubleHeightArtistCovers() {
     const isArtistRootView =
       state.activeTags.length === 0 &&
@@ -63,12 +78,11 @@
     const grid = document.getElementById('main-grid');
     if (!grid) return;
 
-    const cards = grid.querySelectorAll('.card-hover');
-    cards.forEach((card) => {
+    grid.querySelectorAll('.card-hover').forEach((card) => {
       const wrapper = card.firstElementChild;
       if (!wrapper) return;
-      card.classList.remove('col-span-2', 'row-span-2');
-      wrapper.classList.remove('aspect-square', 'aspect-[2/1]', 'min-h-[120px]');
+      wrapper.dataset.forceArtistCover = '1';
+      resetCardGridSpan(card, wrapper);
       wrapper.classList.add('aspect-[1/2]');
 
       const img = wrapper.querySelector('img');
@@ -82,7 +96,7 @@
     });
   }
 
-  // 3. Calcular estadísticas, última actualización y perfil de cada artista
+  // Estadísticas y perfil de artista
   function computeArtistProfileStats(section, artist) {
     let totalItems = 0;
     let extraLabel = '';
@@ -214,25 +228,13 @@
     mainEl.insertBefore(card, topPagBar);
   }
 
-  // Envolver renderAll para aplicar portadas 2x, perfil y cuadrícula sin bordes negros
   const origRenderAll = window.renderAll;
   window.renderAll = function () {
     origRenderAll.apply(this, arguments);
 
-    // En Modo Completa (sin Mosaico), usar columnas tipo masonry para que no queden huecos verticales
     const grid = document.getElementById('main-grid');
-    if (grid && state.fullThumbMode && !state.mosaicMode) {
-      const cols = state.gridCols || 4;
-      grid.className = '';
-      grid.style.columnCount = String(cols);
-      grid.style.columnGap = '0.65rem';
-      grid.querySelectorAll(':scope > .card-hover').forEach((card) => {
-        card.style.breakInside = 'avoid';
-        card.style.marginBottom = '0.65rem';
-        card.style.display = 'inline-block';
-        card.style.width = '100%';
-      });
-    } else if (grid) {
+    if (grid) {
+      // Limpiar cualquier estilo de columnas anterior
       grid.style.columnCount = '';
       grid.style.columnGap = '';
       grid.querySelectorAll(':scope > .card-hover').forEach((card) => {
@@ -245,6 +247,12 @@
 
     enforceDoubleHeightArtistCovers();
     injectArtistProfileBanner();
-    hydrateDriveImages();
+
+    // Reevaluar las proporciones (1x1, 1x2, 2x1) en todas las imágenes ya cargadas
+    document.querySelectorAll('#main-grid img').forEach((img) => {
+      if (img.complete && img.naturalWidth > 0) {
+        applyAdaptiveThumbAspect(img);
+      }
+    });
   };
 })();
