@@ -1,5 +1,5 @@
 // =========================================================================
-// MÓDULO EXTERNO: MODO COMPLETA EN 3 TAMAÑOS (1x1, 1x2, 2x1) + PORTADAS 2X + PERFIL
+// MÓDULO EXTERNO: MODO COMPLETA EXACTO (ALTURA MATEMÁTICA 2x1 = 2x(1x1)+GAP) + PERFIL
 // =========================================================================
 (function () {
   window.getThumbWrapperClass = function (baseExtra = '') {
@@ -11,12 +11,37 @@
     return isLazyDrive ? `opacity-0 transition-opacity duration-200 ${base}` : base;
   };
 
-  function resetCardGridSpan(card, wrapper) {
-    card.classList.remove('col-span-2', 'row-span-2');
-    wrapper.classList.remove('aspect-square', 'aspect-[1/2]', 'aspect-[2/1]', 'min-h-[120px]', 'bg-slate-950/95');
+  // Recalcular la altura exacta de cada fila del grid para que 2 cuadradas/anchas = 1 larga
+  function syncExactGridRowHeight() {
+    const grid = document.getElementById('main-grid');
+    if (!grid) return;
+
+    if (!state.fullThumbMode || state.mosaicMode) {
+      grid.style.gridAutoRows = '';
+      grid.style.gridAutoFlow = '';
+      return;
+    }
+
+    const cols = Number(state.gridCols) || 4;
+    const gapPx = 10; // equivale a gap-2.5 (0.625rem = 10px)
+    const gridWidth = grid.clientWidth;
+    if (!gridWidth) return;
+
+    const colWidth = Math.floor((gridWidth - gapPx * (cols - 1)) / cols);
+    if (colWidth > 20) {
+      grid.style.gridAutoRows = `${colWidth}px`;
+      grid.style.gridAutoFlow = 'dense';
+    }
   }
 
-  // Clasificar cada imagen en uno de los 3 tamaños exactos según su proporción real
+  function resetCardGridSpan(card, wrapper) {
+    card.classList.remove('col-span-2', 'row-span-2');
+    card.style.height = '';
+    wrapper.classList.remove('aspect-square', 'aspect-[1/2]', 'aspect-[2/1]', 'min-h-[120px]', 'bg-slate-950/95');
+    wrapper.style.height = '';
+  }
+
+  // Clasificar cada imagen en 1x1, 2x1 (larga) o 1x2 (ancha) ajustándose a la fila exacta del grid
   window.applyAdaptiveThumbAspect = function (img) {
     if (!img || !img.naturalWidth || !img.naturalHeight) return;
     const wrapper = img.parentElement;
@@ -25,7 +50,7 @@
 
     if (state.mosaicMode) return;
 
-    // Las portadas de artistas siempre van 2 de largo x 1 de ancho
+    // Portadas de artistas en la vista raíz (siempre 2 de largo x 1 de ancho)
     if (wrapper.dataset.forceArtistCover === '1') {
       resetCardGridSpan(card, wrapper);
       wrapper.classList.add('aspect-[1/2]');
@@ -45,19 +70,17 @@
       return;
     }
 
-    const ratio = img.naturalWidth / img.naturalHeight;
+    // En Modo Completa: la tarjeta llena el 100% de sus celdas asignadas (1x1, 2x1 o 1x2)
+    card.style.height = '100%';
+    wrapper.style.height = '100%';
 
+    const ratio = img.naturalWidth / img.naturalHeight;
     if (ratio < 0.72) {
-      // Larga: 2 de largo x 1 de ancho
+      // Larga: ocupa 2 filas de alto x 1 columna de ancho (incluye el gap central automáticamente)
       card.classList.add('row-span-2');
-      wrapper.classList.add('aspect-[1/2]');
     } else if (ratio > 1.38) {
-      // Ancha: 1 de largo x 2 de ancho
+      // Ancha: ocupa 1 fila de alto x 2 columnas de ancho
       card.classList.add('col-span-2');
-      wrapper.classList.add('aspect-[2/1]');
-    } else {
-      // Cuadrada: 1 x 1
-      wrapper.classList.add('aspect-square');
     }
 
     img.style.width = '100%';
@@ -234,7 +257,6 @@
 
     const grid = document.getElementById('main-grid');
     if (grid) {
-      // Limpiar cualquier estilo de columnas anterior
       grid.style.columnCount = '';
       grid.style.columnGap = '';
       grid.querySelectorAll(':scope > .card-hover').forEach((card) => {
@@ -247,12 +269,14 @@
 
     enforceDoubleHeightArtistCovers();
     injectArtistProfileBanner();
+    syncExactGridRowHeight();
 
-    // Reevaluar las proporciones (1x1, 1x2, 2x1) en todas las imágenes ya cargadas
     document.querySelectorAll('#main-grid img').forEach((img) => {
       if (img.complete && img.naturalWidth > 0) {
         applyAdaptiveThumbAspect(img);
       }
     });
   };
+
+  window.addEventListener('resize', syncExactGridRowHeight);
 })();
