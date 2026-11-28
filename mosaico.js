@@ -1,8 +1,18 @@
 // =========================================================================
-// MÓDULO EXTERNO: MODO MOSAICO Y SELECCIÓN MÚLTIPLE (SIN TOCAR EL VISOR)
+// MÓDULO EXTERNO: MODO MOSAICO (AJUSTE TOTAL) + SELECTOR DE 3 A 6 COLUMNAS
 // =========================================================================
 (function () {
   state.mosaicMode = localStorage.getItem('mi_boveda_mosaic_mode') === '1';
+
+  const savedCols = Number(localStorage.getItem('mi_boveda_grid_cols'));
+  state.gridCols = [3, 4, 5, 6].includes(savedCols) ? savedCols : 4;
+
+  const GRID_COLS_CLASSES = {
+    3: 'grid-cols-3 sm:grid-cols-3',
+    4: 'grid-cols-4 sm:grid-cols-4',
+    5: 'grid-cols-5 sm:grid-cols-5',
+    6: 'grid-cols-6 sm:grid-cols-6'
+  };
 
   window.updateMosaicModeButtonUI = function () {
     const btn = document.getElementById('mosaic-mode-btn');
@@ -15,6 +25,23 @@
       label.textContent = 'Mosaico';
       btn.classList.remove('border-emerald-500', 'bg-emerald-600/25', 'text-emerald-200');
     }
+  };
+
+  window.updateGridColsButtonUI = function () {
+    const btn = document.getElementById('grid-cols-cycle-btn');
+    if (!btn) return;
+    btn.innerHTML = `<span>📐</span><span>${state.gridCols} col</span>`;
+  };
+
+  window.cycleGridColumns = function () {
+    const order = [3, 4, 5, 6];
+    const nextIdx = (order.indexOf(state.gridCols) + 1) % order.length;
+    state.gridCols = order[nextIdx];
+    try {
+      localStorage.setItem('mi_boveda_grid_cols', String(state.gridCols));
+    } catch (e) {}
+    updateGridColsButtonUI();
+    applyGridColumnsAndMosaic();
   };
 
   window.toggleMosaicMode = function () {
@@ -30,27 +57,70 @@
     renderAll();
   };
 
-  function injectMosaicButton() {
+  function injectToolbarControls() {
     const refBtn = document.getElementById('thumb-fit-btn');
-    if (!refBtn || document.getElementById('mosaic-mode-btn')) return;
-    const btn = document.createElement('button');
-    btn.id = 'mosaic-mode-btn';
-    btn.type = 'button';
-    btn.onclick = toggleMosaicMode;
-    btn.title = 'Modo Mosaico: toca la imagen para seleccionar varias y toca el nombre para abrir';
-    btn.className = 'flex items-center gap-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:border-indigo-500 shrink-0';
-    btn.innerHTML = '<span>⊞</span><span id="mosaic-mode-label" class="hidden sm:inline">Mosaico</span>';
-    refBtn.insertAdjacentElement('afterend', btn);
-    updateMosaicModeButtonUI();
+    if (!refBtn) return;
+
+    // Botón selector de columnas (3 a 6) visible también en tablet/móvil
+    if (!document.getElementById('grid-cols-cycle-btn')) {
+      const oldDensityBtn = document.getElementById('grid-density-btn');
+      if (oldDensityBtn) oldDensityBtn.classList.add('hidden');
+
+      const colsBtn = document.createElement('button');
+      colsBtn.id = 'grid-cols-cycle-btn';
+      colsBtn.type = 'button';
+      colsBtn.onclick = cycleGridColumns;
+      colsBtn.title = 'Cambiar cantidad de imágenes por fila (3, 4, 5 o 6)';
+      colsBtn.className = 'flex items-center gap-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:border-indigo-500 shrink-0';
+      refBtn.insertAdjacentElement('beforebegin', colsBtn);
+      updateGridColsButtonUI();
+    }
+
+    // Botón Modo Mosaico
+    if (!document.getElementById('mosaic-mode-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'mosaic-mode-btn';
+      btn.type = 'button';
+      btn.onclick = toggleMosaicMode;
+      btn.title = 'Modo Mosaico: ajusta la imagen al recuadro completo, toca imagen para seleccionar y nombre para abrir';
+      btn.className = 'flex items-center gap-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:border-indigo-500 shrink-0';
+      btn.innerHTML = '<span>⊞</span><span id="mosaic-mode-label" class="hidden sm:inline">Mosaico</span>';
+      refBtn.insertAdjacentElement('afterend', btn);
+      updateMosaicModeButtonUI();
+    }
   }
 
-  function applyMosaicBehaviorToGrid() {
-    if (!state.mosaicMode) return;
+  function forceFullFillSquareInMosaic(card, clickBox) {
+    // Quitar expansiones de 2 filas/columnas del modo "Completa" para que no queden huecos
+    card.classList.remove('col-span-2', 'row-span-2');
+    clickBox.classList.remove('aspect-[1/2]', 'aspect-[2/1]', 'min-h-[120px]', 'bg-slate-950/95');
+    clickBox.classList.add('aspect-square', 'w-full', 'h-full');
+
+    // Forzar que todas las imágenes llenen el recuadro al 100% sin franjas negras
+    const imgs = clickBox.querySelectorAll('img');
+    imgs.forEach((img) => {
+      img.classList.remove('object-contain');
+      img.classList.add('object-cover', 'w-full', 'h-full');
+      img.style.objectFit = 'cover';
+      img.style.width = '100%';
+      img.style.height = '100%';
+    });
+  }
+
+  function applyGridColumnsAndMosaic() {
     const grid = document.getElementById('main-grid');
     if (!grid) return;
 
-    // Ajustar cuadrícula compacta tipo mosaico
-    grid.className = 'grid grid-cols-4 sm:grid-cols-6 gap-1 grid-flow-dense';
+    const colsClass = GRID_COLS_CLASSES[state.gridCols] || 'grid-cols-4 sm:grid-cols-4';
+    const gapClass = state.mosaicMode ? 'gap-1' : 'gap-2.5';
+    grid.className = `grid ${colsClass} ${gapClass} grid-flow-dense`;
+
+    // Aplicar también las columnas elegidas a las subcuadrículas (ej. resultados de tags)
+    grid.querySelectorAll('.grid').forEach((subGrid) => {
+      subGrid.className = `grid ${colsClass} ${gapClass} grid-flow-dense`;
+    });
+
+    if (!state.mosaicMode) return;
 
     // Mostrar barra de acciones masivas en Artistas si hay selección
     const bulkBar = document.getElementById('bulk-select-bar');
@@ -66,10 +136,12 @@
       const clickBox = card.firstElementChild;
       if (!clickBox) return;
 
+      forceFullFillSquareInMosaic(card, clickBox);
+
       const originalOnclick = clickBox.getAttribute('onclick') || '';
       const bottomBar = clickBox.lastElementChild;
 
-      // Detectar ID de imagen en Artistas o archivo en Explorador Drive
+      // Detectar si es seleccionable (imagen de Artista o archivo en Explorador Drive)
       const favBtn = card.querySelector('button[onclick*="toggleItemFavorite"]');
       const driveSelBtn = card.querySelector('button[onclick*="toggleSelectDriveBrowserItem"]');
 
@@ -92,28 +164,26 @@
         }
       }
 
-      if (!selectAction) return;
-
-      // Estilo compacto mosaico + borde verde si está seleccionada
+      // Estilo compacto sin bordes redondeados en Modo Mosaico
       card.classList.remove('rounded-2xl', 'border-slate-800', 'border-amber-500/40');
-      card.classList.add('rounded-none', 'border', isSelected ? 'border-emerald-400' : 'border-slate-900');
+      card.classList.add('rounded-none', 'border', isSelected ? 'border-emerald-400' : 'border-slate-950');
       if (isSelected) card.classList.add('ring-2', 'ring-emerald-500');
 
-      // Al tocar la imagen -> selecciona / deselecciona
-      clickBox.onclick = function (e) {
-        e.stopPropagation();
-        selectAction();
-      };
+      if (selectAction) {
+        clickBox.onclick = function (e) {
+          e.stopPropagation();
+          selectAction();
+        };
 
-      // Mostrar check verde arriba a la izquierda si está seleccionada
-      if (isSelected && !card.querySelector('.mosaic-check-badge')) {
-        const badge = document.createElement('span');
-        badge.className = 'mosaic-check-badge absolute top-1.5 left-1.5 z-20 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow';
-        badge.textContent = '✓';
-        clickBox.appendChild(badge);
+        if (isSelected && !card.querySelector('.mosaic-check-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'mosaic-check-badge absolute top-1.5 left-1.5 z-20 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow';
+          badge.textContent = '✓';
+          clickBox.appendChild(badge);
+        }
       }
 
-      // Al tocar la franja inferior sombreada del nombre -> abre la imagen/carpeta
+      // Franja inferior sombreada con el nombre: tocarla abre la imagen/carpeta
       if (bottomBar && originalOnclick) {
         const titleEl = bottomBar.querySelector('.truncate');
         const titleText = titleEl ? titleEl.textContent : '';
@@ -127,21 +197,37 @@
     });
   }
 
-  // Envolver renderAll sin modificar el código original
+  // Evitar que applyAdaptiveThumbAspect vuelva a poner franjas negras cuando Mosaico está activo
+  if (typeof window.applyAdaptiveThumbAspect === 'function') {
+    const origApplyAdaptiveThumbAspect = window.applyAdaptiveThumbAspect;
+    window.applyAdaptiveThumbAspect = function (img) {
+      if (state.mosaicMode && img) {
+        const wrapper = img.parentElement;
+        const card = wrapper ? wrapper.closest('.card-hover') : null;
+        if (card && wrapper) {
+          forceFullFillSquareInMosaic(card, wrapper);
+        }
+        return;
+      }
+      origApplyAdaptiveThumbAspect.apply(this, arguments);
+    };
+  }
+
+  // Envolver renderAll sin tocar el archivo original
   const originalRenderAll = window.renderAll;
   window.renderAll = function () {
     originalRenderAll.apply(this, arguments);
-    injectMosaicButton();
-    applyMosaicBehaviorToGrid();
+    injectToolbarControls();
+    applyGridColumnsAndMosaic();
   };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      injectMosaicButton();
-      applyMosaicBehaviorToGrid();
+      injectToolbarControls();
+      applyGridColumnsAndMosaic();
     });
   } else {
-    injectMosaicButton();
-    applyMosaicBehaviorToGrid();
+    injectToolbarControls();
+    applyGridColumnsAndMosaic();
   }
 })();
